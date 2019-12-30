@@ -1,0 +1,7 @@
+apiVersion: konstellation.dev/v1alpha1
+kind: Nodepool
+metadata:
+  name: example-nodepool
+spec:
+  # Add fields here
+  size: 3

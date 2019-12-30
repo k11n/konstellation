@@ -1,0 +1,84 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: nodepools.konstellation.dev
+spec:
+  group: konstellation.dev
+  names:
+    kind: Nodepool
+    listKind: NodepoolList
+    plural: nodepools
+    singular: nodepool
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: Nodepool is the Schema for the nodepools API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: NodepoolSpec defines the desired state of Nodepool
+          properties:
+            autoscale:
+              type: boolean
+            aws:
+              properties:
+                amiType:
+                  type: string
+                connectFromAnywhere:
+                  type: boolean
+                roleArn:
+                  type: string
+                securityGroupId:
+                  type: string
+                securityGroupName:
+                  type: string
+                sshKeypair:
+                  type: string
+              required:
+              - amiType
+              - connectFromAnywhere
+              - roleArn
+              - sshKeypair
+              type: object
+            diskSizeGiB:
+              type: integer
+            machineType:
+              type: string
+            maxSize:
+              format: int64
+              type: integer
+            minSize:
+              format: int64
+              type: integer
+            requiresGPU:
+              type: boolean
+          required:
+          - autoscale
+          - diskSizeGiB
+          - machineType
+          - maxSize
+          - minSize
+          - requiresGPU
+          type: object
+        status:
+          description: NodepoolStatus defines the observed state of Nodepool
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
