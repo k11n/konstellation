@@ -162,6 +162,7 @@ func (a *AWSProvider) ConfigureCluster(name string) (nodepool *v1alpha1.Nodepool
 	autoscalePrompt := promptui.Prompt{
 		Label:     "Use autoscaler",
 		IsConfirm: true,
+		Default:   "y",
 	}
 	if _, err = autoscalePrompt.Run(); err == nil {
 		np.Autoscale = true
@@ -181,6 +182,7 @@ func (a *AWSProvider) ConfigureCluster(name string) (nodepool *v1alpha1.Nodepool
 	createConfirmation := promptui.Prompt{
 		Label:     "Create nodegroup",
 		IsConfirm: true,
+		Default:   "y",
 	}
 	if _, err = createConfirmation.Run(); err != nil {
 		if err == promptui.ErrAbort {
@@ -273,6 +275,7 @@ func (a *AWSProvider) promptCreateKeypair(ec2Svc *ec2.EC2, name string) (keyName
 		saveTargetPath := path.Join(homeDir, ".ssh", name+".pem")
 		savePrompt := promptui.Prompt{
 			IsConfirm: true,
+			Default:   "y",
 			Label:     fmt.Sprintf("Save new keypair to %s", printTargetPath),
 		}
 		_, err = savePrompt.Run()
@@ -378,6 +381,7 @@ func (a *AWSProvider) promptConfirmBudget(instance *kaws.EC2InstancePricing, min
 	confirmPrompt := promptui.Prompt{
 		Label:     "OK to continue",
 		IsConfirm: true,
+		Default:   "y",
 	}
 	_, err := confirmPrompt.Run()
 	if err == promptui.ErrAbort {

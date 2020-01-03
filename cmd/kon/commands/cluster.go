@@ -107,7 +107,7 @@ func clusterCreate(c *cli.Context) error {
 		return err
 	}
 	fmt.Printf("Successfully created cluster %s. Waiting for cluster to become ready\n", name)
-	err = utils.WaitUntilComplete(utils.LongTimeoutSec, 5000, func() (bool, error) {
+	err = utils.WaitUntilComplete(utils.LongTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
 		cluster, err := cloud.KubernetesProvider().GetCluster(context.Background(), name)
 		if err != nil {
 			return false, err
@@ -173,8 +173,6 @@ func configureCluster(cloud providers.CloudProvider, clusterName string) error {
 		err := utils.KubeApply(file)
 		if err != nil {
 			return errors.Wrapf(err, "Unable to apply config %s", file)
-		} else {
-			fmt.Printf("successfully loaded %s\n", file)
 		}
 	}
 
@@ -194,14 +192,16 @@ func configureCluster(cloud providers.CloudProvider, clusterName string) error {
 	}
 
 	// wait for completion
-	fmt.Printf("Waiting for nodepool become ready\n")
-	err = utils.WaitUntilComplete(utils.LongTimeoutSec, 5000, func() (bool, error) {
+	fmt.Printf("Waiting for nodepool become ready, this may take a few minutes\n")
+	err = utils.WaitUntilComplete(utils.LongTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
 		return cloud.KubernetesProvider().IsNodepoolReady(context.Background(),
 			clusterName, np.GetObjectMeta().GetName())
 	})
 	if err != nil {
 		return err
 	}
+
+	fmt.Printf("Successfully created nodepool %s\n", np.GetObjectMeta().GetName())
 	return nil
 }
 
@@ -285,6 +285,7 @@ func generateKubeConfig(cloud providers.CloudProvider, clusterName string) error
 			return fmt.Errorf("select aborted")
 		}
 	}
+	fmt.Printf("configuring kubectl: generating %s\n", target)
 
 	file, err := os.Create(target)
 	if err != nil {
