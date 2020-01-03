@@ -16,7 +16,7 @@ func KubeApply(filename string) error {
 	}
 	defer os.Remove(filepath)
 
-	return nil
+	return KubeCtl("apply", "-f", filepath)
 }
 
 func KubeCtl(args ...string) error {

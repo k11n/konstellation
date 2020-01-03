@@ -20,9 +20,10 @@ import (
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cast"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (a *AWSProvider) ConfigureCluster(name string) (nodepoolSpec *v1alpha1.NodepoolSpec, err error) {
+func (a *AWSProvider) ConfigureCluster(name string) (nodepool *v1alpha1.Nodepool, err error) {
 	sess, err := a.awsSession()
 	if err != nil {
 		return
@@ -189,7 +190,13 @@ func (a *AWSProvider) ConfigureCluster(name string) (nodepoolSpec *v1alpha1.Node
 	}
 
 	// execute plan & save config
-	createInput := kaws.NodepoolSpecToCreateInput(name, &np)
+	nodepool = &v1alpha1.Nodepool{
+		ObjectMeta: v1.ObjectMeta{
+			Name: KUBE_NODEPOOL_NAME,
+		},
+		Spec: np,
+	}
+	createInput := kaws.NodepoolSpecToCreateInput(name, nodepool)
 	subnets, err := kaws.ListSubnets(ec2Svc, vpcId)
 	if err != nil {
 		return
@@ -204,7 +211,6 @@ func (a *AWSProvider) ConfigureCluster(name string) (nodepoolSpec *v1alpha1.Node
 	}
 
 	fmt.Printf("creating nodegroup %v\n", *createRes.Nodegroup.NodegroupName)
-	nodepoolSpec = &np
 	return
 }
 

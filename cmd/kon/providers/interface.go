@@ -10,7 +10,7 @@ type CloudProvider interface {
 	IsSetup() bool
 	Setup() error
 	CreateCluster() (name string, err error)
-	ConfigureCluster(name string) (*v1alpha1.NodepoolSpec, error)
+	ConfigureCluster(name string) (*v1alpha1.Nodepool, error)
 
 	// utils
 	KubernetesProvider() cloud.KubernetesProvider

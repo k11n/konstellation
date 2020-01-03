@@ -19,6 +19,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	KUBE_NODEPOOL_NAME = "kon-nodepool-0"
+)
+
 type AWSProvider struct {
 	id          string
 	DisplayName string

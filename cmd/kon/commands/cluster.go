@@ -22,7 +22,6 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ktypes "k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -174,27 +173,22 @@ func configureCluster(cloud providers.CloudProvider, clusterName string) error {
 		err := utils.KubeApply(file)
 		if err != nil {
 			return errors.Wrapf(err, "Unable to apply config %s", file)
+		} else {
+			fmt.Printf("successfully loaded %s\n", file)
 		}
 	}
 
-	spec, err := cloud.ConfigureCluster(clusterName)
+	np, err := cloud.ConfigureCluster(clusterName)
 	if err != nil {
 		return err
 	}
 
-	// save spec to kube
-	np := v1alpha1.Nodepool{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: KUBE_NODEPOOL_NAME,
-		},
-		Spec: *spec,
-	}
-
+	// save spec to Kube
 	kclient, err := KubernetesClient()
 	if err != nil {
 		return err
 	}
-	err = kclient.Create(context.Background(), &np)
+	err = kclient.Create(context.Background(), np)
 	if err != nil {
 		return err
 	}
@@ -203,7 +197,7 @@ func configureCluster(cloud providers.CloudProvider, clusterName string) error {
 	fmt.Printf("Waiting for nodepool become ready\n")
 	err = utils.WaitUntilComplete(utils.LongTimeoutSec, 5000, func() (bool, error) {
 		return cloud.KubernetesProvider().IsNodepoolReady(context.Background(),
-			clusterName, KUBE_NODEPOOL_NAME)
+			clusterName, np.GetObjectMeta().GetName())
 	})
 	if err != nil {
 		return err
@@ -228,7 +222,7 @@ func clusterGetToken(c *cli.Context) error {
 }
 
 func getKubeClusterConfig(kclient client.Client) (nodepool *v1alpha1.Nodepool, err error) {
-	err = kclient.Get(context.Background(), ktypes.NamespacedName{Name: KUBE_NODEPOOL_NAME}, nodepool)
+	err = kclient.Get(context.Background(), ktypes.NamespacedName{Name: providers.KUBE_NODEPOOL_NAME}, nodepool)
 	return
 }
 

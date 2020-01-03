@@ -20,8 +20,6 @@ const (
 	// is used by some clients (client-go) who will refresh the token after 14 mins
 	TOKEN_EXPIRATION_MINS = 14
 	URL_TIMEOUT_SECONDS   = 60
-
-	NODEGROUP_NAME = "konstellation-0"
 )
 
 var (
@@ -129,29 +127,30 @@ func (s *EKSService) IsNodepoolReady(ctx context.Context, clusterName string, no
 	return
 }
 
-func NodepoolSpecToCreateInput(cluster string, np *resources.NodepoolSpec) *eks.CreateNodegroupInput {
+func NodepoolSpecToCreateInput(cluster string, np *resources.Nodepool) *eks.CreateNodegroupInput {
+	nps := np.Spec
 	cni := eks.CreateNodegroupInput{}
 	cni.SetClusterName(cluster)
-	cni.SetAmiType(np.AWS.AMIType)
-	cni.SetDiskSize(int64(np.DiskSizeGiB))
-	cni.SetInstanceTypes([]*string{&np.MachineType})
-	cni.SetNodeRole(np.AWS.RoleARN)
-	cni.SetNodegroupName(NODEGROUP_NAME)
+	cni.SetAmiType(nps.AWS.AMIType)
+	cni.SetDiskSize(int64(nps.DiskSizeGiB))
+	cni.SetInstanceTypes([]*string{&nps.MachineType})
+	cni.SetNodeRole(nps.AWS.RoleARN)
+	cni.SetNodegroupName(np.ObjectMeta.Name)
 	rac := eks.RemoteAccessConfig{
-		Ec2SshKey: &np.AWS.SSHKeypair,
+		Ec2SshKey: &nps.AWS.SSHKeypair,
 	}
-	if !np.AWS.ConnectFromAnywhere && np.AWS.SecurityGroupId != "" {
-		rac.SetSourceSecurityGroups([]*string{&np.AWS.SecurityGroupId})
+	if !nps.AWS.ConnectFromAnywhere && nps.AWS.SecurityGroupId != "" {
+		rac.SetSourceSecurityGroups([]*string{&nps.AWS.SecurityGroupId})
 	}
 	cni.SetRemoteAccess(&rac)
 	cni.SetScalingConfig(&eks.NodegroupScalingConfig{
-		MinSize:     &np.MinSize,
-		MaxSize:     &np.MaxSize,
-		DesiredSize: &np.MinSize,
+		MinSize:     &nps.MinSize,
+		MaxSize:     &nps.MaxSize,
+		DesiredSize: &nps.MinSize,
 	})
 
 	tags := make(map[string]*string)
-	if np.Autoscale {
+	if nps.Autoscale {
 		tags[AutoscalerClusterNameTag(cluster)] = &TagValueOwned
 		tags[TagAutoscalerEnabled] = &TagValueTrue
 	}
