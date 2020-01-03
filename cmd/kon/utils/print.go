@@ -72,3 +72,25 @@ func PrintDescStruct(val interface{}) {
 		fmt.Printf(fmtStr, item.Desc, item.Val)
 	}
 }
+
+func appendDescItems(items []descPair, val interface{}) {
+	v := reflect.ValueOf(val)
+	t := reflect.TypeOf(val)
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		// flatten
+		if v.Field(i).Kind() == reflect.Struct {
+			appendDescItems(items, v.Field(i).Interface)
+			continue
+		}
+		// find its tag
+		desc := f.Tag.Get("desc")
+		if desc == "" {
+			continue
+		}
+		items = append(items, descPair{
+			Desc: desc,
+			Val:  v.Field(i).Interface(),
+		})
+	}
+}

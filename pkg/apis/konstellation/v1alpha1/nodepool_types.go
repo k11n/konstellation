@@ -35,7 +35,7 @@ type NodepoolStatus struct {
 
 // Nodepool is the Schema for the nodepools API
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=nodepools,scope=Namespaced
+// +kubebuilder:resource:path=nodepools,scope=Cluster
 type Nodepool struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

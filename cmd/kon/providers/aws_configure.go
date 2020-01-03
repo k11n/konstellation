@@ -15,72 +15,21 @@ import (
 	"github.com/aws/aws-sdk-go/service/pricing"
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
+	"github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
+	resources "github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cast"
 )
 
-type awsNodeGroupConfig struct {
-	Cluster                 string `desc:"Cluster"`
-	NodeRole                string `desc:"Node role"`
-	Keypair                 string `desc:"SSH keypair"`
-	AllowConnectionAnywhere bool   `desc:"Allow connection from internet"`
-	SecurityGroupId         string
-	SecurityGroupName       string `desc:"Security group (for connection)"`
-	NeedsGPU                bool   `desc:"Needs GPU"`
-	InstanceType            string `desc:"Instance type"`
-	MinNodes                int64  `desc:"Min number of nodes"`
-	MaxNodes                int64  `desc:"Max number of nodes"`
-	UsesAutoScale           bool   `desc:"Uses autoscale"`
-	RootDiskSizeGiB         int    `desc:"Root disk size (GiB)"`
-}
-
-func (c awsNodeGroupConfig) AMIType() string {
-	if c.NeedsGPU {
-		return "AL2_x86_64_GPU"
-	} else {
-		return "AL2_x86_64"
-	}
-}
-
-func (c awsNodeGroupConfig) CreateNodegroupInput() *eks.CreateNodegroupInput {
-	cni := eks.CreateNodegroupInput{}
-	cni.SetAmiType(c.AMIType())
-	cni.SetClusterName(c.Cluster)
-	cni.SetDiskSize(int64(c.RootDiskSizeGiB))
-	cni.SetInstanceTypes([]*string{&c.InstanceType})
-	cni.SetNodeRole(c.NodeRole)
-	cni.SetNodegroupName("kon-0")
-	rac := eks.RemoteAccessConfig{
-		Ec2SshKey: &c.Keypair,
-	}
-	if !c.AllowConnectionAnywhere && c.SecurityGroupId != "" {
-		rac.SetSourceSecurityGroups([]*string{&c.SecurityGroupId})
-	}
-	cni.SetRemoteAccess(&rac)
-	cni.SetScalingConfig(&eks.NodegroupScalingConfig{
-		MinSize:     &c.MinNodes,
-		MaxSize:     &c.MaxNodes,
-		DesiredSize: &c.MinNodes,
-	})
-
-	tags := make(map[string]*string)
-	if c.UsesAutoScale {
-		tags[kaws.AutoscalerClusterNameTag(c.Cluster)] = &kaws.TagValueOwned
-		tags[kaws.TagAutoscalerEnabled] = &kaws.TagValueTrue
-	}
-	cni.SetTags(tags)
-	return &cni
-}
-
-func (a *AWSProvider) ConfigureCluster(name string) error {
+func (a *AWSProvider) ConfigureCluster(name string) (nodepoolSpec *v1alpha1.NodepoolSpec, err error) {
 	sess, err := a.awsSession()
 	if err != nil {
-		return err
+		return
 	}
 
-	ngConf := awsNodeGroupConfig{
-		Cluster: name,
+	np := resources.NodepoolSpec{
+		AWS: &resources.NodePoolAWS{},
 	}
 	eksSvc := kaws.NewEKSService(sess)
 	iamSvc := kaws.NewIAMService(sess)
@@ -88,15 +37,14 @@ func (a *AWSProvider) ConfigureCluster(name string) error {
 
 	role, err := a.promptSelectOrCreateNodeRole(iamSvc)
 	if err != nil {
-		return err
+		return
 	}
-	// ngConf.NodeRole = *role.RoleName
-	ngConf.NodeRole = *role.Arn
+	np.AWS.RoleARN = *role.Arn
 
 	// keypair setup
 	kpRes, err := ec2Svc.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{})
 	if err != nil {
-		return err
+		return
 	}
 	keypairs := kpRes.KeyPairs
 	keypairNames := make([]string, 0, len(keypairs))
@@ -111,16 +59,16 @@ func (a *AWSProvider) ConfigureCluster(name string) error {
 	}
 	idx, keypairName, err := keypairPrompt.Run()
 	if err != nil {
-		return err
+		return
 	}
 	if idx == -1 {
 		// create new keypair and save it to ~/.ssh
-		ngConf.Keypair, err = a.promptCreateKeypair(ec2Svc, keypairName)
+		np.AWS.SSHKeypair, err = a.promptCreateKeypair(ec2Svc, keypairName)
 		if err != nil {
-			return err
+			return
 		}
 	} else {
-		ngConf.Keypair = *keypairs[idx].KeyName
+		np.AWS.SSHKeypair = *keypairs[idx].KeyName
 	}
 
 	// load cluster details
@@ -128,7 +76,7 @@ func (a *AWSProvider) ConfigureCluster(name string) error {
 		Name: &name,
 	})
 	if err != nil {
-		return err
+		return
 	}
 	vpcId := *descOut.Cluster.ResourcesVpcConfig.VpcId
 
@@ -139,15 +87,16 @@ func (a *AWSProvider) ConfigureCluster(name string) error {
 	}
 	idx, _, err = connectionPrompt.Run()
 	if err != nil {
-		return err
+		return
 	}
 	if idx == 0 {
-		ngConf.AllowConnectionAnywhere = true
+		np.AWS.ConnectFromAnywhere = true
 	} else {
 		// list security groups
-		securityGroups, err := kaws.ListSecurityGroups(ec2Svc, vpcId)
+		var securityGroups []*ec2.SecurityGroup
+		securityGroups, err = kaws.ListSecurityGroups(ec2Svc, vpcId)
 		if err != nil {
-			return err
+			return
 		}
 		sgNames := make([]string, 0, len(securityGroups))
 		for _, sg := range securityGroups {
@@ -159,10 +108,10 @@ func (a *AWSProvider) ConfigureCluster(name string) error {
 		}
 		idx, _, err = sgPrompt.Run()
 		if err != nil {
-			return err
+			return
 		}
-		ngConf.SecurityGroupId = *securityGroups[idx].GroupId
-		ngConf.SecurityGroupName = *securityGroups[idx].GroupName
+		np.AWS.SecurityGroupId = *securityGroups[idx].GroupId
+		np.AWS.SecurityGroupName = *securityGroups[idx].GroupName
 	}
 
 	instanceConfirmed := false
@@ -173,25 +122,28 @@ func (a *AWSProvider) ConfigureCluster(name string) error {
 			Items: []string{"no", "require GPU"},
 		}
 		idx, _, err = gpuPrompt.Run()
+		if err != nil {
+			return
+		}
 		if idx == 1 {
-			ngConf.NeedsGPU = true
+			np.RequiresGPU = true
 		}
 		var instance *kaws.EC2InstancePricing
-		instance, err = a.promptInstanceType(sess, ngConf.NeedsGPU)
+		instance, err = a.promptInstanceType(sess, np.RequiresGPU)
 		if err != nil {
-			return err
+			return
 		}
-		ngConf.InstanceType = instance.InstanceType
+		np.MachineType = instance.InstanceType
 
-		ngConf.MinNodes, ngConf.MaxNodes, err = a.promptInstanceSizing()
+		np.MinSize, np.MaxSize, err = a.promptInstanceSizing()
 		if err != nil {
-			return err
+			return
 		}
 
 		// compute budget and inform
-		instanceConfirmed, err = a.promptConfirmBudget(instance, ngConf.MinNodes, ngConf.MaxNodes)
+		instanceConfirmed, err = a.promptConfirmBudget(instance, np.MinSize, np.MaxSize)
 		if err != nil {
-			return err
+			return
 		}
 	}
 
@@ -202,51 +154,58 @@ func (a *AWSProvider) ConfigureCluster(name string) error {
 	}
 	sizeStr, err := diskPrompt.Run()
 	if err != nil {
-		return err
+		return
 	}
-	ngConf.RootDiskSizeGiB = cast.ToInt(sizeStr)
+	np.DiskSizeGiB = cast.ToInt(sizeStr)
 
 	autoscalePrompt := promptui.Prompt{
 		Label:     "Use autoscaler",
 		IsConfirm: true,
 	}
-	if _, err := autoscalePrompt.Run(); err == nil {
-		ngConf.UsesAutoScale = true
+	if _, err = autoscalePrompt.Run(); err == nil {
+		np.Autoscale = true
 	} else if err != promptui.ErrAbort {
-		return err
+		return
+	}
+
+	// fill in GPU details
+	if np.RequiresGPU {
+		np.AWS.AMIType = "AL2_x86_64_GPU"
+	} else {
+		np.AWS.AMIType = "AL2_x86_64"
 	}
 
 	// confirm creation and execute
-	utils.PrintDescStruct(ngConf)
+	utils.PrintDescStruct(np)
 	createConfirmation := promptui.Prompt{
 		Label:     "Create nodegroup",
 		IsConfirm: true,
 	}
-	if _, err := createConfirmation.Run(); err != nil {
+	if _, err = createConfirmation.Run(); err != nil {
 		if err == promptui.ErrAbort {
-			return nil
+			err = fmt.Errorf("creation aborted")
 		}
-		return err
+		return
 	}
 
 	// execute plan & save config
-	createInput := ngConf.CreateNodegroupInput()
+	createInput := kaws.NodepoolSpecToCreateInput(name, &np)
 	subnets, err := kaws.ListSubnets(ec2Svc, vpcId)
 	if err != nil {
-		return err
+		return
 	}
 	for _, subnet := range subnets {
 		createInput.Subnets = append(createInput.Subnets, subnet.SubnetId)
 	}
-	utils.PrintJSON(createInput)
 
 	createRes, err := eksSvc.EKS.CreateNodegroup(createInput)
 	if err != nil {
-		return err
+		return
 	}
 
 	fmt.Printf("creating nodegroup %v\n", *createRes.Nodegroup.NodegroupName)
-	return nil
+	nodepoolSpec = &np
+	return
 }
 
 func (a *AWSProvider) promptSelectOrCreateNodeRole(iamSvc *kaws.IAMService) (role *iam.Role, err error) {

@@ -3,6 +3,7 @@ module github.com/davidzhao/konstellation
 go 1.13
 
 require (
+	github.com/GeertJohan/go.rice v1.0.0
 	github.com/aws/aws-sdk-go v1.26.0
 	github.com/manifoldco/promptui v0.6.0
 	github.com/olekukonko/tablewriter v0.0.4

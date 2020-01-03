@@ -10,4 +10,5 @@ type KubernetesProvider interface {
 	ListClusters(context.Context) ([]*types.Cluster, error)
 	GetCluster(context.Context, string) (*types.Cluster, error)
 	GetAuthToken(ctx context.Context, cluster string) (*types.AuthToken, error)
+	IsNodepoolReady(ctx context.Context, clusterName string, nodepoolName string) (bool, error)
 }

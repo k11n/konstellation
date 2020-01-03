@@ -4,11 +4,29 @@ import "time"
 
 import "encoding/json"
 
+type ClusterStatus int
+
+const (
+	StatusCreating ClusterStatus = iota
+	StatusActive
+	StatusDeleting
+	StatusFailed
+	StatusUpdating
+)
+
+func (s ClusterStatus) String() string {
+	return [...]string{"CREATING",
+		"ACTIVE",
+		"DELETING",
+		"FAILED",
+		"UPDATING"}[s]
+}
+
 type Cluster struct {
 	ID              string
 	Name            string
 	PlatformVersion string
-	Status          string
+	Status          ClusterStatus
 	Tags            map[string]string
 	Version         string
 	CloudProvider   string

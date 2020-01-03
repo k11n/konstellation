@@ -14,11 +14,20 @@ import (
 	"github.com/davidzhao/konstellation/cmd/kon/providers"
 	"github.com/davidzhao/konstellation/cmd/kon/templates"
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
+	"github.com/davidzhao/konstellation/pkg/apis"
+	"github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
 	"github.com/manifoldco/promptui"
 	"github.com/olekukonko/tablewriter"
+	"github.com/pkg/errors"
 	"github.com/urfave/cli"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	ktypes "k8s.io/apimachinery/pkg/types"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	kconf "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 var (
@@ -98,11 +107,31 @@ func clusterCreate(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Successfully created cluster %s\n", name)
-	fmt.Printf("This might take a few minutes to create, use `%s cluster list` to check status\n", config.ExecutableName)
-	fmt.Printf("To use the cluster, run `%s cluster select --cloud %s --cluster %s`\n",
-		config.ExecutableName, cloud.ID(), name)
-	return nil
+	fmt.Printf("Successfully created cluster %s. Waiting for cluster to become ready\n", name)
+	err = utils.WaitUntilComplete(utils.LongTimeoutSec, 5000, func() (bool, error) {
+		cluster, err := cloud.KubernetesProvider().GetCluster(context.Background(), name)
+		if err != nil {
+			return false, err
+		}
+		if cluster.Status == types.StatusCreating {
+			return false, nil
+		} else if cluster.Status == types.StatusActive {
+			return true, nil
+		} else {
+			return false, fmt.Errorf("Unexpected cluster status during creation: %s", cluster.Status)
+		}
+	})
+
+	if err == context.DeadlineExceeded {
+		// couldn't verify after waiting
+	} else if err != nil {
+		return err
+	}
+
+	c.Set("cloud", cloud.ID())
+	c.Set("cluster", name)
+
+	return clusterSelect(c)
 }
 
 func clusterSelect(c *cli.Context) error {
@@ -115,17 +144,71 @@ func clusterSelect(c *cli.Context) error {
 		return nil
 	}
 
-	// TODO: check if cluster is ready to go, if not, configure
-	err := cloud.ConfigureCluster(conf.SelectedCluster)
+	err := generateKubeConfig(cloud, conf.SelectedCluster)
 	if err != nil {
 		return err
 	}
 
-	err = generateKubeConfig(cloud, conf.SelectedCluster)
+	err = conf.Persist()
 	if err != nil {
 		return err
 	}
-	return conf.Persist()
+
+	// check if nodepool is ready, if so, skip configuration
+	kclient, err := KubernetesClient()
+	if err != nil {
+		return err
+	}
+	_, err = getKubeClusterConfig(kclient)
+	if err != nil {
+		// need to configure cluster
+		return configureCluster(cloud, conf.SelectedCluster)
+	}
+
+	return nil
+}
+
+func configureCluster(cloud providers.CloudProvider, clusterName string) error {
+	// load new resources into kube
+	for _, file := range KUBE_RESOURCES {
+		err := utils.KubeApply(file)
+		if err != nil {
+			return errors.Wrapf(err, "Unable to apply config %s", file)
+		}
+	}
+
+	spec, err := cloud.ConfigureCluster(clusterName)
+	if err != nil {
+		return err
+	}
+
+	// save spec to kube
+	np := v1alpha1.Nodepool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: KUBE_NODEPOOL_NAME,
+		},
+		Spec: *spec,
+	}
+
+	kclient, err := KubernetesClient()
+	if err != nil {
+		return err
+	}
+	err = kclient.Create(context.Background(), &np)
+	if err != nil {
+		return err
+	}
+
+	// wait for completion
+	fmt.Printf("Waiting for nodepool become ready\n")
+	err = utils.WaitUntilComplete(utils.LongTimeoutSec, 5000, func() (bool, error) {
+		return cloud.KubernetesProvider().IsNodepoolReady(context.Background(),
+			clusterName, KUBE_NODEPOOL_NAME)
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func clusterGetToken(c *cli.Context) error {
@@ -144,13 +227,18 @@ func clusterGetToken(c *cli.Context) error {
 	return nil
 }
 
+func getKubeClusterConfig(kclient client.Client) (nodepool *v1alpha1.Nodepool, err error) {
+	err = kclient.Get(context.Background(), ktypes.NamespacedName{Name: KUBE_NODEPOOL_NAME}, nodepool)
+	return
+}
+
 func printClusterSection(section providers.CloudProvider, clusters []*types.Cluster) {
 	fmt.Printf("\nCloud: %s\n", section.ID())
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Cluster", "Version", "Status", "Provider ID"})
 	for _, c := range clusters {
-		table.Append([]string{c.Name, c.Version, c.Status, c.ID})
+		table.Append([]string{c.Name, c.Version, c.Status.String(), c.ID})
 	}
 	utils.FormatTable(table)
 	table.Render()
@@ -183,12 +271,11 @@ func generateKubeConfig(cloud providers.CloudProvider, clusterName string) error
 		clusterName,
 	}
 
-	// write to kube control
-	homedir, err := os.UserHomeDir()
+	// write to kube config
+	target, err := kubeConfigPath()
 	if err != nil {
 		return err
 	}
-	target := path.Join(homedir, ".kube", "config")
 
 	if isExternalKubeConfig(target) {
 		// already exists.. warn user
@@ -199,8 +286,9 @@ func generateKubeConfig(cloud providers.CloudProvider, clusterName string) error
 		_, err = prompt.Run()
 		if err != nil {
 			// prompt aborted
-			fmt.Println("aborted")
-			return nil
+			fmt.Printf("selecting a cluster requires writing to ~/.kube/config. To try this again run `%s cluster select --cloud %s --cluster %s`\n",
+				config.ExecutableName, cloud.ID(), clusterName)
+			return fmt.Errorf("select aborted")
 		}
 	}
 
@@ -247,4 +335,25 @@ func checksumPath(configPath string) string {
 	configDir := path.Dir(configPath)
 	configName := path.Base(configPath)
 	return path.Join(configDir, fmt.Sprintf(".%s.konsha", configName))
+}
+
+func KubernetesClient() (client.Client, error) {
+	// construct a client from local config
+	scheme := runtime.NewScheme()
+	// register both our scheme and konstellation scheme
+	clientgoscheme.AddToScheme(scheme)
+	apis.AddToScheme(scheme)
+	conf, err := kconf.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+	return client.New(conf, client.Options{Scheme: scheme})
+}
+
+func kubeConfigPath() (string, error) {
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return path.Join(homedir, ".kube", "config"), nil
 }
