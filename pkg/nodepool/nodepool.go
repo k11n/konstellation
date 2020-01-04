@@ -12,7 +12,7 @@ import (
 
 func GetNodepoolOfType(kclient client.Client, kind string) (np *v1alpha1.Nodepool, err error) {
 	items := v1alpha1.NodepoolList{}
-	err = kclient.List(context.Background(), &items, client.MatchingLabels{
+	err = kclient.List(context.Background(), &items, client.InNamespace(""), client.MatchingLabels{
 		NODEPOOL_LABEL: kind,
 	})
 	if err != nil {
@@ -29,7 +29,7 @@ func GetNodepoolOfType(kclient client.Client, kind string) (np *v1alpha1.Nodepoo
 func UpdateStatus(kclient client.Client, np *v1alpha1.Nodepool) error {
 	// get nodelist
 	nodeList := corev1.NodeList{}
-	err := kclient.List(context.Background(), &nodeList)
+	err := kclient.List(context.Background(), &nodeList, client.InNamespace(""))
 	if err != nil {
 		return err
 	}

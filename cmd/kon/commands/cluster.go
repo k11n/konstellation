@@ -152,10 +152,10 @@ func clusterSelect(c *cli.Context) error {
 		return err
 	}
 
-	err = configureCluster(cloud, conf.SelectedCluster)
-	if err != nil {
-		return err
-	}
+	// err = configureCluster(cloud, conf.SelectedCluster)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// configure nodepool & cluster
 	return configureNodepool(cloud, conf.SelectedCluster)
@@ -187,6 +187,9 @@ func configureNodepool(cloud providers.CloudProvider, clusterName string) error 
 		if err != nil {
 			return err
 		}
+		np.SetLabels(map[string]string{
+			nodepool.NODEPOOL_LABEL: nodepool.NODEPOOL_PRIMARY,
+		})
 
 		// save spec to Kube
 		err = kclient.Create(context.Background(), np)

@@ -14,7 +14,6 @@ import (
 	"github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
 	resources "github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
-	"github.com/davidzhao/konstellation/pkg/nodepool"
 )
 
 const (
@@ -131,9 +130,7 @@ func (s *EKSService) IsNodepoolReady(ctx context.Context, clusterName string, no
 }
 
 func (s *EKSService) CreateNodepool(ctx context.Context, clusterName string, np *v1alpha1.Nodepool, purpose string) error {
-	createInput := nodepoolSpecToCreateInput(clusterName, np, map[string]string{
-		nodepool.NODEPOOL_LABEL: purpose,
-	})
+	createInput := nodepoolSpecToCreateInput(clusterName, np)
 	subnets, err := ListSubnets(ec2.New(s.session), np.Spec.AWS.VpcID)
 	if err != nil {
 		return err
@@ -146,7 +143,7 @@ func (s *EKSService) CreateNodepool(ctx context.Context, clusterName string, np 
 	return err
 }
 
-func nodepoolSpecToCreateInput(cluster string, np *resources.Nodepool, labels map[string]string) *eks.CreateNodegroupInput {
+func nodepoolSpecToCreateInput(cluster string, np *resources.Nodepool) *eks.CreateNodegroupInput {
 	nps := np.Spec
 	cni := eks.CreateNodegroupInput{}
 	cni.SetClusterName(cluster)
@@ -174,13 +171,6 @@ func nodepoolSpecToCreateInput(cluster string, np *resources.Nodepool, labels ma
 		tags[TagAutoscalerEnabled] = &TagValueTrue
 	}
 	cni.SetTags(tags)
-	if labels != nil {
-		convertedLabels := make(map[string]*string)
-		for key, val := range labels {
-			convertedLabels[key] = &val
-		}
-		cni.SetLabels(convertedLabels)
-	}
 
 	return &cni
 }
