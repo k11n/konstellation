@@ -18,18 +18,19 @@ import (
 	"github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
 	resources "github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
+	"github.com/davidzhao/konstellation/pkg/nodepool"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cast"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (a *AWSProvider) ConfigureCluster(name string) (nodepool *v1alpha1.Nodepool, err error) {
+func (a *AWSProvider) ConfigureCluster(name string) (np *v1alpha1.Nodepool, err error) {
 	sess, err := a.awsSession()
 	if err != nil {
 		return
 	}
 
-	np := resources.NodepoolSpec{
+	nps := resources.NodepoolSpec{
 		AWS: &resources.NodePoolAWS{},
 	}
 	eksSvc := kaws.NewEKSService(sess)
@@ -40,7 +41,7 @@ func (a *AWSProvider) ConfigureCluster(name string) (nodepool *v1alpha1.Nodepool
 	if err != nil {
 		return
 	}
-	np.AWS.RoleARN = *role.Arn
+	nps.AWS.RoleARN = *role.Arn
 
 	// keypair setup
 	kpRes, err := ec2Svc.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{})
@@ -52,11 +53,11 @@ func (a *AWSProvider) ConfigureCluster(name string) (nodepool *v1alpha1.Nodepool
 	for _, keypair := range keypairs {
 		keypairNames = append(keypairNames, *keypair.KeyName)
 	}
-	// TODO: add validator to ensure keyname is a filename
 	keypairPrompt := promptui.SelectWithAdd{
 		Label:    "Keypair (for SSH access into nodes)",
 		AddLabel: "Create new keypair",
 		Items:    keypairNames,
+		Validate: utils.ValidateName,
 	}
 	idx, keypairName, err := keypairPrompt.Run()
 	if err != nil {
@@ -64,12 +65,12 @@ func (a *AWSProvider) ConfigureCluster(name string) (nodepool *v1alpha1.Nodepool
 	}
 	if idx == -1 {
 		// create new keypair and save it to ~/.ssh
-		np.AWS.SSHKeypair, err = a.promptCreateKeypair(ec2Svc, keypairName)
+		nps.AWS.SSHKeypair, err = a.promptCreateKeypair(ec2Svc, keypairName)
 		if err != nil {
 			return
 		}
 	} else {
-		np.AWS.SSHKeypair = *keypairs[idx].KeyName
+		nps.AWS.SSHKeypair = *keypairs[idx].KeyName
 	}
 
 	// load cluster details
@@ -91,7 +92,7 @@ func (a *AWSProvider) ConfigureCluster(name string) (nodepool *v1alpha1.Nodepool
 		return
 	}
 	if idx == 0 {
-		np.AWS.ConnectFromAnywhere = true
+		nps.AWS.ConnectFromAnywhere = true
 	} else {
 		// list security groups
 		var securityGroups []*ec2.SecurityGroup
@@ -111,8 +112,8 @@ func (a *AWSProvider) ConfigureCluster(name string) (nodepool *v1alpha1.Nodepool
 		if err != nil {
 			return
 		}
-		np.AWS.SecurityGroupId = *securityGroups[idx].GroupId
-		np.AWS.SecurityGroupName = *securityGroups[idx].GroupName
+		nps.AWS.SecurityGroupId = *securityGroups[idx].GroupId
+		nps.AWS.SecurityGroupName = *securityGroups[idx].GroupName
 	}
 
 	instanceConfirmed := false
@@ -127,22 +128,22 @@ func (a *AWSProvider) ConfigureCluster(name string) (nodepool *v1alpha1.Nodepool
 			return
 		}
 		if idx == 1 {
-			np.RequiresGPU = true
+			nps.RequiresGPU = true
 		}
 		var instance *kaws.EC2InstancePricing
-		instance, err = a.promptInstanceType(sess, np.RequiresGPU)
+		instance, err = a.promptInstanceType(sess, nps.RequiresGPU)
 		if err != nil {
 			return
 		}
-		np.MachineType = instance.InstanceType
+		nps.MachineType = instance.InstanceType
 
-		np.MinSize, np.MaxSize, err = a.promptInstanceSizing()
+		nps.MinSize, nps.MaxSize, err = a.promptInstanceSizing()
 		if err != nil {
 			return
 		}
 
 		// compute budget and inform
-		instanceConfirmed, err = a.promptConfirmBudget(instance, np.MinSize, np.MaxSize)
+		instanceConfirmed, err = a.promptConfirmBudget(instance, nps.MinSize, nps.MaxSize)
 		if err != nil {
 			return
 		}
@@ -157,7 +158,7 @@ func (a *AWSProvider) ConfigureCluster(name string) (nodepool *v1alpha1.Nodepool
 	if err != nil {
 		return
 	}
-	np.DiskSizeGiB = cast.ToInt(sizeStr)
+	nps.DiskSizeGiB = cast.ToInt(sizeStr)
 
 	autoscalePrompt := promptui.Prompt{
 		Label:     "Use autoscaler",
@@ -165,20 +166,20 @@ func (a *AWSProvider) ConfigureCluster(name string) (nodepool *v1alpha1.Nodepool
 		Default:   "y",
 	}
 	if _, err = autoscalePrompt.Run(); err == nil {
-		np.Autoscale = true
+		nps.Autoscale = true
 	} else if err != promptui.ErrAbort {
 		return
 	}
 
 	// fill in GPU details
-	if np.RequiresGPU {
-		np.AWS.AMIType = "AL2_x86_64_GPU"
+	if nps.RequiresGPU {
+		nps.AWS.AMIType = "AL2_x86_64_GPU"
 	} else {
-		np.AWS.AMIType = "AL2_x86_64"
+		nps.AWS.AMIType = "AL2_x86_64"
 	}
 
 	// confirm creation and execute
-	utils.PrintDescStruct(np)
+	utils.PrintDescStruct(nps)
 	createConfirmation := promptui.Prompt{
 		Label:     "Create nodegroup",
 		IsConfirm: true,
@@ -186,19 +187,19 @@ func (a *AWSProvider) ConfigureCluster(name string) (nodepool *v1alpha1.Nodepool
 	}
 	if _, err = createConfirmation.Run(); err != nil {
 		if err == promptui.ErrAbort {
-			err = fmt.Errorf("creation aborted")
+			err = fmt.Errorf("nodepool creation aborted")
 		}
 		return
 	}
 
 	// execute plan & save config
-	nodepool = &v1alpha1.Nodepool{
+	np = &v1alpha1.Nodepool{
 		ObjectMeta: v1.ObjectMeta{
-			Name: KUBE_NODEPOOL_NAME,
+			Name: nodepool.NodepoolName(),
 		},
-		Spec: np,
+		Spec: nps,
 	}
-	createInput := kaws.NodepoolSpecToCreateInput(name, nodepool)
+	createInput := kaws.NodepoolSpecToCreateInput(name, np)
 	subnets, err := kaws.ListSubnets(ec2Svc, vpcId)
 	if err != nil {
 		return

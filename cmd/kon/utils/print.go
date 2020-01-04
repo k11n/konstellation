@@ -43,21 +43,12 @@ type descPair struct {
 
 func PrintDescStruct(val interface{}) {
 	t := reflect.TypeOf(val)
-	v := reflect.ValueOf(val)
-
-	items := make([]descPair, 0, t.NumField())
-	for i := 0; i < t.NumField(); i++ {
-		f := t.Field(i)
-		// find its tag
-		desc := f.Tag.Get("desc")
-		if desc == "" {
-			continue
-		}
-		items = append(items, descPair{
-			Desc: desc,
-			Val:  v.Field(i).Interface(),
-		})
+	if t.Kind() != reflect.Struct {
+		fmt.Printf("not a struct: %T, %v", val, val)
+		return
 	}
+	items := make([]descPair, 0, t.NumField())
+	items = appendDescItems(items, val)
 
 	// figure out max length
 	maxLen := 0
@@ -73,14 +64,14 @@ func PrintDescStruct(val interface{}) {
 	}
 }
 
-func appendDescItems(items []descPair, val interface{}) {
+func appendDescItems(items []descPair, val interface{}) []descPair {
 	v := reflect.ValueOf(val)
 	t := reflect.TypeOf(val)
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		// flatten
 		if v.Field(i).Kind() == reflect.Struct {
-			appendDescItems(items, v.Field(i).Interface)
+			items = appendDescItems(items, v.Field(i).Interface)
 			continue
 		}
 		// find its tag
@@ -93,4 +84,5 @@ func appendDescItems(items []descPair, val interface{}) {
 			Val:  v.Field(i).Interface(),
 		})
 	}
+	return items
 }

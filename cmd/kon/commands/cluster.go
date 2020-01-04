@@ -17,13 +17,13 @@ import (
 	"github.com/davidzhao/konstellation/pkg/apis"
 	"github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
+	"github.com/davidzhao/konstellation/pkg/nodepool"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
 	"github.com/manifoldco/promptui"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 	"k8s.io/apimachinery/pkg/runtime"
-	ktypes "k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	kconf "sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -221,8 +221,19 @@ func clusterGetToken(c *cli.Context) error {
 	return nil
 }
 
-func getKubeClusterConfig(kclient client.Client) (nodepool *v1alpha1.Nodepool, err error) {
-	err = kclient.Get(context.Background(), ktypes.NamespacedName{Name: providers.KUBE_NODEPOOL_NAME}, nodepool)
+func getKubeClusterConfig(kclient client.Client) (np *v1alpha1.Nodepool, err error) {
+	items := v1alpha1.NodepoolList{}
+	err = kclient.List(context.Background(), &items, client.MatchingLabels{
+		nodepool.NODEPOOL_LABEL: nodepool.PRIMARY_VALUE,
+	})
+	if err != nil {
+		return
+	}
+	if len(items.Items) == 0 {
+		err = fmt.Errorf("No nodepools found")
+		return
+	}
+	np = &items.Items[0]
 	return
 }
 

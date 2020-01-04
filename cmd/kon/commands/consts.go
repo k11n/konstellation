@@ -7,10 +7,10 @@ The created cluster will use sane defaults for network configurations. If custom
 
 var (
 	KUBE_RESOURCES = []string{
-		"operator.yaml",
 		"service_account.yaml",
 		"role.yaml",
 		"role_binding.yaml",
 		"crds/konstellation.dev_nodepools_crd.yaml",
+		// "operator.yaml",
 	}
 )
