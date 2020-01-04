@@ -3,6 +3,19 @@ kind: CustomResourceDefinition
 metadata:
   name: nodepools.konstellation.dev
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.autoscale
+    name: AutoScale
+    type: boolean
+  - JSONPath: .spec.minSize
+    name: MinSize
+    type: integer
+  - JSONPath: .spec.maxSize
+    name: MaxSize
+    type: integer
+  - JSONPath: .status.numReady
+    name: NumReady
+    type: string
   group: konstellation.dev
   names:
     kind: Nodepool
@@ -78,6 +91,16 @@ spec:
           type: object
         status:
           description: NodepoolStatus defines the observed state of Nodepool
+          properties:
+            nodes:
+              items:
+                type: string
+              type: array
+            numReady:
+              type: integer
+          required:
+          - nodes
+          - numReady
           type: object
       type: object
   version: v1alpha1

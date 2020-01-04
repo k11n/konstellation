@@ -36,6 +36,10 @@ type NodepoolStatus struct {
 // Nodepool is the Schema for the nodepools API
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodepools,scope=Cluster
+// +kubebuilder:printcolumn:name="AutoScale",type=boolean,JSONPath=`.spec.autoscale`
+// +kubebuilder:printcolumn:name="MinSize",type=integer,JSONPath=`.spec.minSize`
+// +kubebuilder:printcolumn:name="MaxSize",type=integer,JSONPath=`.spec.maxSize`
+// +kubebuilder:printcolumn:name="NumReady",type=string,JSONPath=`.status.numReady`
 type Nodepool struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
