@@ -15,7 +15,6 @@ import (
 	"github.com/davidzhao/konstellation/cmd/kon/templates"
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/apis"
-	"github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
 	"github.com/davidzhao/konstellation/pkg/nodepool"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
@@ -153,18 +152,13 @@ func clusterSelect(c *cli.Context) error {
 		return err
 	}
 
-	// check if nodepool is ready, if so, skip configuration
-	kclient, err := KubernetesClient()
+	err = configureCluster(cloud, conf.SelectedCluster)
 	if err != nil {
 		return err
 	}
-	_, err = getKubeClusterConfig(kclient)
-	if err != nil {
-		// need to configure cluster
-		return configureCluster(cloud, conf.SelectedCluster)
-	}
 
-	return nil
+	// configure nodepool & cluster
+	return configureNodepool(cloud, conf.SelectedCluster)
 }
 
 func configureCluster(cloud providers.CloudProvider, clusterName string) error {
@@ -176,27 +170,61 @@ func configureCluster(cloud providers.CloudProvider, clusterName string) error {
 		}
 	}
 
-	np, err := cloud.ConfigureCluster(clusterName)
-	if err != nil {
-		return err
-	}
+	return nil
+}
 
-	// save spec to Kube
+// check nodepool status, if ready continue
+func configureNodepool(cloud providers.CloudProvider, clusterName string) error {
 	kclient, err := KubernetesClient()
 	if err != nil {
 		return err
 	}
-	err = kclient.Create(context.Background(), np)
+	np, err := nodepool.GetNodepoolOfType(kclient, nodepool.NODEPOOL_PRIMARY)
+
+	if err != nil && np == nil {
+		// set configuration for the first time
+		np, err = cloud.ConfigureNodepool(clusterName)
+		if err != nil {
+			return err
+		}
+
+		// save spec to Kube
+		err = kclient.Create(context.Background(), np)
+		if err != nil {
+			return err
+		}
+	}
+
+	// if kube status is already reconciled, we can skip
+	if np.Status.NumReady > 0 {
+		return nil
+	}
+
+	// check aws nodepool status. if it doesn't exist, then create it
+	kubeProvider := cloud.KubernetesProvider()
+	ready, err := kubeProvider.IsNodepoolReady(context.Background(),
+		clusterName, np.GetObjectMeta().GetName())
 	if err != nil {
-		return err
+		// nodepool doesn't exist, create it
+		err = kubeProvider.CreateNodepool(context.Background(), clusterName, np, nodepool.NODEPOOL_PRIMARY)
+		if err != nil {
+			return err
+		}
 	}
 
 	// wait for completion
-	fmt.Printf("Waiting for nodepool become ready, this may take a few minutes\n")
-	err = utils.WaitUntilComplete(utils.LongTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
-		return cloud.KubernetesProvider().IsNodepoolReady(context.Background(),
-			clusterName, np.GetObjectMeta().GetName())
-	})
+	if !ready {
+		fmt.Printf("Waiting for nodepool become ready, this may take a few minutes\n")
+		err = utils.WaitUntilComplete(utils.LongTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
+			return kubeProvider.IsNodepoolReady(context.Background(),
+				clusterName, np.GetObjectMeta().GetName())
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	err = nodepool.UpdateStatus(kclient, np)
 	if err != nil {
 		return err
 	}
@@ -219,22 +247,6 @@ func clusterGetToken(c *cli.Context) error {
 	fmt.Println(string(result))
 
 	return nil
-}
-
-func getKubeClusterConfig(kclient client.Client) (np *v1alpha1.Nodepool, err error) {
-	items := v1alpha1.NodepoolList{}
-	err = kclient.List(context.Background(), &items, client.MatchingLabels{
-		nodepool.NODEPOOL_LABEL: nodepool.PRIMARY_VALUE,
-	})
-	if err != nil {
-		return
-	}
-	if len(items.Items) == 0 {
-		err = fmt.Errorf("No nodepools found")
-		return
-	}
-	np = &items.Items[0]
-	return
 }
 
 func printClusterSection(section providers.CloudProvider, clusters []*types.Cluster) {

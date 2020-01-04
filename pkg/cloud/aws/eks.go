@@ -8,10 +8,13 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
 	resources "github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
+	"github.com/davidzhao/konstellation/pkg/nodepool"
 )
 
 const (
@@ -127,7 +130,23 @@ func (s *EKSService) IsNodepoolReady(ctx context.Context, clusterName string, no
 	return
 }
 
-func NodepoolSpecToCreateInput(cluster string, np *resources.Nodepool) *eks.CreateNodegroupInput {
+func (s *EKSService) CreateNodepool(ctx context.Context, clusterName string, np *v1alpha1.Nodepool, purpose string) error {
+	createInput := nodepoolSpecToCreateInput(clusterName, np, map[string]string{
+		nodepool.NODEPOOL_LABEL: purpose,
+	})
+	subnets, err := ListSubnets(ec2.New(s.session), np.Spec.AWS.VpcID)
+	if err != nil {
+		return err
+	}
+	for _, subnet := range subnets {
+		createInput.Subnets = append(createInput.Subnets, subnet.SubnetId)
+	}
+
+	_, err = s.EKS.CreateNodegroup(createInput)
+	return err
+}
+
+func nodepoolSpecToCreateInput(cluster string, np *resources.Nodepool, labels map[string]string) *eks.CreateNodegroupInput {
 	nps := np.Spec
 	cni := eks.CreateNodegroupInput{}
 	cni.SetClusterName(cluster)
@@ -155,5 +174,13 @@ func NodepoolSpecToCreateInput(cluster string, np *resources.Nodepool) *eks.Crea
 		tags[TagAutoscalerEnabled] = &TagValueTrue
 	}
 	cni.SetTags(tags)
+	if labels != nil {
+		convertedLabels := make(map[string]*string)
+		for key, val := range labels {
+			convertedLabels[key] = &val
+		}
+		cni.SetLabels(convertedLabels)
+	}
+
 	return &cni
 }

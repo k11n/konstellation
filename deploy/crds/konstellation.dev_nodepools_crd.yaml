@@ -47,11 +47,14 @@ spec:
                   type: string
                 sshKeypair:
                   type: string
+                vpcId:
+                  type: string
               required:
               - amiType
               - connectFromAnywhere
               - roleArn
               - sshKeypair
+              - vpcId
               type: object
             diskSizeGiB:
               type: integer

@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	dateTimeFormat = "2006-01-02T15:04"
+	dateTimeFormat = "20060102-1504"
 )
 
 func NodepoolName() string {

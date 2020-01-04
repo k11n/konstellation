@@ -17,7 +17,8 @@ type NodepoolSpec struct {
 
 type NodePoolAWS struct {
 	RoleARN             string `json:"roleArn" desc:"Node role"`
-	AMIType             string `json:"amiType"`
+	VpcID               string `json:"vpcId" desc:"VPC ID"`
+	AMIType             string `json:"amiType" desc:"AMI Type"`
 	SSHKeypair          string `json:"sshKeypair" desc:"SSH keypair"`
 	ConnectFromAnywhere bool   `json:"connectFromAnywhere" desc:"Allow connection from internet"`
 	SecurityGroupId     string `json:"securityGroupId,omitempty"`
@@ -26,9 +27,8 @@ type NodePoolAWS struct {
 
 // NodepoolStatus defines the observed state of Nodepool
 type NodepoolStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+	Nodes    []string `json:"nodes"`
+	NumReady int      `json:"numReady"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
