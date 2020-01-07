@@ -3,7 +3,7 @@ package cloud
 import (
 	"context"
 
-	"github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
+	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
 )
 

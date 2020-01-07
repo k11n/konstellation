@@ -67,10 +67,11 @@ rules:
   verbs:
   - get
 - apiGroups:
-  - konstellation.dev
+  - k11n.dev
   resources:
   - '*'
   - clusterconfigs
+  - clustercomponents
   verbs:
   - create
   - delete

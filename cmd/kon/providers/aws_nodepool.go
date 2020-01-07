@@ -15,8 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/pricing"
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
-	"github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
-	resources "github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
+	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
 	"github.com/davidzhao/konstellation/pkg/nodepool"
 	"github.com/manifoldco/promptui"
@@ -30,8 +29,8 @@ func (a *AWSProvider) ConfigureNodepool(name string) (np *v1alpha1.Nodepool, err
 		return
 	}
 
-	nps := resources.NodepoolSpec{
-		AWS: &resources.NodePoolAWS{},
+	nps := v1alpha1.NodepoolSpec{
+		AWS: &v1alpha1.NodePoolAWS{},
 	}
 	eksSvc := kaws.NewEKSService(sess)
 	iamSvc := kaws.NewIAMService(sess)

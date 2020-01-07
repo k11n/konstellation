@@ -11,8 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
-	resources "github.com/davidzhao/konstellation/pkg/apis/konstellation/v1alpha1"
+	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
 )
 
@@ -143,7 +142,7 @@ func (s *EKSService) CreateNodepool(ctx context.Context, clusterName string, np 
 	return err
 }
 
-func nodepoolSpecToCreateInput(cluster string, np *resources.Nodepool) *eks.CreateNodegroupInput {
+func nodepoolSpecToCreateInput(cluster string, np *v1alpha1.Nodepool) *eks.CreateNodegroupInput {
 	nps := np.Spec
 	cni := eks.CreateNodegroupInput{}
 	cni.SetClusterName(cluster)

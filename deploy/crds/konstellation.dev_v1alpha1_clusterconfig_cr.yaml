@@ -1,7 +1,0 @@
-apiVersion: konstellation.dev/v1alpha1
-kind: ClusterConfig
-metadata:
-  name: example-clusterconfig
-spec:
-  # Add fields here
-  size: 3

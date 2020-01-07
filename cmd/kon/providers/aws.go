@@ -187,11 +187,14 @@ func (a *AWSProvider) CreateCluster() (name string, err error) {
 		sgIds = append(sgIds, sg.GroupId)
 	}
 
-	// create Vpc config request
-	input.SetResourcesVpcConfig(&eks.VpcConfigRequest{
+	resConf := &eks.VpcConfigRequest{
 		SubnetIds:        subnetIds,
 		SecurityGroupIds: sgIds,
-	})
+	}
+	resConf.SetEndpointPrivateAccess(true)
+	resConf.SetEndpointPublicAccess(true)
+	// create Vpc config request
+	input.SetResourcesVpcConfig(resConf)
 
 	// create EKS Cluster
 	eksResult, err := eksSvc.EKS.CreateCluster(&input)

@@ -5,7 +5,7 @@ import (
 )
 
 func TestTempfileFromResource(t *testing.T) {
-	name := "crds/konstellation.dev_nodepools_crd.yaml"
+	name := "crds/k11n.dev_nodepools_crd.yaml"
 	_, err := TempfileFromResource(name)
 	if err != nil {
 		t.Fatalf("Could not load tempfile %s", name)

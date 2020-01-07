@@ -37,6 +37,7 @@ type NodepoolStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodepools,scope=Cluster
 // +kubebuilder:printcolumn:name="AutoScale",type=boolean,JSONPath=`.spec.autoscale`
+// +kubebuilder:printcolumn:name="MachineType",type=integer,JSONPath=`.spec.machineType`
 // +kubebuilder:printcolumn:name="MinSize",type=integer,JSONPath=`.spec.minSize`
 // +kubebuilder:printcolumn:name="MaxSize",type=integer,JSONPath=`.spec.maxSize`
 // +kubebuilder:printcolumn:name="NumReady",type=string,JSONPath=`.status.numReady`

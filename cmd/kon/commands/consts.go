@@ -10,7 +10,8 @@ var (
 		"service_account.yaml",
 		"role.yaml",
 		"role_binding.yaml",
-		"crds/konstellation.dev_nodepools_crd.yaml",
+		"crds/k11n.dev_nodepools_crd.yaml",
+		"crds/k11n.dev_clusterconfigs_crd.yaml",
 		// "operator.yaml",
 	}
 )

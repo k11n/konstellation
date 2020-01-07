@@ -152,10 +152,10 @@ func clusterSelect(c *cli.Context) error {
 		return err
 	}
 
-	// err = configureCluster(cloud, conf.SelectedCluster)
-	// if err != nil {
-	// 	return err
-	// }
+	err = configureCluster(cloud, conf.SelectedCluster)
+	if err != nil {
+		return err
+	}
 
 	// configure nodepool & cluster
 	return configureNodepool(cloud, conf.SelectedCluster)

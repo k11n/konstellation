@@ -1,9 +1,9 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: clusterconfigs.konstellation.dev
+  name: clusterconfigs.k11n.dev
 spec:
-  group: konstellation.dev
+  group: k11n.dev
   names:
     kind: ClusterConfig
     listKind: ClusterConfigList
