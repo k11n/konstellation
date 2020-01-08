@@ -4,34 +4,27 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 
 	rice "github.com/GeertJohan/go.rice"
+	"github.com/davidzhao/konstellation/pkg/utils/cli"
 )
 
 func KubeApply(filename string) error {
-	filepath, err := TempfileFromResource(filename)
+	filepath, err := TempfileFromDeployResource(filename)
 	if err != nil {
 		return err
 	}
 	defer os.Remove(filepath)
 
-	return KubeCtl("apply", "-f", filepath)
+	return cli.KubeCtl("apply", "-f", filepath)
 }
 
-func KubeCtl(args ...string) error {
-	cmd := exec.Command("kubectl", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
-
-func ResourcesBox() *rice.Box {
+func DeployResourcesBox() *rice.Box {
 	return rice.MustFindBox("../../../deploy")
 }
 
-func TempfileFromResource(name string) (temppath string, err error) {
-	source, err := ResourcesBox().Open(name)
+func TempfileFromDeployResource(name string) (temppath string, err error) {
+	source, err := DeployResourcesBox().Open(name)
 	if err != nil {
 		return
 	}

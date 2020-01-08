@@ -8,8 +8,8 @@ import (
 type Component interface {
 	Name() string
 	Version() string
-	// check if local CLI is installed locally
-	IsCLIInstalled() (bool, error)
+	// returns true if CLI is needed and has not yet been installed
+	NeedsCLI() bool
 	// installs CLI locally
 	InstallCLI() error
 	// installs the component onto the kube cluster
