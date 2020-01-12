@@ -13,18 +13,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type LinkerdComponent struct {
+type LinkerdInstaller struct {
 }
 
-func (c *LinkerdComponent) Name() string {
+func (c *LinkerdInstaller) Name() string {
 	return "linkerd"
 }
 
-func (c *LinkerdComponent) Version() string {
+func (c *LinkerdInstaller) Version() string {
 	return "stable-2.6.1"
 }
 
-func (c *LinkerdComponent) NeedsCLI() bool {
+func (c *LinkerdInstaller) NeedsCLI() bool {
 	p := c.cliPath()
 	if _, err := os.Stat(p); err != nil {
 		// not installed
@@ -38,6 +38,7 @@ func (c *LinkerdComponent) NeedsCLI() bool {
 		return true
 	}
 
+	// TODO: more sophisticated version parsing
 	if strings.HasPrefix(string(output), fmt.Sprintf("Client version: %s", c.Version())) {
 		return false
 	}
@@ -45,7 +46,7 @@ func (c *LinkerdComponent) NeedsCLI() bool {
 	return true
 }
 
-func (c *LinkerdComponent) InstallCLI() error {
+func (c *LinkerdInstaller) InstallCLI() error {
 	tmpdir, err := ioutil.TempDir("", "linkerd")
 	if err != nil {
 		return err
@@ -84,19 +85,19 @@ func (c *LinkerdComponent) InstallCLI() error {
 	return os.Symlink(path.Join(c.installRoot(), "bin", "linkerd"), c.cliPath())
 }
 
-func (c *LinkerdComponent) InstallComponent(kclient client.Client) error {
+func (c *LinkerdInstaller) InstallComponent(kclient client.Client) error {
 	return nil
 }
 
-func (c *LinkerdComponent) installRoot() string {
+func (c *LinkerdInstaller) installRoot() string {
 	return path.Join(cli.GetRootDir(), "linkerd2")
 }
 
-func (c *LinkerdComponent) cliPath() string {
+func (c *LinkerdInstaller) cliPath() string {
 	return path.Join(cli.GetBinDir(), "linkerd")
 }
 
-func (c *LinkerdComponent) runBufferedCommand(args ...string) ([]byte, error) {
+func (c *LinkerdInstaller) runBufferedCommand(args ...string) ([]byte, error) {
 	cmd := exec.Command(c.cliPath(), args...)
 	return cmd.CombinedOutput()
 }

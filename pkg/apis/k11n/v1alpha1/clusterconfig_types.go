@@ -7,18 +7,21 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type ClusterComponent struct {
+	Name    string            `json:"name"`
+	Version string            `json:"version"`
+	Config  map[string]string `json:"config"`
+}
+
 // ClusterConfigSpec defines the desired state of ClusterConfig
 type ClusterConfigSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+	Version    string             `json:"version"`
+	Components []ClusterComponent `json:"components"`
 }
 
 // ClusterConfigStatus defines the observed state of ClusterConfig
 type ClusterConfigStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
+	InstalledComponents []string `json:"components"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

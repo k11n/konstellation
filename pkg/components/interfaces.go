@@ -1,11 +1,11 @@
-package copmonents
+package components
 
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type Component interface {
+type ComponentInstaller interface {
 	Name() string
 	Version() string
 	// returns true if CLI is needed and has not yet been installed

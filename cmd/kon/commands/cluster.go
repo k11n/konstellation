@@ -15,9 +15,11 @@ import (
 	"github.com/davidzhao/konstellation/cmd/kon/templates"
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/apis"
+	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
-	"github.com/davidzhao/konstellation/pkg/nodepool"
+	"github.com/davidzhao/konstellation/pkg/resources"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
+	"github.com/davidzhao/konstellation/version"
 	"github.com/manifoldco/promptui"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
@@ -162,11 +164,66 @@ func clusterSelect(c *cli.Context) error {
 }
 
 func configureCluster(cloud providers.CloudProvider, clusterName string) error {
-	// load new resources into kube
-	for _, file := range KUBE_RESOURCES {
-		err := utils.KubeApply(file)
+	kclient, err := KubernetesClient()
+	if err != nil {
+		return err
+	}
+	// get cluster config and status, if all of the components are installed, then we are good to go
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		// create initial config
+		cc = &v1alpha1.ClusterConfig{
+			Spec: v1alpha1.ClusterConfigSpec{
+				Version: version.Version,
+			},
+		}
+		cc.ObjectMeta.Name = clusterName
+		for _, comp := range config.Components {
+			cc.Spec.Components = append(cc.Spec.Components, v1alpha1.ClusterComponent{
+				Name:    comp.Name(),
+				Version: comp.Version(),
+			})
+		}
+		err = kclient.Create(context.Background(), cc)
 		if err != nil {
-			return errors.Wrapf(err, "Unable to apply config %s", file)
+			return err
+		}
+
+		// load new resources into kube
+		for _, file := range KUBE_RESOURCES {
+			err := utils.KubeApply(file)
+			if err != nil {
+				return errors.Wrapf(err, "Unable to apply config %s", file)
+			}
+		}
+	}
+
+	// now install all these resources
+	installed := make(map[string]bool)
+	for _, comp := range cc.Status.InstalledComponents {
+		installed[comp] = true
+	}
+
+	for _, comp := range config.Components {
+		if installed[comp.Name()] {
+			continue
+		}
+		if comp.NeedsCLI() {
+			err = comp.InstallCLI()
+			if err != nil {
+				return err
+			}
+		}
+		err = comp.InstallComponent(kclient)
+		if err != nil {
+			return err
+		}
+
+		// mark it as installed
+		cc.Status.InstalledComponents = append(cc.Status.InstalledComponents, comp.Name())
+		err = kclient.Status().Update(context.Background(), cc)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -179,7 +236,7 @@ func configureNodepool(cloud providers.CloudProvider, clusterName string) error 
 	if err != nil {
 		return err
 	}
-	np, err := nodepool.GetNodepoolOfType(kclient, nodepool.NODEPOOL_PRIMARY)
+	np, err := resources.GetNodepoolOfType(kclient, resources.NODEPOOL_PRIMARY)
 
 	if err != nil && np == nil {
 		// set configuration for the first time
@@ -188,7 +245,7 @@ func configureNodepool(cloud providers.CloudProvider, clusterName string) error 
 			return err
 		}
 		np.SetLabels(map[string]string{
-			nodepool.NODEPOOL_LABEL: nodepool.NODEPOOL_PRIMARY,
+			resources.NODEPOOL_LABEL: resources.NODEPOOL_PRIMARY,
 		})
 
 		// save spec to Kube
@@ -209,7 +266,7 @@ func configureNodepool(cloud providers.CloudProvider, clusterName string) error 
 		clusterName, np.GetObjectMeta().GetName())
 	if err != nil {
 		// nodepool doesn't exist, create it
-		err = kubeProvider.CreateNodepool(context.Background(), clusterName, np, nodepool.NODEPOOL_PRIMARY)
+		err = kubeProvider.CreateNodepool(context.Background(), clusterName, np, resources.NODEPOOL_PRIMARY)
 		if err != nil {
 			return err
 		}
@@ -227,7 +284,7 @@ func configureNodepool(cloud providers.CloudProvider, clusterName string) error 
 		}
 	}
 
-	err = nodepool.UpdateStatus(kclient, np)
+	err = resources.UpdateStatus(kclient, np)
 	if err != nil {
 		return err
 	}

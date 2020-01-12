@@ -12,7 +12,7 @@ func TestInstallLinkerd(t *testing.T) {
 	rootDir := cli.TestSetRootTempdir()
 	defer os.RemoveAll(rootDir)
 
-	l := LinkerdComponent{}
+	l := LinkerdInstaller{}
 	if !l.NeedsCLI() {
 		// this should be true.. nothing's installed yet
 		t.Fatalf("cli is not installed, but reporting uneeded")

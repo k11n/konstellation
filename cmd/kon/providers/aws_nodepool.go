@@ -17,7 +17,7 @@ import (
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
-	"github.com/davidzhao/konstellation/pkg/nodepool"
+	"github.com/davidzhao/konstellation/pkg/resources"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cast"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -194,7 +194,7 @@ func (a *AWSProvider) ConfigureNodepool(name string) (np *v1alpha1.Nodepool, err
 	// execute plan & save config
 	np = &v1alpha1.Nodepool{
 		ObjectMeta: v1.ObjectMeta{
-			Name: nodepool.NodepoolName(),
+			Name: resources.NodepoolName(),
 		},
 		Spec: nps,
 	}

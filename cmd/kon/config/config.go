@@ -5,11 +5,17 @@ import (
 	"path"
 
 	"gopkg.in/yaml.v2"
+
+	"github.com/davidzhao/konstellation/pkg/components"
+	"github.com/davidzhao/konstellation/pkg/components/linkerd"
 )
 
 var (
 	defaultConfigDir = os.ExpandEnv("$HOME/.konstellation")
 	config           *ClientConfig
+	Components       = []components.ComponentInstaller{
+		&linkerd.LinkerdInstaller{},
+	}
 )
 
 const (

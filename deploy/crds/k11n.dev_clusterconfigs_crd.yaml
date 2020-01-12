@@ -9,7 +9,7 @@ spec:
     listKind: ClusterConfigList
     plural: clusterconfigs
     singular: clusterconfig
-  scope: Namespaced
+  scope: Cluster
   subresources:
     status: {}
   validation:
@@ -30,9 +30,39 @@ spec:
           type: object
         spec:
           description: ClusterConfigSpec defines the desired state of ClusterConfig
+          properties:
+            components:
+              items:
+                properties:
+                  config:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  name:
+                    type: string
+                  version:
+                    type: string
+                required:
+                - config
+                - name
+                - version
+                type: object
+              type: array
+            version:
+              type: string
+          required:
+          - components
+          - version
           type: object
         status:
           description: ClusterConfigStatus defines the observed state of ClusterConfig
+          properties:
+            components:
+              items:
+                type: string
+              type: array
+          required:
+          - components
           type: object
       type: object
   version: v1alpha1
