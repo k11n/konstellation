@@ -9,7 +9,7 @@ spec:
     type: boolean
   - JSONPath: .spec.machineType
     name: MachineType
-    type: integer
+    type: string
   - JSONPath: .spec.minSize
     name: MinSize
     type: integer
