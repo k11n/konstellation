@@ -1,6 +1,7 @@
 package linkerd
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -86,7 +87,16 @@ func (c *LinkerdInstaller) InstallCLI() error {
 }
 
 func (c *LinkerdInstaller) InstallComponent(kclient client.Client) error {
-	return nil
+	output := new(bytes.Buffer)
+	cmd := exec.Command(c.cliPath(), "install")
+	cmd.Stdout = output
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+
+	return cli.KubeApplyReader(output)
 }
 
 func (c *LinkerdInstaller) installRoot() string {

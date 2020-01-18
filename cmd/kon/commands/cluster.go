@@ -143,8 +143,35 @@ func clusterSelect(c *cli.Context) error {
 	if cloud == nil {
 		return nil
 	}
+	kubeProvider := cloud.KubernetesProvider()
+	cluster, err := kubeProvider.GetCluster(context.Background(), conf.SelectedCluster)
+	if err != nil {
+		return err
+	}
 
-	err := generateKubeConfig(cloud, conf.SelectedCluster)
+	if cluster.Status == types.StatusCreating {
+		fmt.Println("Waiting for cluster to become ready")
+		err = utils.WaitUntilComplete(utils.LongTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
+			cluster, err := kubeProvider.GetCluster(context.Background(), conf.SelectedCluster)
+			if err != nil {
+				return false, err
+			}
+			if cluster.Status == types.StatusCreating {
+				return false, nil
+			} else if cluster.Status == types.StatusActive {
+				return true, nil
+			} else {
+				return false, fmt.Errorf("Unexpected cluster status: %s", cluster.Status)
+			}
+		})
+		if err != nil {
+			return err
+		}
+	} else if cluster.Status != types.StatusActive {
+		return fmt.Errorf("Cannot select cluster, status: %s", cluster.Status.String())
+	}
+
+	err = generateKubeConfig(cloud, conf.SelectedCluster)
 	if err != nil {
 		return err
 	}
@@ -191,7 +218,7 @@ func configureCluster(cloud providers.CloudProvider, clusterName string) error {
 
 		// load new resources into kube
 		for _, file := range KUBE_RESOURCES {
-			err := utils.KubeApply(file)
+			err := utils.KubeApplyFile(file)
 			if err != nil {
 				return errors.Wrapf(err, "Unable to apply config %s", file)
 			}
@@ -205,14 +232,16 @@ func configureCluster(cloud providers.CloudProvider, clusterName string) error {
 	}
 
 	for _, comp := range config.Components {
-		if installed[comp.Name()] {
-			continue
-		}
+		// always recheck CLI status
 		if comp.NeedsCLI() {
 			err = comp.InstallCLI()
 			if err != nil {
 				return err
 			}
+		}
+
+		if installed[comp.Name()] {
+			continue
 		}
 		err = comp.InstallComponent(kclient)
 		if err != nil {

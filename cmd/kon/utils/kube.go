@@ -9,7 +9,7 @@ import (
 	"github.com/davidzhao/konstellation/pkg/utils/cli"
 )
 
-func KubeApply(filename string) error {
+func KubeApplyFile(filename string) error {
 	filepath, err := TempfileFromDeployResource(filename)
 	if err != nil {
 		return err

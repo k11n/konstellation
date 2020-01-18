@@ -83,7 +83,7 @@ func (s *EKSService) GetCluster(ctx context.Context, name string) (cluster *type
 	if ec.Endpoint != nil {
 		cluster.Endpoint = *ec.Endpoint
 	}
-	if ec.CertificateAuthority != nil {
+	if ec.CertificateAuthority != nil && ec.CertificateAuthority.Data != nil {
 		cluster.CertificateAuthorityData = *ec.CertificateAuthority.Data
 	}
 	return
