@@ -187,7 +187,12 @@ func clusterSelect(c *cli.Context) error {
 	}
 
 	// configure nodepool & cluster
-	return configureNodepool(cloud, conf.SelectedCluster)
+	err = configureNodepool(cloud, conf.SelectedCluster)
+	if err != nil {
+		return err
+	}
+
+	return installComponents(cloud, conf.SelectedCluster)
 }
 
 func configureCluster(cloud providers.CloudProvider, clusterName string) error {
@@ -238,39 +243,6 @@ func configureCluster(cloud providers.CloudProvider, clusterName string) error {
 		}
 	}
 
-	// now install all these resources
-	installed := make(map[string]bool)
-	for _, comp := range cc.Status.InstalledComponents {
-		installed[comp] = true
-	}
-
-	for _, comp := range config.Components {
-		// always recheck CLI status
-		if comp.NeedsCLI() {
-			fmt.Printf("Installing CLI for %s\n", comp.Name())
-			err = comp.InstallCLI()
-			if err != nil {
-				return err
-			}
-		}
-
-		if installed[comp.Name()] {
-			continue
-		}
-		fmt.Printf("Installing Kubernetes components for %s\n", comp.Name())
-		err = comp.InstallComponent(kclient)
-		if err != nil {
-			return err
-		}
-
-		// mark it as installed
-		cc.Status.InstalledComponents = append(cc.Status.InstalledComponents, comp.Name())
-		err = kclient.Status().Update(context.Background(), cc)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -304,6 +276,8 @@ func configureNodepool(cloud providers.CloudProvider, clusterName string) error 
 		return nil
 	}
 
+	fmt.Println("Creating nodepool")
+
 	// check aws nodepool status. if it doesn't exist, then create it
 	kubeProvider := cloud.KubernetesProvider()
 	ready, err := kubeProvider.IsNodepoolReady(context.Background(),
@@ -334,6 +308,47 @@ func configureNodepool(cloud providers.CloudProvider, clusterName string) error 
 	}
 
 	fmt.Printf("Successfully created nodepool %s\n", np.GetObjectMeta().GetName())
+	return nil
+}
+
+func installComponents(cloud providers.CloudProvider, cluster string) error {
+	kclient, err := KubernetesClient()
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return err
+	}
+	// now install all these resources
+	installed := make(map[string]bool)
+	for _, comp := range cc.Status.InstalledComponents {
+		installed[comp] = true
+	}
+
+	for _, comp := range config.Components {
+		// always recheck CLI status
+		if comp.NeedsCLI() {
+			fmt.Printf("Installing CLI for %s\n", comp.Name())
+			err = comp.InstallCLI()
+			if err != nil {
+				return err
+			}
+		}
+
+		if installed[comp.Name()] {
+			continue
+		}
+		fmt.Printf("Installing Kubernetes components for %s\n", comp.Name())
+		err = comp.InstallComponent(kclient)
+		if err != nil {
+			return err
+		}
+
+		// mark it as installed
+		cc.Status.InstalledComponents = append(cc.Status.InstalledComponents, comp.Name())
+		err = kclient.Status().Update(context.Background(), cc)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
