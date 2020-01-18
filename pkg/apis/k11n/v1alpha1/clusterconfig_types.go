@@ -8,9 +8,11 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 type ClusterComponent struct {
-	Name    string            `json:"name"`
-	Version string            `json:"version"`
-	Config  map[string]string `json:"config"`
+	Name    string `json:"name"`
+	Version string `json:"version"`
+	// +kubebuilder:validation:Optional
+	// +nullable
+	Config map[string]string `json:"config"`
 }
 
 // ClusterConfigSpec defines the desired state of ClusterConfig

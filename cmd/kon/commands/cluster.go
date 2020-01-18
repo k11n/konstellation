@@ -198,6 +198,27 @@ func configureCluster(cloud providers.CloudProvider, clusterName string) error {
 	// get cluster config and status, if all of the components are installed, then we are good to go
 	cc, err := resources.GetClusterConfig(kclient)
 	if err != nil {
+		// load new resources into kube
+		fmt.Println("Loading Konstellation resources")
+		for _, file := range KUBE_RESOURCES {
+			err := utils.KubeApplyFile(file)
+			if err != nil {
+				return errors.Wrapf(err, "Unable to apply config %s", file)
+			}
+		}
+
+		err = utils.WaitUntilComplete(utils.ShortTimeoutSec, utils.MediumCheckInterval, func() (bool, error) {
+			_, err := resources.GetClusterConfig(kclient)
+			if err != resources.ErrNotFound {
+				return false, nil
+			} else {
+				return true, nil
+			}
+		})
+		if err != nil {
+			return err
+		}
+
 		// create initial config
 		cc = &v1alpha1.ClusterConfig{
 			Spec: v1alpha1.ClusterConfigSpec{
@@ -215,14 +236,6 @@ func configureCluster(cloud providers.CloudProvider, clusterName string) error {
 		if err != nil {
 			return err
 		}
-
-		// load new resources into kube
-		for _, file := range KUBE_RESOURCES {
-			err := utils.KubeApplyFile(file)
-			if err != nil {
-				return errors.Wrapf(err, "Unable to apply config %s", file)
-			}
-		}
 	}
 
 	// now install all these resources
@@ -234,6 +247,7 @@ func configureCluster(cloud providers.CloudProvider, clusterName string) error {
 	for _, comp := range config.Components {
 		// always recheck CLI status
 		if comp.NeedsCLI() {
+			fmt.Printf("Installing CLI for %s\n", comp.Name())
 			err = comp.InstallCLI()
 			if err != nil {
 				return err
@@ -243,6 +257,7 @@ func configureCluster(cloud providers.CloudProvider, clusterName string) error {
 		if installed[comp.Name()] {
 			continue
 		}
+		fmt.Printf("Installing Kubernetes components for %s\n", comp.Name())
 		err = comp.InstallComponent(kclient)
 		if err != nil {
 			return err

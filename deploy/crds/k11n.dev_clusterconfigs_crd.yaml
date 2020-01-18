@@ -37,13 +37,13 @@ spec:
                   config:
                     additionalProperties:
                       type: string
+                    nullable: true
                     type: object
                   name:
                     type: string
                   version:
                     type: string
                 required:
-                - config
                 - name
                 - version
                 type: object

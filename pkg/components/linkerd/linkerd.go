@@ -67,6 +67,7 @@ func (c *LinkerdInstaller) InstallCLI() error {
 		return err
 	}
 
+	// fmt.Printf("running install cmd: %s\n", installCmd)
 	cmd := exec.Command(installCmd)
 	cmd.Env = []string{
 		fmt.Sprintf("LINKERD2_VERSION=%s", c.Version()),
