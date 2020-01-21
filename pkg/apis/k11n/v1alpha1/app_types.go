@@ -7,9 +7,11 @@ import (
 
 // AppSpec defines the desired state of App
 type AppSpec struct {
-	Ports      []PortSpec `json:"ports,omitempty"`
-	DockerRepo string     `json:"docker_repo,omitempty"`
-	Image      string     `json:"image"`
+	DockerRepo string `json:"docker_repo,omitempty"`
+	Image      string `json:"image"`
+
+	// +optional
+	Ports []PortSpec `json:"ports,omitempty"`
 
 	// +optional
 	ImageTag string `json:"image_tag,omitempty"`
@@ -28,6 +30,9 @@ type AppSpec struct {
 	Scale ScaleSpec `json:"scale,omitempty"`
 	// +optional
 	Probes ProbeConfig `json:"probes,omitempty"`
+
+	//+kubebuilder:validation:MinItems:=1
+	Targets []TargetConfig `json:"targets"`
 }
 
 // AppStatus defines the observed state of App
@@ -49,7 +54,10 @@ type AppStatus struct {
 
 // App is the Schema for the apps API
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=apps,scope=Namespaced
+// +kubebuilder:resource:path=apps,scope=Cluster
+// +kubebuilder:printcolumn:name="CurrentReplicas",type=int,JSONPath=`.status.currentReplicas`
+// +kubebuilder:printcolumn:name="DesiredReplicas",type=int,JSONPath=`.status.desiredReplicas`
+// +kubebuilder:printcolumn:name="State",type=int,JSONPath=`.status.state`
 type App struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -104,6 +112,9 @@ type ProbeConfig struct {
 type TargetConfig struct {
 	Name string `json:"name"`
 
+	// the host to match for the ingress,
+	// +optional
+	IngressHosts []string `json:"ingressHosts,omitempty"`
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
 	// +optional
