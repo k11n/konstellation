@@ -4,19 +4,48 @@ go 1.13
 
 require (
 	github.com/GeertJohan/go.rice v1.0.0
-	github.com/aws/aws-sdk-go v1.26.0
-	github.com/manifoldco/promptui v0.6.0
+	github.com/alecthomas/gometalinter v3.0.0+incompatible // indirect
+	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
+	github.com/aws/aws-sdk-go v1.28.6
+	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
+	github.com/daaku/go.zipexe v1.0.1 // indirect
+	github.com/gogo/protobuf v1.3.1 // indirect
+	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
+	github.com/gordonklaus/ineffassign v0.0.0-20190601041439-ed7b1b5ee0f8 // indirect
+	github.com/imdario/mergo v0.3.8 // indirect
+	github.com/json-iterator/go v1.1.9 // indirect
+	github.com/lunixbochs/vtclean v1.0.0 // indirect
+	github.com/manifoldco/promptui v0.7.0
+	github.com/mattn/go-colorable v0.1.4 // indirect
+	github.com/mattn/go-isatty v0.0.11 // indirect
+	github.com/mattn/go-runewidth v0.0.8 // indirect
+	github.com/nicksnyder/go-i18n v2.0.3+incompatible // indirect
+	github.com/nkovacs/streamquote v1.0.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/operator-framework/operator-sdk v0.13.0
-	github.com/pkg/errors v0.8.1
+	github.com/pelletier/go-toml v1.6.0 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/pflag v1.0.5
+	github.com/tsenart/deadcode v0.0.0-20160724212837-210d2dc333e9 // indirect
 	github.com/urfave/cli v1.22.2
+	github.com/valyala/fasttemplate v1.1.0 // indirect
 	github.com/valyala/quicktemplate v1.4.1
+	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad // indirect
+	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f // indirect
+	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa // indirect
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
+	golang.org/x/sys v0.0.0-20200120151820-655fe14d7479 // indirect
+	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
+	golang.org/x/tools v0.0.0-20200119215504-eb0d8dd85bcc // indirect
+	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
+	google.golang.org/appengine v1.6.5 // indirect
+	gopkg.in/alecthomas/kingpin.v3-unstable v3.0.0-20191105091915-95d230a53780 // indirect
 	gopkg.in/yaml.v2 v2.2.7
-	k8s.io/api v0.0.0
-	k8s.io/apimachinery v0.0.0
+	k8s.io/api v0.17.1
+	k8s.io/apimachinery v0.17.1
 	k8s.io/client-go v12.0.0+incompatible
+	k8s.io/utils v0.0.0-20200117235808-5f6fbceb4c31 // indirect
 	sigs.k8s.io/controller-runtime v0.4.0
 )
 
