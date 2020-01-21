@@ -324,15 +324,6 @@ func installComponents(cloud providers.CloudProvider, cluster string) error {
 	}
 
 	for _, comp := range config.Components {
-		// always recheck CLI status
-		if comp.NeedsCLI() {
-			fmt.Printf("Installing CLI for %s\n", comp.Name())
-			err = comp.InstallCLI()
-			if err != nil {
-				return err
-			}
-		}
-
 		if installed[comp.Name()] {
 			continue
 		}
