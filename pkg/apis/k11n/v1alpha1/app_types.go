@@ -1,6 +1,9 @@
 package v1alpha1
 
 import (
+	"fmt"
+
+	"github.com/imdario/mergo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -37,17 +40,6 @@ type AppSpec struct {
 
 // AppStatus defines the observed state of App
 type AppStatus struct {
-	CurrentReplicas int      `json:"currentReplicas"`
-	DesiredReplicas int      `json:"desiredReplicas"`
-	Pods            []string `json:"pods,omitempty"`
-
-	// +optional
-	Hostname string `json:"hostname,omitempty"`
-	// +optional
-	Ingress string `json:"ingress,omitempty"`
-
-	// TODO: this should be an enum type of some sort
-	State string `json:"state"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -55,9 +47,6 @@ type AppStatus struct {
 // App is the Schema for the apps API
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=apps,scope=Cluster
-// +kubebuilder:printcolumn:name="CurrentReplicas",type=int,JSONPath=`.status.currentReplicas`
-// +kubebuilder:printcolumn:name="DesiredReplicas",type=int,JSONPath=`.status.desiredReplicas`
-// +kubebuilder:printcolumn:name="State",type=int,JSONPath=`.status.state`
 type App struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -127,4 +116,72 @@ type TargetConfig struct {
 
 func init() {
 	SchemeBuilder.Register(&App{}, &AppList{})
+}
+
+func (a *AppSpec) ScaleSpecForTarget(target string) *ScaleSpec {
+	scale := a.Scale.DeepCopy()
+	tc := a.GetTargetConfig(target)
+
+	if tc != nil {
+		mergo.Merge(scale, &tc.Scale)
+	}
+	if scale.Min == 0 {
+		scale.Min = 1
+	}
+	if scale.Max == 0 {
+		scale.Max = scale.Min
+	}
+	return scale
+}
+
+func (a *AppSpec) EnvForTarget(target string) []corev1.EnvVar {
+	tc := a.GetTargetConfig(target)
+	env := []corev1.EnvVar{}
+	seen := map[string]bool{}
+	if tc != nil {
+		for _, ev := range tc.Env {
+			seen[ev.Name] = true
+			env = append(env, ev)
+		}
+	}
+
+	for _, ev := range a.Env {
+		if !seen[ev.Name] {
+			env = append(env, ev)
+		}
+	}
+	return env
+}
+
+func (a *AppSpec) ResourcesForTarget(target string) *corev1.ResourceRequirements {
+	res := a.Resources.DeepCopy()
+	tc := a.GetTargetConfig(target)
+	if tc != nil {
+		mergo.Merge(res, &tc.Resources)
+	}
+	return res
+}
+
+func (a *AppSpec) ProbesForTarget(target string) *ProbeConfig {
+	probes := a.Probes.DeepCopy()
+	tc := a.GetTargetConfig(target)
+	if tc != nil {
+		mergo.Merge(probes, &tc.Probes)
+	}
+	return probes
+}
+
+func (a *AppSpec) GetTargetConfig(target string) *TargetConfig {
+	var targetConf *TargetConfig
+	for i, _ := range a.Targets {
+		if a.Targets[i].Name == target {
+			targetConf = &a.Targets[i]
+			break
+		}
+	}
+	return targetConf
+}
+
+func (a *App) GetAppTargetName(target string) string {
+	return fmt.Sprintf("%s-%s", a.Name, target)
 }

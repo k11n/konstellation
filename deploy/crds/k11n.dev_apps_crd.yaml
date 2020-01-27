@@ -3,16 +3,6 @@ kind: CustomResourceDefinition
 metadata:
   name: apps.k11n.dev
 spec:
-  additionalPrinterColumns:
-  - JSONPath: .status.currentReplicas
-    name: CurrentReplicas
-    type: int
-  - JSONPath: .status.desiredReplicas
-    name: DesiredReplicas
-    type: int
-  - JSONPath: .status.state
-    name: State
-    type: int
   group: k11n.dev
   names:
     kind: App
@@ -840,26 +830,6 @@ spec:
           type: object
         status:
           description: AppStatus defines the observed state of App
-          properties:
-            currentReplicas:
-              type: integer
-            desiredReplicas:
-              type: integer
-            hostname:
-              type: string
-            ingress:
-              type: string
-            pods:
-              items:
-                type: string
-              type: array
-            state:
-              description: 'TODO: this should be an enum type of some sort'
-              type: string
-          required:
-          - currentReplicas
-          - desiredReplicas
-          - state
           type: object
       type: object
   version: v1alpha1

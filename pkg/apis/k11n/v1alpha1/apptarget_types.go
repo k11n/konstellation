@@ -1,0 +1,76 @@
+package v1alpha1
+
+import (
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// AppTargetSpec defines the desired state of AppTarget
+type AppTargetSpec struct {
+	App    string `json:"app"`
+	Target string `json:"target"`
+	Build  string `json:"build"`
+
+	// +optional
+	Ports []PortSpec `json:"ports,omitempty"`
+
+	// +optional
+	Command []string `json:"command,omitempty"`
+	// +optional
+	Args []string `json:"args,omitempty"`
+
+	// +optional
+	Env []corev1.EnvVar `json:"env,omitempty"`
+	// +optional
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	// +optional
+	Scale ScaleSpec `json:"scale,omitempty"`
+	// +optional
+	Probes ProbeConfig `json:"probes,omitempty"`
+	// +optional
+	IngressHosts []string `json:"ingressHosts,omitempty"`
+}
+
+// AppTargetStatus defines the observed state of AppTarget
+type AppTargetStatus struct {
+	CurrentReplicas int      `json:"currentReplicas"`
+	DesiredReplicas int      `json:"desiredReplicas"`
+	Pods            []string `json:"pods,omitempty"`
+
+	// +optional
+	Hostname string `json:"hostname,omitempty"`
+	// +optional
+	Ingress string `json:"ingress,omitempty"`
+
+	// TODO: this should be an enum type of some sort
+	State string `json:"state"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// AppTarget is the Schema for the apptargets API
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=apptargets,scope=Cluster
+// +kubebuilder:printcolumn:name="CurrentReplicas",type=int,JSONPath=`.status.currentReplicas`
+// +kubebuilder:printcolumn:name="DesiredReplicas",type=int,JSONPath=`.status.desiredReplicas`
+// +kubebuilder:printcolumn:name="State",type=int,JSONPath=`.status.state`
+type AppTarget struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   AppTargetSpec   `json:"spec,omitempty"`
+	Status AppTargetStatus `json:"status,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// AppTargetList contains a list of AppTarget
+type AppTargetList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []AppTarget `json:"items"`
+}
+
+func init() {
+	SchemeBuilder.Register(&AppTarget{}, &AppTargetList{})
+}

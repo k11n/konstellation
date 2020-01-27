@@ -48,10 +48,15 @@ spec:
                 - version
                 type: object
               type: array
+            targets:
+              items:
+                type: string
+              type: array
             version:
               type: string
           required:
           - components
+          - targets
           - version
           type: object
         status:

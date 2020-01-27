@@ -73,6 +73,7 @@ rules:
   - clusterconfigs
   - clustercomponents
   - apps
+  - apptargets
   verbs:
   - create
   - delete

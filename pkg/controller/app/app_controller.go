@@ -2,9 +2,10 @@ package app
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/davidzhao/konstellation/pkg/resources"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,9 +23,9 @@ import (
 var log = logf.Log.WithName("controller_app")
 
 /**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
+* App Controller is the top level handler. It generates Build(s) and AppTarget(s)
+* after figuring out the target environment
+**/
 
 // Add creates a new App Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -51,11 +52,26 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner App
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &v1alpha1.App{},
+	secondaryTypes := []runtime.Object{
+		&v1alpha1.AppTarget{},
+	}
+	for _, t := range secondaryTypes {
+		err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &v1alpha1.App{},
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	// Watch cluster config changes, as it may make it eligible to deploy a new target
+	err = c.Watch(&source.Kind{Type: &v1alpha1.ClusterConfig{}}, &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: handler.ToRequestsFunc(func(configMapObject handler.MapObject) []reconcile.Request {
+			// TODO: grab all apps and force reconcile
+			return []reconcile.Request{}
+		}),
 	})
 	if err != nil {
 		return err
@@ -82,72 +98,126 @@ type ReconcileApp struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileApp) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Result, err error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling App")
 
 	// Fetch the App instance
-	instance := &v1alpha1.App{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	app := &v1alpha1.App{}
+	err = r.client.Get(context.TODO(), request.NamespacedName, app)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			return reconcile.Result{}, nil
+			err = nil
+			return
 		}
 		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+		return
 	}
 
-	// Define a new Pod object
-	pod := newPodForCR(instance)
-
-	// Set App instance as the owner and controller
-	if err := controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
-		return reconcile.Result{}, err
+	// figure out what targets we should work with from cluster config
+	cc, err := resources.GetClusterConfig(r.client)
+	if err != nil {
+		return
 	}
 
-	// Check if this Pod already exists
-	found := &corev1.Pod{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, found)
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
-		err = r.client.Create(context.TODO(), pod)
+	appTargets := map[string]bool{}
+	for _, t := range app.Spec.Targets {
+		appTargets[t.Name] = true
+	}
+	clusterTargets := map[string]bool{}
+	for _, target := range cc.Spec.Targets {
+		clusterTargets[target] = true
+	}
+
+	hasUpdates := false
+	// deploy the intersection of app and cluster targets
+	for target, _ := range appTargets {
+		var targetUpdated bool
+		targetUpdated, err = r.reconcileAppTarget(app, target)
 		if err != nil {
-			return reconcile.Result{}, err
+			return
 		}
-
-		// Pod created successfully - don't requeue
-		return reconcile.Result{}, nil
-	} else if err != nil {
-		return reconcile.Result{}, err
+		if targetUpdated {
+			hasUpdates = true
+		}
 	}
 
-	// Pod already exists - don't requeue
-	reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", found.Namespace, "Pod.Name", found.Name)
-	return reconcile.Result{}, nil
+	// TODO: remove old targets that aren't valid
+
+	if hasUpdates {
+		res.Requeue = true
+	}
+
+	return
 }
 
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *v1alpha1.App) *corev1.Pod {
-	labels := map[string]string{
-		"app": cr.Name,
+func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string) (updated bool, err error) {
+	appTarget := newAppTargetForApp(app, target)
+	// Set App instance as the owner and controller
+	if err = controllerutil.SetControllerReference(app, appTarget, r.scheme); err != nil {
+		return
 	}
-	return &corev1.Pod{
+
+	// see if we already have a target for this
+	existing := &v1alpha1.AppTarget{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: app.GetAppTargetName(target)}, existing)
+	if err != nil && errors.IsNotFound(err) {
+		// create new
+		log.Info("Creating new AppTarget", "app", app.Name, "target", target)
+		err = r.client.Create(context.TODO(), appTarget)
+		updated = true
+		return
+	} else if err != nil {
+		return
+	}
+
+	if !reflect.DeepEqual(existing.Spec, appTarget.Spec) {
+		// update the new instance
+		log.Info("Updating AppTarget with new spec", "appTarget", appTarget.Name)
+		updated = true
+		err = r.client.Update(context.TODO(), appTarget)
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+func newAppTargetForApp(app *v1alpha1.App, target string) *v1alpha1.AppTarget {
+	at := &v1alpha1.AppTarget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
-			Namespace: cr.Namespace,
-			Labels:    labels,
+			Name:   app.GetAppTargetName(target),
+			Labels: labelsForAppTarget(app, target),
 		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
+		Spec: v1alpha1.AppTargetSpec{
+			App:       app.Name,
+			Target:    target,
+			Ports:     app.Spec.Ports,
+			Command:   app.Spec.Command,
+			Args:      app.Spec.Args,
+			Env:       app.Spec.EnvForTarget(target),
+			Resources: *app.Spec.ResourcesForTarget(target),
+			Scale:     *app.Spec.ScaleSpecForTarget(target),
+			Probes:    *app.Spec.ProbesForTarget(target),
 		},
+	}
+
+	tc := app.Spec.GetTargetConfig(target)
+	// TODO: this should never be nil
+	if tc != nil {
+		at.Spec.IngressHosts = tc.IngressHosts
+	}
+
+	return at
+}
+
+func labelsForAppTarget(app *v1alpha1.App, target string) map[string]string {
+	return map[string]string{
+		resources.APP_LABEL:    app.Name,
+		resources.TARGET_LABEL: target,
 	}
 }
