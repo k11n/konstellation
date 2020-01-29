@@ -6,6 +6,7 @@ import (
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
+	"github.com/thoas/go-funk"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -52,7 +53,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to secondary resource Pods and requeue the owner App
+	// Watch for changes to secondary resource app targets
 	secondaryTypes := []runtime.Object{
 		&v1alpha1.AppTarget{},
 	}
@@ -69,8 +70,40 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch cluster config changes, as it may make it eligible to deploy a new target
 	err = c.Watch(&source.Kind{Type: &v1alpha1.ClusterConfig{}}, &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: handler.ToRequestsFunc(func(configMapObject handler.MapObject) []reconcile.Request {
-			// TODO: grab all apps and force reconcile
-			return []reconcile.Request{}
+			apps, err := resources.ListApps(mgr.GetClient())
+			requests := []reconcile.Request{}
+			if err != nil {
+				return requests
+			}
+
+			newTargets := map[string]bool{}
+			clusterConfig := configMapObject.Object.(*v1alpha1.ClusterConfig)
+			for _, target := range clusterConfig.Spec.Targets {
+				newTargets[target] = true
+			}
+
+			// reconcile all apps that
+			for _, app := range apps {
+				needsReconcile := false
+				for _, target := range app.Spec.Targets {
+					if newTargets[target.Name] {
+						if !funk.Contains(app.Status.ActiveTargets, target.Name) {
+							needsReconcile = true
+							break
+						}
+					}
+				}
+				if needsReconcile {
+					// not yet active, reconcile this app
+					requests = append(requests, reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Name: app.Name,
+						},
+					})
+				}
+			}
+
+			return requests
 		}),
 	})
 	if err != nil {
@@ -91,13 +124,6 @@ type ReconcileApp struct {
 	scheme *runtime.Scheme
 }
 
-// Reconcile reads that state of the cluster for a App object and makes changes based on the state read
-// and what is in the App.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
-// Note:
-// The Controller will requeue the Request to be processed again if the returned error is non-nil or
-// Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Result, err error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling App")

@@ -40,6 +40,7 @@ type AppSpec struct {
 
 // AppStatus defines the observed state of App
 type AppStatus struct {
+	ActiveTargets []string `json:"activeTargets"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
