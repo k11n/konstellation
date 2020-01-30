@@ -241,6 +241,15 @@ func configureCluster(cloud providers.CloudProvider, clusterName string) error {
 		if err != nil {
 			return err
 		}
+	} else {
+		// load new resources into kube
+		fmt.Println("Loading Konstellation resources")
+		for _, file := range KUBE_RESOURCES {
+			err := utils.KubeApplyFile(file)
+			if err != nil {
+				return errors.Wrapf(err, "Unable to apply config %s", file)
+			}
+		}
 	}
 
 	return nil

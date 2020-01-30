@@ -6,13 +6,13 @@ spec:
   additionalPrinterColumns:
   - JSONPath: .status.currentReplicas
     name: CurrentReplicas
-    type: int
+    type: integer
   - JSONPath: .status.desiredReplicas
     name: DesiredReplicas
-    type: int
+    type: integer
   - JSONPath: .status.state
     name: State
-    type: int
+    type: string
   group: k11n.dev
   names:
     kind: AppTarget
@@ -171,9 +171,10 @@ spec:
             probes:
               properties:
                 liveness:
-                  description: Probe describes a health check to be performed against
-                    a container to determine whether it is alive or ready to receive
-                    traffic.
+                  description: a duplication of core Kube types, repeated here to
+                    avoid dependency on intOrString type Probe describes a health
+                    check to be performed against a container to determine whether
+                    it is alive or ready to receive traffic.
                   properties:
                     exec:
                       description: One and only one of the following should be specified.
@@ -226,13 +227,10 @@ spec:
                           description: Path to access on the HTTP server.
                           type: string
                         port:
-                          anyOf:
-                          - type: integer
-                          - type: string
                           description: Name or number of the port to access on the
                             container. Number must be in the range 1 to 65535. Name
                             must be an IANA_SVC_NAME.
-                          x-kubernetes-int-or-string: true
+                          type: integer
                         scheme:
                           description: Scheme to use for connecting to the host. Defaults
                             to HTTP.
@@ -256,26 +254,6 @@ spec:
                         1. Must be 1 for liveness and startup. Minimum value is 1.
                       format: int32
                       type: integer
-                    tcpSocket:
-                      description: 'TCPSocket specifies an action involving a TCP
-                        port. TCP hooks not yet supported TODO: implement a realistic
-                        TCP lifecycle hook'
-                      properties:
-                        host:
-                          description: 'Optional: Host name to connect to, defaults
-                            to the pod IP.'
-                          type: string
-                        port:
-                          anyOf:
-                          - type: integer
-                          - type: string
-                          description: Number or name of the port to access on the
-                            container. Number must be in the range 1 to 65535. Name
-                            must be an IANA_SVC_NAME.
-                          x-kubernetes-int-or-string: true
-                      required:
-                      - port
-                      type: object
                     timeoutSeconds:
                       description: 'Number of seconds after which the probe times
                         out. Defaults to 1 second. Minimum value is 1. More info:
@@ -284,9 +262,10 @@ spec:
                       type: integer
                   type: object
                 readiness:
-                  description: Probe describes a health check to be performed against
-                    a container to determine whether it is alive or ready to receive
-                    traffic.
+                  description: a duplication of core Kube types, repeated here to
+                    avoid dependency on intOrString type Probe describes a health
+                    check to be performed against a container to determine whether
+                    it is alive or ready to receive traffic.
                   properties:
                     exec:
                       description: One and only one of the following should be specified.
@@ -339,13 +318,10 @@ spec:
                           description: Path to access on the HTTP server.
                           type: string
                         port:
-                          anyOf:
-                          - type: integer
-                          - type: string
                           description: Name or number of the port to access on the
                             container. Number must be in the range 1 to 65535. Name
                             must be an IANA_SVC_NAME.
-                          x-kubernetes-int-or-string: true
+                          type: integer
                         scheme:
                           description: Scheme to use for connecting to the host. Defaults
                             to HTTP.
@@ -369,26 +345,6 @@ spec:
                         1. Must be 1 for liveness and startup. Minimum value is 1.
                       format: int32
                       type: integer
-                    tcpSocket:
-                      description: 'TCPSocket specifies an action involving a TCP
-                        port. TCP hooks not yet supported TODO: implement a realistic
-                        TCP lifecycle hook'
-                      properties:
-                        host:
-                          description: 'Optional: Host name to connect to, defaults
-                            to the pod IP.'
-                          type: string
-                        port:
-                          anyOf:
-                          - type: integer
-                          - type: string
-                          description: Number or name of the port to access on the
-                            container. Number must be in the range 1 to 65535. Name
-                            must be an IANA_SVC_NAME.
-                          x-kubernetes-int-or-string: true
-                      required:
-                      - port
-                      type: object
                     timeoutSeconds:
                       description: 'Number of seconds after which the probe times
                         out. Defaults to 1 second. Minimum value is 1. More info:

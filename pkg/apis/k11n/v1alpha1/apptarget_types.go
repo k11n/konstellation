@@ -51,9 +51,9 @@ type AppTargetStatus struct {
 // AppTarget is the Schema for the apptargets API
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=apptargets,scope=Cluster
-// +kubebuilder:printcolumn:name="CurrentReplicas",type=int,JSONPath=`.status.currentReplicas`
-// +kubebuilder:printcolumn:name="DesiredReplicas",type=int,JSONPath=`.status.desiredReplicas`
-// +kubebuilder:printcolumn:name="State",type=int,JSONPath=`.status.state`
+// +kubebuilder:printcolumn:name="CurrentReplicas",type=integer,JSONPath=`.status.currentReplicas`
+// +kubebuilder:printcolumn:name="DesiredReplicas",type=integer,JSONPath=`.status.desiredReplicas`
+// +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
 type AppTarget struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
