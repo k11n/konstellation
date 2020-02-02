@@ -112,22 +112,26 @@ func (r *ReconcileAppTarget) Reconcile(request reconcile.Request) (res reconcile
 		return
 	}
 
-	// Define a new Pod object
-	pod := newDeploymentForAppTarget(appTarget)
-	// Set AppTarget instance as the owner and controller
-	if err = controllerutil.SetControllerReference(appTarget, pod, r.scheme); err != nil {
-		return
-	}
-
-	// Define a new Deployment object
+	// Reconcile Deployment
 	deployment, updated, err := r.reconcileDeployment(appTarget)
 	if err != nil {
 		return
 	}
-	log.Info("Reconciled deployment", "deployment", deployment.Name)
-
+	log.Info("Reconciled deployment", "deployment", deployment.Name, "updated", updated)
 	if updated {
 		res.Requeue = true
+		return
+	}
+
+	// Reconcile Service
+	service, updated, err := r.reconcileService(appTarget, deployment)
+	if err != nil {
+		return
+	}
+	log.Info("Reconciled service", "service", service.Name, "updated", updated)
+	if updated {
+		res.Requeue = true
+		return
 	}
 
 	return
@@ -145,24 +149,22 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 	// see if we already have a deployment for this
 	existing := &appsv1.Deployment{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: deployment.Name, Namespace: namespace}, existing)
-	if err != nil && errors.IsNotFound(err) {
-		// create new
-		log.Info("Creating deployment", "appTarget", appTarget.Name, "deployment", deployment.Name, "namespace", namespace)
-		err = r.client.Create(context.TODO(), deployment)
-		updated = true
-		return
-	} else if err != nil {
-		return
-	}
-
-	if !reflect.DeepEqual(existing.Spec, deployment.Spec) {
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// create new
+			log.Info("Creating deployment", "appTarget", appTarget.Name, "deployment", deployment.Name, "namespace", namespace)
+			err = r.client.Create(context.TODO(), deployment)
+			updated = true
+			return
+		} else {
+			return
+		}
+	} else if !reflect.DeepEqual(existing.Spec, deployment.Spec) {
 		// update the deployment
 		log.Info("deployment updated, updating")
 		updated = true
 		err = r.client.Update(context.TODO(), deployment)
-		if err != nil {
-			return
-		}
+		return
 	}
 
 	// update status
@@ -179,6 +181,51 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 	podNames := resources.GetPodNames(podList.Items)
 	if !reflect.DeepEqual(podNames, appTarget.Status.Pods) {
 		appTarget.Status.Pods = podNames
+		err = r.client.Status().Update(context.TODO(), appTarget)
+	}
+
+	return
+}
+
+func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment *appsv1.Deployment) (service *corev1.Service, updated bool, err error) {
+	namespace := namespaceForAppTarget(at)
+	// do we need a service? if no ports defined, we don't
+	serviceNeeded := len(at.Spec.Ports) > 0
+	service = newServiceForAppTarget(at)
+
+	// find existing service obj
+	existing := corev1.Service{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: service.GetName()}, &existing)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			if !serviceNeeded {
+				// don't need a service and none found
+				service = nil
+				return
+			}
+			// need a service but not found, need to create it and reconcile later
+			log.Info("Creating service", "appTarget", at.Name, "service", service.Name, "namespace", namespace)
+			err = r.client.Create(context.TODO(), service)
+			updated = true
+			return
+		} else {
+			// other errors, just return
+			return
+		}
+	}
+
+	// do we still want this service?
+	if serviceNeeded {
+		// update needed?
+		if !reflect.DeepEqual(service.Spec, existing.Spec) {
+			updated = true
+			err = r.client.Update(context.TODO(), service)
+			return
+		}
+	} else {
+		// delete existing service
+		updated = true
+		err = r.client.Delete(context.TODO(), &existing)
 	}
 
 	return
@@ -187,17 +234,78 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 func newDeploymentForAppTarget(at *v1alpha1.AppTarget) *appsv1.Deployment {
 	namespace := namespaceForAppTarget(at)
 	replicas := int32(at.Spec.Scale.Min)
+	ls := labelsForAppTarget(at)
+
+	container := corev1.Container{
+		Name:      at.Name,
+		Image:     "",
+		Command:   at.Spec.Command,
+		Args:      at.Spec.Args,
+		Env:       at.Spec.Env,
+		Resources: at.Spec.Resources,
+		Ports:     at.Spec.ContainerPorts(),
+	}
+	if at.Spec.Probes.Liveness != nil {
+		container.LivenessProbe = at.Spec.Probes.Liveness.ToCoreProbe()
+	}
+	if at.Spec.Probes.Readiness != nil {
+		container.ReadinessProbe = at.Spec.Probes.Readiness.ToCoreProbe()
+	}
+	if at.Spec.Probes.Startup != nil {
+		container.StartupProbe = at.Spec.Probes.Startup.ToCoreProbe()
+	}
+
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      at.Spec.App,
 			Namespace: namespace,
-			Labels:    labelsForAppTarget(at),
+			Labels:    ls,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: ls,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: ls,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						container,
+					},
+				},
+			},
 		},
 	}
 	return &deployment
+}
+
+func newServiceForAppTarget(at *v1alpha1.AppTarget) *corev1.Service {
+	namespace := namespaceForAppTarget(at)
+	ls := labelsForAppTarget(at)
+
+	ports := []corev1.ServicePort{}
+	for _, p := range at.Spec.Ports {
+		ports = append(ports, corev1.ServicePort{
+			Name:     p.Name,
+			Protocol: p.Protocol,
+			Port:     p.Port,
+		})
+	}
+
+	svc := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      at.Spec.App,
+			Namespace: namespace,
+			Labels:    ls,
+		},
+		Spec: corev1.ServiceSpec{
+			Ports:    ports,
+			Selector: ls,
+		},
+	}
+	return &svc
 }
 
 func namespaceForAppTarget(at *v1alpha1.AppTarget) string {

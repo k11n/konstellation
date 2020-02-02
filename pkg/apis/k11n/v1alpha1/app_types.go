@@ -1,11 +1,10 @@
 package v1alpha1
 
 import (
-	"fmt"
-
 	"github.com/imdario/mergo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // AppSpec defines the desired state of App
@@ -67,7 +66,9 @@ type AppList struct {
 
 type PortSpec struct {
 	Name string `json:"name"`
-	Port int    `json:"port"`
+	Port int32  `json:"port"`
+	// +optional
+	Protocol corev1.Protocol `json:"protocol,omitempty"`
 	// +optional
 	IngressPath string `json:"ingressPath,omitempty"`
 }
@@ -94,9 +95,11 @@ type ScaleBehavior struct {
 
 type ProbeConfig struct {
 	// +optional
-	Liveness Probe `json:"liveness,omitempty"`
+	Liveness *Probe `json:"liveness,omitempty"`
 	// +optional
-	Readiness Probe `json:"readiness,omitempty"`
+	Readiness *Probe `json:"readiness,omitempty"`
+	// +optional
+	Startup *Probe `json:"startup,omitempty"`
 }
 
 type TargetConfig struct {
@@ -184,9 +187,35 @@ func (a *AppSpec) GetTargetConfig(target string) *TargetConfig {
 }
 
 func (a *App) GetAppTargetName(target string) string {
-	return fmt.Sprintf("%s-%s", a.Name, target)
+	return a.Name
 }
 
+func (p *Probe) ToCoreProbe() *corev1.Probe {
+	coreHander := corev1.Handler{
+		Exec: p.Handler.Exec,
+	}
+	if p.Handler.HTTPGet != nil {
+		hg := p.Handler.HTTPGet
+		coreHander.HTTPGet = &corev1.HTTPGetAction{
+			Path:        hg.Path,
+			Host:        hg.Host,
+			Port:        intstr.FromInt(hg.Port),
+			Scheme:      hg.Scheme,
+			HTTPHeaders: hg.HTTPHeaders,
+		}
+	}
+	coreP := corev1.Probe{
+		Handler:             coreHander,
+		InitialDelaySeconds: p.InitialDelaySeconds,
+		TimeoutSeconds:      p.TimeoutSeconds,
+		PeriodSeconds:       p.PeriodSeconds,
+		SuccessThreshold:    p.SuccessThreshold,
+		FailureThreshold:    p.FailureThreshold,
+	}
+	return &coreP
+}
+
+// ---------------------------------------------------------------------------//
 // a duplication of core Kube types, repeated here to avoid dependency on intOrString type
 // Probe describes a health check to be performed against a container to determine whether it is
 // alive or ready to receive traffic.

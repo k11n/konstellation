@@ -74,3 +74,15 @@ type AppTargetList struct {
 func init() {
 	SchemeBuilder.Register(&AppTarget{}, &AppTargetList{})
 }
+
+func (a *AppTargetSpec) ContainerPorts() []corev1.ContainerPort {
+	ports := []corev1.ContainerPort{}
+	for _, p := range a.Ports {
+		ports = append(ports, corev1.ContainerPort{
+			Name:          p.Name,
+			ContainerPort: p.Port,
+			Protocol:      p.Protocol,
+		})
+	}
+	return ports
+}
