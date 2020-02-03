@@ -204,7 +204,8 @@ func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string) (upd
 		// update the new instance
 		log.Info("Updating AppTarget with new spec", "appTarget", appTarget.Name)
 		updated = true
-		err = r.client.Update(context.TODO(), appTarget)
+		existing.Spec = appTarget.Spec
+		err = r.client.Update(context.TODO(), existing)
 		if err != nil {
 			return
 		}

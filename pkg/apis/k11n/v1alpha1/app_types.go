@@ -67,8 +67,11 @@ type AppList struct {
 type PortSpec struct {
 	Name string `json:"name"`
 	Port int32  `json:"port"`
+	// TCP by default. IngressPath works only with HTTP services
 	// +optional
 	Protocol corev1.Protocol `json:"protocol,omitempty"`
+	// ingressPath indicates the path at which the current port should be
+	// exposed. Only for HTTP apps
 	// +optional
 	IngressPath string `json:"ingressPath,omitempty"`
 }
@@ -79,18 +82,18 @@ type ResourceLimits struct {
 }
 
 type ScaleSpec struct {
-	TargetCPUUtilization int `json:"targetCPUUtilizationPercentage,omitempty"`
-	Min                  int `json:"min,omitempty"`
-	Max                  int `json:"max,omitempty"`
+	TargetCPUUtilization int32 `json:"targetCPUUtilizationPercentage,omitempty"`
+	Min                  int32 `json:"min,omitempty"`
+	Max                  int32 `json:"max,omitempty"`
 	// +optional
-	ScaleUp ScaleBehavior `json:"scaleUp,omitempty"`
+	ScaleUp *ScaleBehavior `json:"scaleUp,omitempty"`
 	// +optional
-	ScaleDown ScaleBehavior `json:"scaleDown,omitempty"`
+	ScaleDown *ScaleBehavior `json:"scaleDown,omitempty"`
 }
 
 type ScaleBehavior struct {
-	Step  int `json:"step,omitempty"`
-	Delay int `json:"delay,omitempty"`
+	Step  int32 `json:"step,omitempty"`
+	Delay int32 `json:"delay,omitempty"`
 }
 
 type ProbeConfig struct {

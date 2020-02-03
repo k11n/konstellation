@@ -147,6 +147,8 @@ spec:
               items:
                 properties:
                   ingressPath:
+                    description: ingressPath indicates the path at which the current
+                      port should be exposed. Only for HTTP apps
                     type: string
                   name:
                     type: string
@@ -154,8 +156,8 @@ spec:
                     format: int32
                     type: integer
                   protocol:
-                    description: Protocol defines network protocols supported for
-                      things like container ports.
+                    description: TCP by default. IngressPath works only with HTTP
+                      services
                     type: string
                 required:
                 - name
@@ -462,24 +464,31 @@ spec:
             scale:
               properties:
                 max:
+                  format: int32
                   type: integer
                 min:
+                  format: int32
                   type: integer
                 scaleDown:
                   properties:
                     delay:
+                      format: int32
                       type: integer
                     step:
+                      format: int32
                       type: integer
                   type: object
                 scaleUp:
                   properties:
                     delay:
+                      format: int32
                       type: integer
                     step:
+                      format: int32
                       type: integer
                   type: object
                 targetCPUUtilizationPercentage:
+                  format: int32
                   type: integer
               type: object
             targets:
@@ -908,24 +917,31 @@ spec:
                   scale:
                     properties:
                       max:
+                        format: int32
                         type: integer
                       min:
+                        format: int32
                         type: integer
                       scaleDown:
                         properties:
                           delay:
+                            format: int32
                             type: integer
                           step:
+                            format: int32
                             type: integer
                         type: object
                       scaleUp:
                         properties:
                           delay:
+                            format: int32
                             type: integer
                           step:
+                            format: int32
                             type: integer
                         type: object
                       targetCPUUtilizationPercentage:
+                        format: int32
                         type: integer
                     type: object
                 required:

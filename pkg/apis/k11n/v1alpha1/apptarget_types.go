@@ -33,9 +33,11 @@ type AppTargetSpec struct {
 
 // AppTargetStatus defines the observed state of AppTarget
 type AppTargetStatus struct {
-	CurrentReplicas int      `json:"currentReplicas"`
-	DesiredReplicas int      `json:"desiredReplicas"`
-	Pods            []string `json:"pods,omitempty"`
+	CurrentReplicas     int32        `json:"currentReplicas"`
+	DesiredReplicas     int32        `json:"desiredReplicas"`
+	UnavailableReplicas int32        `json:"unavailableReplicas"`
+	Pods                []string     `json:"pods,omitempty"`
+	LastScaleTime       *metav1.Time `json:"lastScaleTime,omitempty"`
 
 	// +optional
 	Hostname string `json:"hostname,omitempty"`
@@ -53,6 +55,7 @@ type AppTargetStatus struct {
 // +kubebuilder:resource:path=apptargets,scope=Cluster
 // +kubebuilder:printcolumn:name="CurrentReplicas",type=integer,JSONPath=`.status.currentReplicas`
 // +kubebuilder:printcolumn:name="DesiredReplicas",type=integer,JSONPath=`.status.desiredReplicas`
+// +kubebuilder:printcolumn:name="Hostname",type=string,JSONPath=`.status.hostname`
 // +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
 type AppTarget struct {
 	metav1.TypeMeta   `json:",inline"`

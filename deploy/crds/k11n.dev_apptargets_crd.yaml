@@ -10,6 +10,9 @@ spec:
   - JSONPath: .status.desiredReplicas
     name: DesiredReplicas
     type: integer
+  - JSONPath: .status.hostname
+    name: Hostname
+    type: string
   - JSONPath: .status.state
     name: State
     type: string
@@ -158,6 +161,8 @@ spec:
               items:
                 properties:
                   ingressPath:
+                    description: ingressPath indicates the path at which the current
+                      port should be exposed. Only for HTTP apps
                     type: string
                   name:
                     type: string
@@ -165,8 +170,8 @@ spec:
                     format: int32
                     type: integer
                   protocol:
-                    description: Protocol defines network protocols supported for
-                      things like container ports.
+                    description: TCP by default. IngressPath works only with HTTP
+                      services
                     type: string
                 required:
                 - name
@@ -473,24 +478,31 @@ spec:
             scale:
               properties:
                 max:
+                  format: int32
                   type: integer
                 min:
+                  format: int32
                   type: integer
                 scaleDown:
                   properties:
                     delay:
+                      format: int32
                       type: integer
                     step:
+                      format: int32
                       type: integer
                   type: object
                 scaleUp:
                   properties:
                     delay:
+                      format: int32
                       type: integer
                     step:
+                      format: int32
                       type: integer
                   type: object
                 targetCPUUtilizationPercentage:
+                  format: int32
                   type: integer
               type: object
             target:
@@ -504,12 +516,17 @@ spec:
           description: AppTargetStatus defines the observed state of AppTarget
           properties:
             currentReplicas:
+              format: int32
               type: integer
             desiredReplicas:
+              format: int32
               type: integer
             hostname:
               type: string
             ingress:
+              type: string
+            lastScaleTime:
+              format: date-time
               type: string
             pods:
               items:
@@ -518,10 +535,14 @@ spec:
             state:
               description: 'TODO: this should be an enum type of some sort'
               type: string
+            unavailableReplicas:
+              format: int32
+              type: integer
           required:
           - currentReplicas
           - desiredReplicas
           - state
+          - unavailableReplicas
           type: object
       type: object
   version: v1alpha1

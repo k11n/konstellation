@@ -8,7 +8,8 @@ import (
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalev1 "k8s.io/api/autoscaling/v1"
+	"k8s.io/api/autoscaling/v2beta2"
+	autoscalev2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -61,7 +62,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	secondaryTypes := []runtime.Object{
 		&appsv1.Deployment{},
 		&corev1.Service{},
-		&autoscalev1.HorizontalPodAutoscaler{},
+		&autoscalev2beta2.HorizontalPodAutoscaler{},
 		&netv1beta1.Ingress{},
 	}
 	for _, t := range secondaryTypes {
@@ -120,7 +121,6 @@ func (r *ReconcileAppTarget) Reconcile(request reconcile.Request) (res reconcile
 	log.Info("Reconciled deployment", "deployment", deployment.Name, "updated", updated)
 	if updated {
 		res.Requeue = true
-		return
 	}
 
 	// Reconcile Service
@@ -131,7 +131,6 @@ func (r *ReconcileAppTarget) Reconcile(request reconcile.Request) (res reconcile
 	log.Info("Reconciled service", "service", service.Name, "updated", updated)
 	if updated {
 		res.Requeue = true
-		return
 	}
 
 	return
@@ -141,7 +140,7 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 	namespace := namespaceForAppTarget(appTarget)
 	deployment = newDeploymentForAppTarget(appTarget)
 
-	// Set App instance as the owner and controller
+	// Set AppTarget instance as the owner and controller
 	if err = controllerutil.SetControllerReference(appTarget, deployment, r.scheme); err != nil {
 		return
 	}
@@ -163,7 +162,8 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 		// update the deployment
 		log.Info("deployment updated, updating")
 		updated = true
-		err = r.client.Update(context.TODO(), deployment)
+		existing.Spec = deployment.Spec
+		err = r.client.Update(context.TODO(), existing)
 		return
 	}
 
@@ -184,6 +184,8 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 		err = r.client.Status().Update(context.TODO(), appTarget)
 	}
 
+	// TODO: Log DeploymentCondition and carry to apptarget
+
 	return
 }
 
@@ -192,6 +194,10 @@ func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment
 	// do we need a service? if no ports defined, we don't
 	serviceNeeded := len(at.Spec.Ports) > 0
 	service = newServiceForAppTarget(at)
+	// Set AppTarget instance as the owner and controller
+	if err = controllerutil.SetControllerReference(at, service, r.scheme); err != nil {
+		return
+	}
 
 	// find existing service obj
 	existing := corev1.Service{}
@@ -219,8 +225,17 @@ func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment
 		// update needed?
 		if !reflect.DeepEqual(service.Spec, existing.Spec) {
 			updated = true
-			err = r.client.Update(context.TODO(), service)
+			existing.Spec = service.Spec
+			err = r.client.Update(context.TODO(), &existing)
 			return
+		}
+
+		// update service hostname
+		hostname := fmt.Sprintf("%s.%s.svc.cluster.local", existing.Name, namespace)
+		if at.Status.Hostname != hostname {
+			at.Status.Hostname = hostname
+			updated = true
+			err = r.client.Status().Update(context.TODO(), at)
 		}
 	} else {
 		// delete existing service
@@ -228,6 +243,46 @@ func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment
 		err = r.client.Delete(context.TODO(), &existing)
 	}
 
+	return
+}
+
+func (r *ReconcileAppTarget) reconcileAutoscaler(at *v1alpha1.AppTarget, deployment *appsv1.Deployment) (hpa *autoscalev2beta2.HorizontalPodAutoscaler, updated bool, err error) {
+	namespace := namespaceForAppTarget(at)
+	autoscaler := newAutoscalerForAppTarget(at, deployment)
+	if err = controllerutil.SetControllerReference(at, autoscaler, r.scheme); err != nil {
+		return
+	}
+
+	existing := v2beta2.HorizontalPodAutoscaler{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: autoscaler.ObjectMeta.Name}, &existing)
+	if err != nil && errors.IsNotFound(err) {
+		// create the resource
+		err = r.client.Create(context.TODO(), autoscaler)
+		updated = true
+		// need to reconcile again after creation complete
+		return
+	} else if err != nil {
+		return
+	}
+
+	// check if Spec has updated
+	if !reflect.DeepEqual(existing.Spec, autoscaler.Spec) {
+		existing.Spec = autoscaler.Spec
+		err = r.client.Update(context.TODO(), &existing)
+		updated = true
+		return
+	}
+
+	// update status
+	updatedStatus := at.Status.DeepCopy()
+	updatedStatus.DesiredReplicas = existing.Status.DesiredReplicas
+	updatedStatus.CurrentReplicas = existing.Status.CurrentReplicas
+	updatedStatus.LastScaleTime = existing.Status.LastScaleTime
+	if !reflect.DeepEqual(updatedStatus, at.Status) {
+		// update
+		err = r.client.Status().Update(context.TODO(), at)
+		updated = true
+	}
 	return
 }
 
@@ -306,6 +361,47 @@ func newServiceForAppTarget(at *v1alpha1.AppTarget) *corev1.Service {
 		},
 	}
 	return &svc
+}
+
+func newAutoscalerForAppTarget(at *v1alpha1.AppTarget, deployment *appsv1.Deployment) *autoscalev2beta2.HorizontalPodAutoscaler {
+	minReplicas := int32(at.Spec.Scale.Min)
+	maxReplicas := int32(at.Spec.Scale.Max)
+	if minReplicas == 0 {
+		minReplicas = 1
+	}
+	if maxReplicas < minReplicas {
+		maxReplicas = minReplicas
+	}
+	var metrics []autoscalev2beta2.MetricSpec
+	if at.Spec.Scale.TargetCPUUtilization > 0 {
+		metrics = append(metrics, autoscalev2beta2.MetricSpec{
+			Type: autoscalev2beta2.ResourceMetricSourceType,
+			Resource: &autoscalev2beta2.ResourceMetricSource{
+				Name: "cpu",
+				Target: autoscalev2beta2.MetricTarget{
+					Type:               autoscalev2beta2.UtilizationMetricType,
+					AverageUtilization: &at.Spec.Scale.TargetCPUUtilization,
+				},
+			},
+		})
+	}
+	autoscaler := autoscalev2beta2.HorizontalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   fmt.Sprintf("%s-scaler", at.Spec.App),
+			Labels: labelsForAppTarget(at),
+		},
+		Spec: autoscalev2beta2.HorizontalPodAutoscalerSpec{
+			ScaleTargetRef: autoscalev2beta2.CrossVersionObjectReference{
+				APIVersion: deployment.APIVersion,
+				Kind:       deployment.Kind,
+				Name:       deployment.Name,
+			},
+			MinReplicas: &minReplicas,
+			MaxReplicas: maxReplicas,
+			Metrics:     metrics,
+		},
+	}
+	return &autoscaler
 }
 
 func namespaceForAppTarget(at *v1alpha1.AppTarget) string {
