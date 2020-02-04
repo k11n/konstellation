@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	"github.com/imdario/mergo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -9,8 +11,8 @@ import (
 
 // AppSpec defines the desired state of App
 type AppSpec struct {
-	DockerRepo string `json:"docker_repo,omitempty"`
-	Image      string `json:"image"`
+	Registry string `json:"registry,omitempty"`
+	Image    string `json:"image"`
 
 	// +optional
 	Ports []PortSpec `json:"ports,omitempty"`
@@ -190,7 +192,7 @@ func (a *AppSpec) GetTargetConfig(target string) *TargetConfig {
 }
 
 func (a *App) GetAppTargetName(target string) string {
-	return a.Name
+	return fmt.Sprintf("%s-%s", a.Name, target)
 }
 
 func (p *Probe) ToCoreProbe() *corev1.Probe {

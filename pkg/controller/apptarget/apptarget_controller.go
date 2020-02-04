@@ -137,35 +137,42 @@ func (r *ReconcileAppTarget) Reconcile(request reconcile.Request) (res reconcile
 }
 
 func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) (deployment *appsv1.Deployment, updated bool, err error) {
-	namespace := namespaceForAppTarget(appTarget)
-	deployment = newDeploymentForAppTarget(appTarget)
-
-	// Set AppTarget instance as the owner and controller
-	if err = controllerutil.SetControllerReference(appTarget, deployment, r.scheme); err != nil {
-		return
-	}
-
-	// see if we already have a deployment for this
-	existing := &appsv1.Deployment{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: deployment.Name, Namespace: namespace}, existing)
+	// find build
+	build := &v1alpha1.Build{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: appTarget.Spec.Build}, build)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			// create new
-			log.Info("Creating deployment", "appTarget", appTarget.Name, "deployment", deployment.Name, "namespace", namespace)
-			err = r.client.Create(context.TODO(), deployment)
-			updated = true
-			return
-		} else {
-			return
-		}
-	} else if !reflect.DeepEqual(existing.Spec, deployment.Spec) {
-		// update the deployment
-		log.Info("deployment updated, updating")
-		updated = true
-		existing.Spec = deployment.Spec
-		err = r.client.Update(context.TODO(), existing)
 		return
 	}
+
+	namespace := namespaceForAppTarget(appTarget)
+	deployment = newDeploymentForAppTarget(appTarget, build)
+
+	existing := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: deployment.Namespace,
+			Name:      deployment.Name,
+		},
+	}
+	// now reconcile
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, existing, func() error {
+		log.Info("Reconciling deployment", "existingSpec", existing.Spec, "newSpec", deployment.Spec)
+		if existing.ObjectMeta.CreationTimestamp.IsZero() {
+			existing.Spec.Selector = deployment.Spec.Selector
+			// Set AppTarget instance as the owner and controller
+			if err := controllerutil.SetControllerReference(appTarget, existing, r.scheme); err != nil {
+				return err
+			}
+		}
+		existing.Spec.Template = deployment.Spec.Template
+		existing.ObjectMeta.Labels = deployment.ObjectMeta.Labels
+		return nil
+	})
+
+	if err != nil {
+		log.Error(err, "deployment reconcile failed")
+	}
+
+	log.Info("Deployment spec saved", "operation", op)
 
 	// update status
 	podList := &corev1.PodList{}
@@ -194,14 +201,15 @@ func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment
 	// do we need a service? if no ports defined, we don't
 	serviceNeeded := len(at.Spec.Ports) > 0
 	service = newServiceForAppTarget(at)
-	// Set AppTarget instance as the owner and controller
-	if err = controllerutil.SetControllerReference(at, service, r.scheme); err != nil {
-		return
-	}
 
 	// find existing service obj
-	existing := corev1.Service{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: service.GetName()}, &existing)
+	existing := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      service.Name,
+			Namespace: service.Namespace,
+		},
+	}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: service.GetName()}, existing)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			if !serviceNeeded {
@@ -209,11 +217,6 @@ func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment
 				service = nil
 				return
 			}
-			// need a service but not found, need to create it and reconcile later
-			log.Info("Creating service", "appTarget", at.Name, "service", service.Name, "namespace", namespace)
-			err = r.client.Create(context.TODO(), service)
-			updated = true
-			return
 		} else {
 			// other errors, just return
 			return
@@ -221,28 +224,39 @@ func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment
 	}
 
 	// do we still want this service?
-	if serviceNeeded {
-		// update needed?
-		if !reflect.DeepEqual(service.Spec, existing.Spec) {
-			updated = true
-			existing.Spec = service.Spec
-			err = r.client.Update(context.TODO(), &existing)
-			return
-		}
-
-		// update service hostname
-		hostname := fmt.Sprintf("%s.%s.svc.cluster.local", existing.Name, namespace)
-		if at.Status.Hostname != hostname {
-			at.Status.Hostname = hostname
-			updated = true
-			err = r.client.Status().Update(context.TODO(), at)
-		}
-	} else {
+	if !serviceNeeded {
 		// delete existing service
-		updated = true
-		err = r.client.Delete(context.TODO(), &existing)
+		err = r.client.Delete(context.TODO(), existing)
+		return
 	}
 
+	// service still needed, update
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, existing, func() error {
+		existing.Labels = service.Labels
+		existing.Spec.Ports = service.Spec.Ports
+		if existing.CreationTimestamp.IsZero() {
+			existing.Spec.Selector = service.Spec.Selector
+			// Set AppTarget instance as the owner and controller
+			if err := controllerutil.SetControllerReference(at, service, r.scheme); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return
+	}
+
+	log.Info("Updated service", "operation", op)
+
+	// update service hostname
+	hostname := fmt.Sprintf("%s.%s.svc.cluster.local", existing.Name, namespace)
+	if at.Status.Hostname != hostname {
+		log.Info("app hostname", "existing", at.Status.Hostname, "new", hostname)
+		at.Status.Hostname = hostname
+		updated = true
+		err = r.client.Status().Update(context.TODO(), at)
+	}
 	return
 }
 
@@ -286,14 +300,14 @@ func (r *ReconcileAppTarget) reconcileAutoscaler(at *v1alpha1.AppTarget, deploym
 	return
 }
 
-func newDeploymentForAppTarget(at *v1alpha1.AppTarget) *appsv1.Deployment {
+func newDeploymentForAppTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build) *appsv1.Deployment {
 	namespace := namespaceForAppTarget(at)
 	replicas := int32(at.Spec.Scale.Min)
 	ls := labelsForAppTarget(at)
 
 	container := corev1.Container{
 		Name:      at.Name,
-		Image:     "",
+		Image:     build.FullImageWithTag(),
 		Command:   at.Spec.Command,
 		Args:      at.Spec.Args,
 		Env:       at.Spec.Env,

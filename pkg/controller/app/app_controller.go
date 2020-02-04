@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"reflect"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
@@ -143,6 +142,12 @@ func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Resul
 		return
 	}
 
+	// see if we need to store the build
+	build, err := r.reconcileBuild(app)
+	if err != nil {
+		return
+	}
+
 	// figure out what targets we should work with from cluster config
 	cc, err := resources.GetClusterConfig(r.client)
 	if err != nil {
@@ -162,7 +167,7 @@ func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Resul
 	// deploy the intersection of app and cluster targets
 	for target, _ := range appTargets {
 		var targetUpdated bool
-		targetUpdated, err = r.reconcileAppTarget(app, target)
+		targetUpdated, err = r.reconcileAppTarget(app, target, build)
 		if err != nil {
 			return
 		}
@@ -180,50 +185,70 @@ func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Resul
 	return
 }
 
-func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string) (updated bool, err error) {
-	appTarget := newAppTargetForApp(app, target)
-	// Set App instance as the owner and controller
-	if err = controllerutil.SetControllerReference(app, appTarget, r.scheme); err != nil {
-		return
-	}
+func (r *ReconcileApp) reconcileBuild(app *v1alpha1.App) (*v1alpha1.Build, error) {
+	// TODO: handle ImageTag being "latest" or empty
+	build := v1alpha1.NewBuild(app.Spec.Registry, app.Spec.Image, app.Spec.ImageTag)
+	build.ObjectMeta.Labels = resources.LabelsForBuild(build)
 
-	// see if we already have a target for this
-	existing := &v1alpha1.AppTarget{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: app.GetAppTargetName(target)}, existing)
-	if err != nil && errors.IsNotFound(err) {
-		// create new
-		log.Info("Creating new AppTarget", "app", app.Name, "target", target)
-		err = r.client.Create(context.TODO(), appTarget)
-		updated = true
-		return
-	} else if err != nil {
-		return
-	}
-
-	if !reflect.DeepEqual(existing.Spec, appTarget.Spec) {
-		// update the new instance
-		log.Info("Updating AppTarget with new spec", "appTarget", appTarget.Name)
-		updated = true
-		existing.Spec = appTarget.Spec
-		err = r.client.Update(context.TODO(), existing)
-		if err != nil {
-			return
+	existing := &v1alpha1.Build{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: build.GetName()}, existing)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// create this build
+			err = r.client.Create(context.TODO(), build)
+			if err != nil {
+				return nil, err
+			}
+			return build, nil
+		} else {
+			return nil, err
 		}
 	}
 
+	return existing, nil
+}
+
+func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string, build *v1alpha1.Build) (updated bool, err error) {
+	appTarget := newAppTargetForApp(app, target, build)
+
+	// see if we already have a target for this
+	existing := &v1alpha1.AppTarget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: app.GetAppTargetName(target),
+		},
+	}
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, existing, func() error {
+		// Set App instance as the owner and controller
+		if err := controllerutil.SetControllerReference(app, existing, r.scheme); err != nil {
+			return err
+		}
+
+		existing.Labels = appTarget.Labels
+		existing.Spec = appTarget.Spec
+		return nil
+	})
+	if err != nil {
+		return
+	}
+	log.Info("Reconciled appTarget", "target", target, "operation", op)
 	return
 }
 
-func newAppTargetForApp(app *v1alpha1.App, target string) *v1alpha1.AppTarget {
+func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Build) *v1alpha1.AppTarget {
+	ls := labelsForAppTarget(app, target)
+	for k, v := range resources.LabelsForBuild(build) {
+		ls[k] = v
+	}
 	at := &v1alpha1.AppTarget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   app.GetAppTargetName(target),
-			Labels: labelsForAppTarget(app, target),
+			Labels: ls,
 		},
 		Spec: v1alpha1.AppTargetSpec{
 			App:       app.Name,
 			Target:    target,
 			Ports:     app.Spec.Ports,
+			Build:     build.GetName(),
 			Command:   app.Spec.Command,
 			Args:      app.Spec.Args,
 			Env:       app.Spec.EnvForTarget(target),

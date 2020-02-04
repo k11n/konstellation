@@ -74,6 +74,7 @@ rules:
   - clustercomponents
   - apps
   - apptargets
+  - builds
   verbs:
   - create
   - delete

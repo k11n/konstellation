@@ -39,8 +39,6 @@ spec:
               items:
                 type: string
               type: array
-            docker_repo:
-              type: string
             env:
               description: defaults for the app, overridden by env
               items:
@@ -443,6 +441,8 @@ spec:
                       type: integer
                   type: object
               type: object
+            registry:
+              type: string
             resources:
               description: ResourceRequirements describes the compute resource requirements.
               properties:
