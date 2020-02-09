@@ -8,7 +8,6 @@ import (
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/api/autoscaling/v2beta2"
 	autoscalev2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
@@ -133,6 +132,8 @@ func (r *ReconcileAppTarget) Reconcile(request reconcile.Request) (res reconcile
 		res.Requeue = true
 	}
 
+	_, _, err = r.reconcileAutoscaler(appTarget, deployment)
+
 	return
 }
 
@@ -155,7 +156,6 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 	}
 	// now reconcile
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, existing, func() error {
-		log.Info("Reconciling deployment", "existingSpec", existing.Spec, "newSpec", deployment.Spec)
 		if existing.ObjectMeta.CreationTimestamp.IsZero() {
 			existing.Spec.Selector = deployment.Spec.Selector
 			// Set AppTarget instance as the owner and controller
@@ -171,7 +171,7 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 	if err != nil {
 		log.Error(err, "deployment reconcile failed")
 	}
-
+	deployment = existing
 	log.Info("Deployment spec saved", "operation", op)
 
 	// update status
@@ -247,6 +247,7 @@ func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment
 		return
 	}
 
+	service = existing
 	log.Info("Updated service", "operation", op)
 
 	// update service hostname
@@ -263,29 +264,31 @@ func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment
 func (r *ReconcileAppTarget) reconcileAutoscaler(at *v1alpha1.AppTarget, deployment *appsv1.Deployment) (hpa *autoscalev2beta2.HorizontalPodAutoscaler, updated bool, err error) {
 	namespace := namespaceForAppTarget(at)
 	autoscaler := newAutoscalerForAppTarget(at, deployment)
-	if err = controllerutil.SetControllerReference(at, autoscaler, r.scheme); err != nil {
-		return
-	}
 
-	existing := v2beta2.HorizontalPodAutoscaler{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: autoscaler.ObjectMeta.Name}, &existing)
-	if err != nil && errors.IsNotFound(err) {
-		// create the resource
-		err = r.client.Create(context.TODO(), autoscaler)
-		updated = true
-		// need to reconcile again after creation complete
-		return
-	} else if err != nil {
+	existing := &autoscalev2beta2.HorizontalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      autoscaler.Name,
+		},
+	}
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, existing, func() error {
+		existing.Labels = autoscaler.Labels
+		existing.Spec.MinReplicas = autoscaler.Spec.MinReplicas
+		existing.Spec.MaxReplicas = autoscaler.Spec.MaxReplicas
+		existing.Spec.Metrics = autoscaler.Spec.Metrics
+		if existing.CreationTimestamp.IsZero() {
+			if err := controllerutil.SetControllerReference(at, autoscaler, r.scheme); err != nil {
+				return err
+			}
+			existing.Spec.ScaleTargetRef = autoscaler.Spec.ScaleTargetRef
+		}
+		return nil
+	})
+	if err != nil {
 		return
 	}
-
-	// check if Spec has updated
-	if !reflect.DeepEqual(existing.Spec, autoscaler.Spec) {
-		existing.Spec = autoscaler.Spec
-		err = r.client.Update(context.TODO(), &existing)
-		updated = true
-		return
-	}
+	hpa = existing
+	log.Info("Updated autoscaler", "operation", op)
 
 	// update status
 	updatedStatus := at.Status.DeepCopy()
