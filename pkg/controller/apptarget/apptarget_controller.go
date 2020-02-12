@@ -162,8 +162,9 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 			if err := controllerutil.SetControllerReference(appTarget, existing, r.scheme); err != nil {
 				return err
 			}
+			updated = true
 		}
-		existing.Spec.Template = deployment.Spec.Template
+		resources.MergeObject(&existing.Spec.Template, &deployment.Spec.Template)
 		existing.ObjectMeta.Labels = deployment.ObjectMeta.Labels
 		return nil
 	})
@@ -172,6 +173,7 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 		log.Error(err, "deployment reconcile failed")
 	}
 	deployment = existing
+	updated = (op != controllerutil.OperationResultNone)
 	log.Info("Deployment spec saved", "operation", op)
 
 	// update status
@@ -233,7 +235,7 @@ func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment
 	// service still needed, update
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, existing, func() error {
 		existing.Labels = service.Labels
-		existing.Spec.Ports = service.Spec.Ports
+		resources.MergeSlice(&existing.Spec.Ports, &service.Spec.Ports)
 		if existing.CreationTimestamp.IsZero() {
 			existing.Spec.Selector = service.Spec.Selector
 			// Set AppTarget instance as the owner and controller
@@ -246,7 +248,7 @@ func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment
 	if err != nil {
 		return
 	}
-
+	updated = (op != controllerutil.OperationResultNone)
 	service = existing
 	log.Info("Updated service", "operation", op)
 
@@ -273,9 +275,11 @@ func (r *ReconcileAppTarget) reconcileAutoscaler(at *v1alpha1.AppTarget, deploym
 	}
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, existing, func() error {
 		existing.Labels = autoscaler.Labels
+
 		existing.Spec.MinReplicas = autoscaler.Spec.MinReplicas
 		existing.Spec.MaxReplicas = autoscaler.Spec.MaxReplicas
-		existing.Spec.Metrics = autoscaler.Spec.Metrics
+		// existing.Spec.Metrics = autoscaler.Spec.Metrics
+		resources.MergeSlice(&existing.Spec.Metrics, &autoscaler.Spec.Metrics)
 		if existing.CreationTimestamp.IsZero() {
 			if err := controllerutil.SetControllerReference(at, autoscaler, r.scheme); err != nil {
 				return err
@@ -287,6 +291,7 @@ func (r *ReconcileAppTarget) reconcileAutoscaler(at *v1alpha1.AppTarget, deploym
 	if err != nil {
 		return
 	}
+	updated = (op != controllerutil.OperationResultNone)
 	hpa = existing
 	log.Info("Updated autoscaler", "operation", op)
 
@@ -295,6 +300,7 @@ func (r *ReconcileAppTarget) reconcileAutoscaler(at *v1alpha1.AppTarget, deploym
 	updatedStatus.DesiredReplicas = existing.Status.DesiredReplicas
 	updatedStatus.CurrentReplicas = existing.Status.CurrentReplicas
 	updatedStatus.LastScaleTime = existing.Status.LastScaleTime
+	log.Info("desired replicas", "statusReplicas", existing.Status.DesiredReplicas, "specReplicas", existing.Spec.MaxReplicas)
 	if !reflect.DeepEqual(updatedStatus, at.Status) {
 		// update
 		err = r.client.Status().Update(context.TODO(), at)

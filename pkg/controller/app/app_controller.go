@@ -224,12 +224,13 @@ func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string, buil
 		}
 
 		existing.Labels = appTarget.Labels
-		existing.Spec = appTarget.Spec
+		resources.MergeObject(&existing.Spec, &appTarget.Spec)
 		return nil
 	})
 	if err != nil {
 		return
 	}
+	updated = (op != controllerutil.OperationResultNone)
 	log.Info("Reconciled appTarget", "target", target, "operation", op)
 	return
 }

@@ -132,7 +132,7 @@ func (a *AppSpec) ScaleSpecForTarget(target string) *ScaleSpec {
 	tc := a.GetTargetConfig(target)
 
 	if tc != nil {
-		mergo.Merge(scale, &tc.Scale)
+		mergo.MergeWithOverwrite(scale, &tc.Scale)
 	}
 	if scale.Min == 0 {
 		scale.Min = 1
@@ -166,7 +166,7 @@ func (a *AppSpec) ResourcesForTarget(target string) *corev1.ResourceRequirements
 	res := a.Resources.DeepCopy()
 	tc := a.GetTargetConfig(target)
 	if tc != nil {
-		mergo.Merge(res, &tc.Resources)
+		mergo.MergeWithOverwrite(res, &tc.Resources)
 	}
 	return res
 }
@@ -175,7 +175,7 @@ func (a *AppSpec) ProbesForTarget(target string) *ProbeConfig {
 	probes := a.Probes.DeepCopy()
 	tc := a.GetTargetConfig(target)
 	if tc != nil {
-		mergo.Merge(probes, &tc.Probes)
+		mergo.MergeWithOverwrite(probes, &tc.Probes)
 	}
 	return probes
 }
