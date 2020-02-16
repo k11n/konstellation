@@ -2,9 +2,11 @@ package app
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
+	"github.com/davidzhao/konstellation/pkg/utils/objects"
 	"github.com/thoas/go-funk"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -224,7 +226,7 @@ func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string, buil
 		}
 
 		existing.Labels = appTarget.Labels
-		resources.MergeObject(&existing.Spec, &appTarget.Spec)
+		objects.MergeObject(&existing.Spec, &appTarget.Spec)
 		return nil
 	})
 	if err != nil {
@@ -258,6 +260,8 @@ func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Build)
 			Probes:    *app.Spec.ProbesForTarget(target),
 		},
 	}
+
+	fmt.Printf("new resources: %v\n", app.Spec.ResourcesForTarget(target))
 
 	tc := app.Spec.GetTargetConfig(target)
 	// TODO: this should never be nil

@@ -7,6 +7,7 @@ import (
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
+	"github.com/davidzhao/konstellation/pkg/utils/objects"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalev2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
@@ -26,11 +27,6 @@ import (
 )
 
 var log = logf.Log.WithName("controller_apptarget")
-
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
 
 // Add creates a new AppTarget Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -164,7 +160,7 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 			}
 			updated = true
 		}
-		resources.MergeObject(&existing.Spec.Template, &deployment.Spec.Template)
+		objects.MergeObject(&existing.Spec.Template, &deployment.Spec.Template)
 		existing.ObjectMeta.Labels = deployment.ObjectMeta.Labels
 		return nil
 	})
@@ -235,7 +231,7 @@ func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment
 	// service still needed, update
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, existing, func() error {
 		existing.Labels = service.Labels
-		resources.MergeSlice(&existing.Spec.Ports, &service.Spec.Ports)
+		objects.MergeSlice(&existing.Spec.Ports, &service.Spec.Ports)
 		if existing.CreationTimestamp.IsZero() {
 			existing.Spec.Selector = service.Spec.Selector
 			// Set AppTarget instance as the owner and controller
@@ -279,7 +275,7 @@ func (r *ReconcileAppTarget) reconcileAutoscaler(at *v1alpha1.AppTarget, deploym
 		existing.Spec.MinReplicas = autoscaler.Spec.MinReplicas
 		existing.Spec.MaxReplicas = autoscaler.Spec.MaxReplicas
 		// existing.Spec.Metrics = autoscaler.Spec.Metrics
-		resources.MergeSlice(&existing.Spec.Metrics, &autoscaler.Spec.Metrics)
+		objects.MergeSlice(&existing.Spec.Metrics, &autoscaler.Spec.Metrics)
 		if existing.CreationTimestamp.IsZero() {
 			if err := controllerutil.SetControllerReference(at, autoscaler, r.scheme); err != nil {
 				return err

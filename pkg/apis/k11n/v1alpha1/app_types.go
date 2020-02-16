@@ -3,7 +3,7 @@ package v1alpha1
 import (
 	"fmt"
 
-	"github.com/imdario/mergo"
+	"github.com/davidzhao/konstellation/pkg/utils/objects"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -132,7 +132,7 @@ func (a *AppSpec) ScaleSpecForTarget(target string) *ScaleSpec {
 	tc := a.GetTargetConfig(target)
 
 	if tc != nil {
-		mergo.MergeWithOverwrite(scale, &tc.Scale)
+		objects.MergeObject(scale, &tc.Scale)
 	}
 	if scale.Min == 0 {
 		scale.Min = 1
@@ -166,7 +166,7 @@ func (a *AppSpec) ResourcesForTarget(target string) *corev1.ResourceRequirements
 	res := a.Resources.DeepCopy()
 	tc := a.GetTargetConfig(target)
 	if tc != nil {
-		mergo.MergeWithOverwrite(res, &tc.Resources)
+		objects.MergeObject(res, &tc.Resources)
 	}
 	return res
 }
@@ -175,7 +175,7 @@ func (a *AppSpec) ProbesForTarget(target string) *ProbeConfig {
 	probes := a.Probes.DeepCopy()
 	tc := a.GetTargetConfig(target)
 	if tc != nil {
-		mergo.MergeWithOverwrite(probes, &tc.Probes)
+		objects.MergeObject(probes, &tc.Probes)
 	}
 	return probes
 }
