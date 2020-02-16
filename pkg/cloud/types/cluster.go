@@ -1,8 +1,9 @@
 package types
 
-import "time"
-
-import "encoding/json"
+import (
+	"encoding/json"
+	"time"
+)
 
 type ClusterStatus int
 
@@ -32,7 +33,7 @@ type Cluster struct {
 	CloudProvider   string
 	// detailed fields
 	Endpoint                 string
-	CertificateAuthorityData string
+	CertificateAuthorityData []byte
 }
 
 type AuthToken struct {

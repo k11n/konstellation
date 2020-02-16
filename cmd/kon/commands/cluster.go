@@ -12,7 +12,6 @@ import (
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/davidzhao/konstellation/cmd/kon/providers"
-	"github.com/davidzhao/konstellation/cmd/kon/templates"
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/apis"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
@@ -25,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 	"k8s.io/apimachinery/pkg/runtime"
+	k8sJson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	kconf "sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -63,6 +63,15 @@ var ClusterCommands = []cli.Command{
 				Name:   "select",
 				Usage:  "select an active cluster to work with",
 				Action: clusterSelect,
+				Flags: []cli.Flag{
+					clusterCloudFlag,
+					clusterNameFlag,
+				},
+			},
+			cli.Command{
+				Name:   "configure",
+				Usage:  "configure cluster settings",
+				Action: clusterConfigure,
 				Flags: []cli.Flag{
 					clusterCloudFlag,
 					clusterNameFlag,
@@ -193,6 +202,14 @@ func clusterSelect(c *cli.Context) error {
 	}
 
 	return installComponents(cloud, conf.SelectedCluster)
+}
+
+/**
+ * Configures cluster, including targets it should run
+ */
+func clusterConfigure(c *cli.Context) error {
+	// load
+	return nil
 }
 
 func configureCluster(cloud providers.CloudProvider, clusterName string) error {
@@ -385,10 +402,6 @@ func generateKubeConfig(cloud providers.CloudProvider, clusterName string) error
 	if !cloud.IsSetup() {
 		return fmt.Errorf("%s has not been setup", cloud)
 	}
-	cluster, err := cloud.KubernetesProvider().GetCluster(context.Background(), clusterName)
-	if err != nil {
-		return err
-	}
 	// find current executable path
 	cmdPath, err := os.Executable()
 	if err != nil {
@@ -398,13 +411,31 @@ func generateKubeConfig(cloud providers.CloudProvider, clusterName string) error
 	if err != nil {
 		return err
 	}
-	tokenArgs := []string{
-		"cluster",
-		"get-token",
-		"--cloud",
-		cloud.ID(),
-		"--cluster",
-		clusterName,
+
+	clusterConfs := []*resources.KubeClusterConfig{}
+	selectedIdx := -1
+	for _, c := range AvailableClouds {
+		ksvc := c.KubernetesProvider()
+		if ksvc == nil {
+			continue
+		}
+		clusters, err := ksvc.ListClusters(context.Background())
+		if err != nil {
+			return err
+		}
+		for i, cluster := range clusters {
+			cc := &resources.KubeClusterConfig{
+				Cloud:       c.ID(),
+				Cluster:     cluster.Name,
+				CAData:      []byte(cluster.CertificateAuthorityData),
+				EndpointUrl: cluster.Endpoint,
+			}
+			clusterConfs = append(clusterConfs, cc)
+
+			if cloud.ID() == c.ID() && clusterName == cluster.Name {
+				selectedIdx = i
+			}
+		}
 	}
 
 	// write to kube config
@@ -429,20 +460,32 @@ func generateKubeConfig(cloud providers.CloudProvider, clusterName string) error
 	}
 	fmt.Printf("configuring kubectl: generating %s\n", target)
 
+	kubeConf := resources.GenerateConfig(cmdPath, clusterConfs, selectedIdx)
 	file, err := os.Create(target)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	configContent := templates.KubeConfig(cluster.Endpoint, cluster.CertificateAuthorityData, cmdPath, tokenArgs)
-	_, err = file.WriteString(configContent)
+	defer func() {
+		if file != nil {
+			file.Close()
+		}
+	}()
+
+	serializer := k8sJson.NewYAMLSerializer(k8sJson.DefaultMetaFactory, nil, nil)
+	err = serializer.Encode(kubeConf, file)
 	if err != nil {
 		return err
 	}
+	file.Close()
+	file = nil
 
 	// generate checksum
 	cp := checksumPath(target)
-	return ioutil.WriteFile(cp, []byte(files.Sha1ChecksumString(configContent)), files.DefaultFileMode)
+	checksum, err := files.Sha1ChecksumFile(target)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(cp, []byte(checksum), files.DefaultFileMode)
 }
 
 func isExternalKubeConfig(configPath string) bool {
