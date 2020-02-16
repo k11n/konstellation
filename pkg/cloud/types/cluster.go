@@ -13,14 +13,18 @@ const (
 	StatusDeleting
 	StatusFailed
 	StatusUpdating
+	StatusUnconfigured
 )
 
 func (s ClusterStatus) String() string {
-	return [...]string{"CREATING",
+	return [...]string{
+		"CREATING",
 		"ACTIVE",
 		"DELETING",
 		"FAILED",
-		"UPDATING"}[s]
+		"UPDATING",
+		"UNCONFIGURED",
+	}[s]
 }
 
 type Cluster struct {

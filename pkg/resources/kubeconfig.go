@@ -14,14 +14,14 @@ type KubeClusterConfig struct {
 }
 
 func (c *KubeClusterConfig) Name() string {
-	return fmt.Sprintf("%s-%s", c.Cloud, c.Cluster)
+	return ContextNameForCluster(c.Cloud, c.Cluster)
 }
 
 func (c *KubeClusterConfig) User() string {
 	return fmt.Sprintf("%s-user", c.Name())
 }
 
-func GenerateConfig(cliPath string, clusters []*KubeClusterConfig, selectedIndex int) *cliv1.Config {
+func GenerateKubeConfig(cliPath string, clusters []*KubeClusterConfig, selectedIndex int) *cliv1.Config {
 	config := &cliv1.Config{
 		Kind:       "Config",
 		APIVersion: "v1",
@@ -66,4 +66,8 @@ func GenerateConfig(cliPath string, clusters []*KubeClusterConfig, selectedIndex
 		})
 	}
 	return config
+}
+
+func ContextNameForCluster(cloud, cluster string) string {
+	return fmt.Sprintf("%s-%s", cloud, cluster)
 }

@@ -6,9 +6,23 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
+
+	"github.com/manifoldco/promptui"
+	"github.com/olekukonko/tablewriter"
+	"github.com/pkg/errors"
+	"github.com/urfave/cli"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	k8sJson "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	kconf "sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/davidzhao/konstellation/cmd/kon/providers"
@@ -18,16 +32,8 @@ import (
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
 	"github.com/davidzhao/konstellation/pkg/resources"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
+	"github.com/davidzhao/konstellation/pkg/utils/objects"
 	"github.com/davidzhao/konstellation/version"
-	"github.com/manifoldco/promptui"
-	"github.com/olekukonko/tablewriter"
-	"github.com/pkg/errors"
-	"github.com/urfave/cli"
-	"k8s.io/apimachinery/pkg/runtime"
-	k8sJson "k8s.io/apimachinery/pkg/runtime/serializer/json"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	kconf "sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 var (
@@ -72,10 +78,6 @@ var ClusterCommands = []cli.Command{
 				Name:   "configure",
 				Usage:  "configure cluster settings",
 				Action: clusterConfigure,
-				Flags: []cli.Flag{
-					clusterCloudFlag,
-					clusterNameFlag,
-				},
 			},
 			cli.Command{
 				Name:   "get-token",
@@ -90,6 +92,11 @@ var ClusterCommands = []cli.Command{
 	},
 }
 
+type clusterInfo struct {
+	Cluster    *types.Cluster
+	ConfigSpec *v1alpha1.ClusterConfigSpec
+}
+
 func clusterList(c *cli.Context) error {
 	for _, c := range AvailableClouds {
 		ksvc := c.KubernetesProvider()
@@ -100,7 +107,25 @@ func clusterList(c *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		printClusterSection(c, clusters)
+
+		infos := []*clusterInfo{}
+		for _, cluster := range clusters {
+			contextName := resources.ContextNameForCluster(c.ID(), cluster.Name)
+			kclient, err := KubernetesClientWithContext(contextName)
+			if err != nil {
+				return err
+			}
+			info := &clusterInfo{
+				Cluster: cluster,
+			}
+			infos = append(infos, info)
+			config, err := resources.GetClusterConfig(kclient)
+			if err != nil {
+				continue
+			}
+			info.ConfigSpec = &config.Spec
+		}
+		printClusterSection(c, infos)
 	}
 
 	return nil
@@ -152,6 +177,11 @@ func clusterSelect(c *cli.Context) error {
 	if cloud == nil {
 		return nil
 	}
+	ac := activeCluster{
+		Cloud:   cloud,
+		Cluster: conf.SelectedCluster,
+	}
+
 	kubeProvider := cloud.KubernetesProvider()
 	cluster, err := kubeProvider.GetCluster(context.Background(), conf.SelectedCluster)
 	if err != nil {
@@ -180,7 +210,7 @@ func clusterSelect(c *cli.Context) error {
 		return fmt.Errorf("Cannot select cluster, status: %s", cluster.Status.String())
 	}
 
-	err = generateKubeConfig(cloud, conf.SelectedCluster)
+	err = ac.generateKubeConfig()
 	if err != nil {
 		return err
 	}
@@ -190,127 +220,174 @@ func clusterSelect(c *cli.Context) error {
 		return err
 	}
 
-	err = configureCluster(cloud, conf.SelectedCluster)
+	kclient := ac.kubernetesClient()
+	// see if we have to configure cluster
+	_, err = resources.GetClusterConfig(kclient)
+	if err != nil {
+		// have not been configured, do it
+		err = ac.createClusterConfig()
+		if err != nil {
+			return err
+		}
+		err = ac.configureCluster()
+
+	} else {
+		// TODO: in release versions don't reload resources
+		// still load the resources
+		err = ac.loadResourcesIntoKube()
+	}
 	if err != nil {
 		return err
 	}
 
-	// configure nodepool & cluster
-	err = configureNodepool(cloud, conf.SelectedCluster)
+	// see if we have a nodepool
+	_, err = resources.GetNodepoolOfType(kclient, resources.NODEPOOL_PRIMARY)
+	if err != nil {
+		err = ac.configureNodepool()
+	}
 	if err != nil {
 		return err
 	}
 
-	return installComponents(cloud, conf.SelectedCluster)
+	return ac.installComponents()
 }
 
 /**
  * Configures cluster, including targets it should run
  */
 func clusterConfigure(c *cli.Context) error {
-	// load
-	return nil
+	conf := config.GetConfig()
+	if conf.SelectedCloud == "" || conf.SelectedCluster == "" {
+		return fmt.Errorf("Cluster not selected yet. Select one with 'kon cluster select ...'")
+	}
+	cloud := CloudProviderByID(conf.SelectedCloud)
+	if cloud == nil {
+		return fmt.Errorf("Unable to find cloud provider for %s", conf.SelectedCloud)
+	}
+	ac := activeCluster{
+		Cloud:   cloud,
+		Cluster: conf.SelectedCluster,
+	}
+
+	return ac.configureCluster()
 }
 
-func configureCluster(cloud providers.CloudProvider, clusterName string) error {
-	kclient, err := KubernetesClient()
+func clusterGetToken(c *cli.Context) error {
+	cloud := CloudProviderByID(c.String("cloud"))
+	if cloud == nil {
+		return nil
+	}
+	token, err := cloud.KubernetesProvider().GetAuthToken(context.Background(), c.String("cluster"))
 	if err != nil {
 		return err
 	}
-	// get cluster config and status, if all of the components are installed, then we are good to go
-	cc, err := resources.GetClusterConfig(kclient)
+
+	result, _ := json.Marshal(token)
+	fmt.Println(string(result))
+
+	return nil
+}
+
+type activeCluster struct {
+	Cloud   providers.CloudProvider
+	Cluster string
+	kclient client.Client
+}
+
+func (c *activeCluster) createClusterConfig() error {
+	kclient := c.kubernetesClient()
+
+	// load new resources into kube
+	err := c.loadResourcesIntoKube()
 	if err != nil {
-		// load new resources into kube
-		fmt.Println("Loading Konstellation resources")
-		for _, file := range KUBE_RESOURCES {
-			err := utils.KubeApplyFile(file)
-			if err != nil {
-				return errors.Wrapf(err, "Unable to apply config %s", file)
-			}
-		}
+		return err
+	}
 
-		err = utils.WaitUntilComplete(utils.ShortTimeoutSec, utils.MediumCheckInterval, func() (bool, error) {
-			_, err := resources.GetClusterConfig(kclient)
-			if err != resources.ErrNotFound {
-				return false, nil
-			} else {
-				return true, nil
-			}
-		})
-		if err != nil {
-			return err
+	err = utils.WaitUntilComplete(utils.ShortTimeoutSec, utils.MediumCheckInterval, func() (bool, error) {
+		_, err := resources.GetClusterConfig(kclient)
+		if err != resources.ErrNotFound {
+			return false, nil
+		} else {
+			return true, nil
 		}
+	})
+	if err != nil {
+		return err
+	}
 
-		// create initial config
-		cc = &v1alpha1.ClusterConfig{
-			Spec: v1alpha1.ClusterConfigSpec{
-				Version: version.Version,
-			},
+	// create initial config
+	cc := &v1alpha1.ClusterConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: c.Cluster,
+		},
+	}
+	_, err = controllerutil.CreateOrUpdate(context.TODO(), kclient, cc, func() error {
+		cc.Spec = v1alpha1.ClusterConfigSpec{
+			Version: version.Version,
 		}
-		cc.ObjectMeta.Name = clusterName
 		for _, comp := range config.Components {
 			cc.Spec.Components = append(cc.Spec.Components, v1alpha1.ClusterComponent{
 				Name:    comp.Name(),
 				Version: comp.Version(),
 			})
 		}
-		err = kclient.Create(context.Background(), cc)
+		return nil
+	})
+	return err
+}
+
+func (c *activeCluster) loadResourcesIntoKube() error {
+	// load new resources into kube
+	fmt.Println("Loading Konstellation resources")
+	for _, file := range KUBE_RESOURCES {
+		err := utils.KubeApplyFile(file)
 		if err != nil {
-			return err
-		}
-	} else {
-		// load new resources into kube
-		fmt.Println("Loading Konstellation resources")
-		for _, file := range KUBE_RESOURCES {
-			err := utils.KubeApplyFile(file)
-			if err != nil {
-				return errors.Wrapf(err, "Unable to apply config %s", file)
-			}
+			return errors.Wrapf(err, "Unable to apply config %s", file)
 		}
 	}
-
 	return nil
 }
 
 // check nodepool status, if ready continue
-func configureNodepool(cloud providers.CloudProvider, clusterName string) error {
-	kclient, err := KubernetesClient()
+func (c *activeCluster) configureNodepool() error {
+	kclient := c.kubernetesClient()
+
+	// set configuration for the first time
+	np, err := c.Cloud.ConfigureNodepool(c.Cluster)
 	if err != nil {
 		return err
 	}
-	np, err := resources.GetNodepoolOfType(kclient, resources.NODEPOOL_PRIMARY)
+	np.SetLabels(map[string]string{
+		resources.NODEPOOL_LABEL: resources.NODEPOOL_PRIMARY,
+	})
 
-	if err != nil && np == nil {
-		// set configuration for the first time
-		np, err = cloud.ConfigureNodepool(clusterName)
-		if err != nil {
-			return err
-		}
-		np.SetLabels(map[string]string{
-			resources.NODEPOOL_LABEL: resources.NODEPOOL_PRIMARY,
-		})
-
-		// save spec to Kube
-		err = kclient.Create(context.Background(), np)
-		if err != nil {
-			return err
-		}
+	// save spec to Kube
+	existing := &v1alpha1.Nodepool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: np.Name,
+		},
+	}
+	_, err = controllerutil.CreateOrUpdate(context.TODO(), kclient, existing, func() error {
+		objects.MergeObject(&existing.Spec, &np.Spec)
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	// if kube status is already reconciled, we can skip
-	if np.Status.NumReady > 0 {
+	if existing.Status.NumReady > 0 {
 		return nil
 	}
 
-	fmt.Println("Creating nodepool")
+	fmt.Println("Creating nodepool...")
 
 	// check aws nodepool status. if it doesn't exist, then create it
-	kubeProvider := cloud.KubernetesProvider()
-	ready, err := kubeProvider.IsNodepoolReady(context.Background(),
-		clusterName, np.GetObjectMeta().GetName())
+	kubeProvider := c.Cloud.KubernetesProvider()
+	ready, err := kubeProvider.IsNodepoolReady(context.Background(), c.Cluster, np.Name)
 	if err != nil {
 		// nodepool doesn't exist, create it
-		err = kubeProvider.CreateNodepool(context.Background(), clusterName, np, resources.NODEPOOL_PRIMARY)
+		err = kubeProvider.CreateNodepool(context.Background(), c.Cluster, np, resources.NODEPOOL_PRIMARY)
 		if err != nil {
 			return err
 		}
@@ -320,15 +397,14 @@ func configureNodepool(cloud providers.CloudProvider, clusterName string) error 
 	if !ready {
 		fmt.Printf("Waiting for nodepool become ready, this may take a few minutes\n")
 		err = utils.WaitUntilComplete(utils.LongTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
-			return kubeProvider.IsNodepoolReady(context.Background(),
-				clusterName, np.GetObjectMeta().GetName())
+			return kubeProvider.IsNodepoolReady(context.Background(), c.Cluster, existing.Name)
 		})
 		if err != nil {
 			return err
 		}
 	}
 
-	err = resources.UpdateStatus(kclient, np)
+	err = resources.UpdateStatus(kclient, existing)
 	if err != nil {
 		return err
 	}
@@ -337,8 +413,8 @@ func configureNodepool(cloud providers.CloudProvider, clusterName string) error 
 	return nil
 }
 
-func installComponents(cloud providers.CloudProvider, cluster string) error {
-	kclient, err := KubernetesClient()
+func (c *activeCluster) installComponents() error {
+	kclient := c.kubernetesClient()
 	cc, err := resources.GetClusterConfig(kclient)
 	if err != nil {
 		return err
@@ -369,38 +445,10 @@ func installComponents(cloud providers.CloudProvider, cluster string) error {
 	return nil
 }
 
-func clusterGetToken(c *cli.Context) error {
-	cloud := CloudProviderByID(c.String("cloud"))
-	if cloud == nil {
-		return nil
-	}
-	token, err := cloud.KubernetesProvider().GetAuthToken(context.Background(), c.String("cluster"))
-	if err != nil {
-		return err
-	}
-
-	result, err := json.Marshal(token)
-	fmt.Println(string(result))
-
-	return nil
-}
-
-func printClusterSection(section providers.CloudProvider, clusters []*types.Cluster) {
-	fmt.Printf("\nCloud: %s\n", section.ID())
-
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Cluster", "Version", "Status", "Provider ID"})
-	for _, c := range clusters {
-		table.Append([]string{c.Name, c.Version, c.Status.String(), c.ID})
-	}
-	utils.FormatTable(table)
-	table.Render()
-}
-
-func generateKubeConfig(cloud providers.CloudProvider, clusterName string) error {
+func (c *activeCluster) generateKubeConfig() error {
 	// spec from: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins
-	if !cloud.IsSetup() {
-		return fmt.Errorf("%s has not been setup", cloud)
+	if !c.Cloud.IsSetup() {
+		return fmt.Errorf("%s has not been setup", c.Cloud)
 	}
 	// find current executable path
 	cmdPath, err := os.Executable()
@@ -414,8 +462,8 @@ func generateKubeConfig(cloud providers.CloudProvider, clusterName string) error
 
 	clusterConfs := []*resources.KubeClusterConfig{}
 	selectedIdx := -1
-	for _, c := range AvailableClouds {
-		ksvc := c.KubernetesProvider()
+	for _, cloud := range AvailableClouds {
+		ksvc := cloud.KubernetesProvider()
 		if ksvc == nil {
 			continue
 		}
@@ -425,14 +473,14 @@ func generateKubeConfig(cloud providers.CloudProvider, clusterName string) error
 		}
 		for i, cluster := range clusters {
 			cc := &resources.KubeClusterConfig{
-				Cloud:       c.ID(),
+				Cloud:       cloud.ID(),
 				Cluster:     cluster.Name,
 				CAData:      []byte(cluster.CertificateAuthorityData),
 				EndpointUrl: cluster.Endpoint,
 			}
 			clusterConfs = append(clusterConfs, cc)
 
-			if cloud.ID() == c.ID() && clusterName == cluster.Name {
+			if cloud.ID() == c.Cloud.ID() && c.Cluster == cluster.Name {
 				selectedIdx = i
 			}
 		}
@@ -454,13 +502,13 @@ func generateKubeConfig(cloud providers.CloudProvider, clusterName string) error
 		if err != nil {
 			// prompt aborted
 			fmt.Printf("selecting a cluster requires writing to ~/.kube/config. To try this again run `%s cluster select --cloud %s --cluster %s`\n",
-				config.ExecutableName, cloud.ID(), clusterName)
+				config.ExecutableName, c.Cloud.ID(), c.Cluster)
 			return fmt.Errorf("select aborted")
 		}
 	}
 	fmt.Printf("configuring kubectl: generating %s\n", target)
 
-	kubeConf := resources.GenerateConfig(cmdPath, clusterConfs, selectedIdx)
+	kubeConf := resources.GenerateKubeConfig(cmdPath, clusterConfs, selectedIdx)
 	file, err := os.Create(target)
 	if err != nil {
 		return err
@@ -486,6 +534,44 @@ func generateKubeConfig(cloud providers.CloudProvider, clusterName string) error
 		return err
 	}
 	return ioutil.WriteFile(cp, []byte(checksum), files.DefaultFileMode)
+}
+
+func (c *activeCluster) kubernetesClient() client.Client {
+	if c.kclient == nil {
+		kclient, err := KubernetesClientWithContext(resources.ContextNameForCluster(c.Cloud.ID(), c.Cluster))
+		if err != nil {
+			log.Fatalf("Unable to acquire client to Kubernetes, err: %v", err)
+		}
+		c.kclient = kclient
+	}
+	return c.kclient
+}
+
+func printClusterSection(section providers.CloudProvider, clusters []*clusterInfo) {
+	fmt.Printf("\nCloud: %s\n", section.ID())
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Cluster", "Version", "Status", "Targets", "Provider ID"})
+	for _, ci := range clusters {
+		c := ci.Cluster
+		targets := []string{}
+		if ci.ConfigSpec != nil {
+			targets = ci.ConfigSpec.Targets
+		} else {
+			if c.Status == types.StatusActive {
+				c.Status = types.StatusUnconfigured
+			}
+		}
+		table.Append([]string{
+			c.Name,
+			c.Version,
+			c.Status.String(),
+			strings.Join(targets, ", "),
+			c.ID,
+		})
+	}
+	utils.FormatTable(table)
+	table.Render()
 }
 
 func isExternalKubeConfig(configPath string) bool {
@@ -517,13 +603,13 @@ func checksumPath(configPath string) string {
 	return path.Join(configDir, fmt.Sprintf(".%s.konsha", configName))
 }
 
-func KubernetesClient() (client.Client, error) {
+func KubernetesClientWithContext(contextName string) (client.Client, error) {
 	// construct a client from local config
 	scheme := runtime.NewScheme()
 	// register both our scheme and konstellation scheme
 	clientgoscheme.AddToScheme(scheme)
 	apis.AddToScheme(scheme)
-	conf, err := kconf.GetConfig()
+	conf, err := kconf.GetConfigWithContext(contextName)
 	if err != nil {
 		return nil, err
 	}
