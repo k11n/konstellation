@@ -36,6 +36,8 @@ func (c *activeCluster) configureCluster() error {
 	switch idx {
 	case 0:
 		err = c.addTargetPrompt(cc)
+	case 1:
+		err = c.removeTargetPrompt(cc)
 	}
 	return err
 }
@@ -55,6 +57,32 @@ func (c *activeCluster) addTargetPrompt(cc *v1alpha1.ClusterConfig) error {
 		return fmt.Errorf("Target %s already exists on cluster %s", val, c.Cluster)
 	}
 	cc.Spec.Targets = append(cc.Spec.Targets, val)
-	resources.UpdateClusterConfig(c.kubernetesClient(), cc)
+	err = resources.UpdateClusterConfig(c.kubernetesClient(), cc)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Added target %s to cluster :)\n", val)
+	return nil
+}
+
+func (c *activeCluster) removeTargetPrompt(cc *v1alpha1.ClusterConfig) error {
+	if len(cc.Spec.Targets) == 0 {
+		return fmt.Errorf("The cluster doesn't have any targets")
+	}
+	s := promptui.Select{
+		Label: "Select target to remove",
+		Items: cc.Spec.Targets,
+	}
+	idx, val, err := s.Run()
+	if err != nil {
+		return err
+	}
+
+	cc.Spec.Targets = append(cc.Spec.Targets[:idx], cc.Spec.Targets[idx+1:]...)
+	err = resources.UpdateClusterConfig(c.kubernetesClient(), cc)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Removed target %s from cluster :)\n", val)
 	return nil
 }
