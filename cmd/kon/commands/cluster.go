@@ -98,6 +98,10 @@ type clusterInfo struct {
 }
 
 func clusterList(c *cli.Context) error {
+	conf := config.GetConfig()
+	if conf.IsClusterSelected() {
+		fmt.Printf("\nSelected cluster %s (%s)\n", conf.SelectedCluster, conf.SelectedCloud)
+	}
 	for _, c := range AvailableClouds {
 		ksvc := c.KubernetesProvider()
 		if ksvc == nil {

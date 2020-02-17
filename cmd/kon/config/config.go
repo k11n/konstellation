@@ -80,6 +80,10 @@ func (c *ClientConfig) IsSetup() bool {
 	return false
 }
 
+func (c *ClientConfig) IsClusterSelected() bool {
+	return c.SelectedCloud != "" && c.SelectedCluster != ""
+}
+
 func (c *ClientConfig) ToYAML() (str string, err error) {
 	content, err := yaml.Marshal(c)
 	if err != nil {
