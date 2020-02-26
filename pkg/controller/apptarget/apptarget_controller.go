@@ -3,7 +3,6 @@ package apptarget
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
@@ -12,6 +11,7 @@ import (
 	autoscalev2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -171,6 +171,9 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 	deployment = existing
 	updated = (op != controllerutil.OperationResultNone)
 	log.Info("Deployment spec saved", "operation", op)
+	if updated {
+		return
+	}
 
 	// update status
 	podList := &corev1.PodList{}
@@ -183,15 +186,29 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 		return
 	}
 
-	podNames := resources.GetPodNames(podList.Items)
-	if !reflect.DeepEqual(podNames, appTarget.Status.Pods) {
-		appTarget.Status.Pods = podNames
-		err = r.client.Status().Update(context.TODO(), appTarget)
+	// TODO: attach status to each replicaset and release
+	// podNames := resources.GetPodNames(podList.Items)
+	statusCopy := appTarget.Status.DeepCopy()
+	status := &appTarget.Status
+	status.NumDesired = deployment.Status.Replicas
+	status.NumReady = deployment.Status.ReadyReplicas
+	status.NumAvailable = deployment.Status.AvailableReplicas
+
+	err = r.syncReleaseStatus(appTarget, deployment)
+	if err != nil {
+		return
 	}
 
-	// TODO: Log DeploymentCondition and carry to apptarget
-
+	if !apiequality.Semantic.DeepEqual(statusCopy, &appTarget.Status) {
+		updated = true
+		err = r.client.Status().Update(context.TODO(), appTarget)
+	}
 	return
+}
+
+func (r *ReconcileAppTarget) syncReleaseStatus(at *v1alpha1.AppTarget, deployment *appsv1.Deployment) error {
+
+	return nil
 }
 
 func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment *appsv1.Deployment) (service *corev1.Service, updated bool, err error) {
@@ -245,6 +262,9 @@ func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment
 		return
 	}
 	updated = (op != controllerutil.OperationResultNone)
+	if updated {
+		return
+	}
 	service = existing
 	log.Info("Updated service", "operation", op)
 
@@ -288,16 +308,17 @@ func (r *ReconcileAppTarget) reconcileAutoscaler(at *v1alpha1.AppTarget, deploym
 		return
 	}
 	updated = (op != controllerutil.OperationResultNone)
+	if updated {
+		return
+	}
 	hpa = existing
 	log.Info("Updated autoscaler", "operation", op)
 
 	// update status
 	updatedStatus := at.Status.DeepCopy()
-	updatedStatus.DesiredReplicas = existing.Status.DesiredReplicas
-	updatedStatus.CurrentReplicas = existing.Status.CurrentReplicas
 	updatedStatus.LastScaleTime = existing.Status.LastScaleTime
 	log.Info("desired replicas", "statusReplicas", existing.Status.DesiredReplicas, "specReplicas", existing.Spec.MaxReplicas)
-	if !reflect.DeepEqual(updatedStatus, at.Status) {
+	if !apiequality.Semantic.DeepEqual(updatedStatus, at.Status) {
 		// update
 		err = r.client.Status().Update(context.TODO(), at)
 		updated = true
@@ -311,7 +332,7 @@ func newDeploymentForAppTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build) *a
 	ls := labelsForAppTarget(at)
 
 	container := corev1.Container{
-		Name:      at.Name,
+		Name:      "app",
 		Image:     build.FullImageWithTag(),
 		Command:   at.Spec.Command,
 		Args:      at.Spec.Args,

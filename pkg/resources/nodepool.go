@@ -3,10 +3,10 @@ package resources
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -48,7 +48,7 @@ func UpdateStatus(kclient client.Client, np *v1alpha1.Nodepool) error {
 		}
 	}
 
-	if np.Status.NumReady == numReady && reflect.DeepEqual(np.Status.Nodes, nodes) {
+	if np.Status.NumReady == numReady && apiequality.Semantic.DeepEqual(np.Status.Nodes, nodes) {
 		// no need to update
 		return nil
 	}

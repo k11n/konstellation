@@ -570,7 +570,7 @@ func printClusterSection(section providers.CloudProvider, clusters []*clusterInf
 			c.Name,
 			c.Version,
 			c.Status.String(),
-			strings.Join(targets, ", "),
+			strings.Join(targets, ","),
 			c.ID,
 		})
 	}

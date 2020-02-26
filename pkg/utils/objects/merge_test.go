@@ -1,10 +1,10 @@
 package objects
 
 import (
-	"reflect"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -35,7 +35,7 @@ func TestMergeObject(t *testing.T) {
 	}
 	emptyDest := spec{}
 	MergeObject(&emptyDest, &src)
-	if !reflect.DeepEqual(emptyDest, src) {
+	if !apiequality.Semantic.DeepEqual(emptyDest, src) {
 		t.Fatalf("emptyDest isn't equal to src")
 	}
 
@@ -47,10 +47,10 @@ func TestMergeObject(t *testing.T) {
 
 	// should not have updated dest, copy & dest are the same
 	MergeObject(&unchangedDest, &src)
-	if !reflect.DeepEqual(&unchangedDest, &destCopy) {
+	if !apiequality.Semantic.DeepEqual(&unchangedDest, &destCopy) {
 		t.Fatalf("unchangedDest was updated by src")
 	}
-	if reflect.DeepEqual(&unchangedDest, src) {
+	if apiequality.Semantic.DeepEqual(&unchangedDest, src) {
 		t.Fatalf("unchangedDest should not be equal to src")
 	}
 }
@@ -71,7 +71,7 @@ func TestMergeSlice(t *testing.T) {
 	// try merging slices
 	emptySlice := []port{}
 	MergeSlice(&emptySlice, &srcPorts)
-	if !reflect.DeepEqual(emptySlice, srcPorts) {
+	if !apiequality.Semantic.DeepEqual(emptySlice, srcPorts) {
 		t.Fatalf("could not merge into empty ports")
 	}
 
@@ -115,7 +115,7 @@ func TestMergeStructWithMap(t *testing.T) {
 	}
 
 	MergeObject(&dst, &src)
-	if !reflect.DeepEqual(src, dst) {
+	if !apiequality.Semantic.DeepEqual(src, dst) {
 		t.Fatalf("src and dst aren't equal")
 	}
 }

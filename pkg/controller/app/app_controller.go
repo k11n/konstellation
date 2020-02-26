@@ -83,12 +83,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				newTargets[target] = true
 			}
 
-			// reconcile all apps that
+			// reconcile all apps that the cluster supports
 			for _, app := range apps {
 				needsReconcile := false
 				for _, target := range app.Spec.Targets {
 					if newTargets[target.Name] {
-						if !funk.Contains(app.Status.ActiveTargets, target.Name) {
+						if funk.Contains(app.Status.ActiveTargets, target.Name) {
 							needsReconcile = true
 							break
 						}
@@ -169,6 +169,10 @@ func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Resul
 	// deploy the intersection of app and cluster targets
 	for target, _ := range appTargets {
 		var targetUpdated bool
+		if !clusterTargets[target] {
+			// skip reconcile, since cluster doesn't support it
+			continue
+		}
 		targetUpdated, err = r.reconcileAppTarget(app, target, build)
 		if err != nil {
 			return

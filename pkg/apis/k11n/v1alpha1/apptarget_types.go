@@ -33,20 +33,40 @@ type AppTargetSpec struct {
 
 // AppTargetStatus defines the observed state of AppTarget
 type AppTargetStatus struct {
-	CurrentReplicas     int32        `json:"currentReplicas"`
-	DesiredReplicas     int32        `json:"desiredReplicas"`
-	UnavailableReplicas int32        `json:"unavailableReplicas"`
-	Pods                []string     `json:"pods,omitempty"`
-	LastScaleTime       *metav1.Time `json:"lastScaleTime,omitempty"`
-
+	ActiveReleases []ReleaseStatus `json:"pods,omitempty"`
+	CanaryRelease  string          `json:"canaryRelease"`
+	LastScaleTime  *metav1.Time    `json:"lastScaleTime,omitempty"`
+	NumDesired     int32           `json:"numDesired"`
+	NumReady       int32           `json:"numReady"`
+	NumAvailable   int32           `json:"numAvailable"`
 	// +optional
 	Hostname string `json:"hostname,omitempty"`
 	// +optional
 	Ingress string `json:"ingress,omitempty"`
 
-	// TODO: this should be an enum type of some sort
-	State string `json:"state"`
+	// State AppTargetState `json:"state"`
 }
+
+type ReleaseStatus struct {
+	Release      string       `json:"release"`
+	ReplicaSet   string       `json:"replicaSet"`
+	State        ReleaseState `json:"state"`
+	NumDesired   int32        `json:"numDesired"`
+	NumReady     int32        `json:"numReady"`
+	NumAvailable int32        `json:"numAvailable"`
+	Pods         []string     `json:"pods,omitempty"`
+	Reason       string       `json:"reason"`
+}
+
+type ReleaseState string
+
+const (
+	ReleaseStateNew       ReleaseState = "new"
+	ReleaseStateCanarying ReleaseState = "canarying"
+	ReleaseStateReleasing ReleaseState = "releasing"
+	ReleaseStateReleased  ReleaseState = "released"
+	ReleaseStateFailed    ReleaseState = "failed"
+)
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
