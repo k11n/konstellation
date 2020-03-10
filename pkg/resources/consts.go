@@ -11,6 +11,7 @@ const (
 	APPTARGET_LABEL      = "k11n.dev/appTarget"
 	BUILD_REGISTRY_LABEL = "k11n.dev/buildRegistry"
 	BUILD_IMAGE_LABEL    = "k11n.dev/buildImage"
+	RELEASE_LABEL        = "k11n.dev/release"
 )
 
 var (

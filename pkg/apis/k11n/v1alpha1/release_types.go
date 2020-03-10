@@ -10,49 +10,49 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// BuildSpec defines the desired state of Build
-type BuildSpec struct {
+// ReleaseSpec defines the desired state of Build
+type ReleaseSpec struct {
 	Registry  string           `json:"registry"`
 	Image     string           `json:"image"`
 	Tag       string           `json:"tag"`
 	CreatedAt metav1.Timestamp `json:"createdAt"`
 }
 
-// BuildStatus defines the observed state of Build
-type BuildStatus struct {
+// ReleaseStatus defines the observed state of Build
+type ReleaseStatus struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// Build is the Schema for the builds API
+// Release is the Schema for the releases API
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=builds,scope=Cluster
-type Build struct {
+// +kubebuilder:resource:path=releases,scope=Cluster
+type Release struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   BuildSpec   `json:"spec,omitempty"`
-	Status BuildStatus `json:"status,omitempty"`
+	Spec   ReleaseSpec   `json:"spec,omitempty"`
+	Status ReleaseStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// BuildList contains a list of Build
-type BuildList struct {
+// ReleaseList contains a list of Release
+type ReleaseList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Build `json:"items"`
+	Items           []Release `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Build{}, &BuildList{})
+	SchemeBuilder.Register(&Release{}, &ReleaseList{})
 }
 
-func (b *Build) ImagePath() string {
+func (b *Release) ImagePath() string {
 	return fmt.Sprintf("%s/%s", b.Spec.Registry, b.Spec.Image)
 }
 
-func (b *Build) FullImageWithTag() string {
+func (b *Release) FullImageWithTag() string {
 	fullImage := b.ImagePath()
 	if b.Spec.Tag != "" {
 		fullImage += ":" + b.Spec.Tag
@@ -60,7 +60,7 @@ func (b *Build) FullImageWithTag() string {
 	return fullImage
 }
 
-func (s *BuildSpec) NameFromSpec() string {
+func (s *ReleaseSpec) NameFromSpec() string {
 	image := strings.ReplaceAll(s.Image, "/", "-")
 	name := fmt.Sprintf("%s-%s", s.Registry, image)
 	if s.Tag != "" {
@@ -69,9 +69,9 @@ func (s *BuildSpec) NameFromSpec() string {
 	return name
 }
 
-func NewBuild(registry, image, tag string) *Build {
-	b := Build{
-		Spec: BuildSpec{
+func NewRelease(registry, image, tag string) *Release {
+	b := Release{
+		Spec: ReleaseSpec{
 			Registry: registry,
 			Image:    image,
 			Tag:      tag,

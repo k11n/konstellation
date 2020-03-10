@@ -12,9 +12,9 @@ var (
 		"role_binding.yaml",
 		"crds/k11n.dev_apps_crd.yaml",
 		"crds/k11n.dev_apptargets_crd.yaml",
-		"crds/k11n.dev_builds_crd.yaml",
 		"crds/k11n.dev_clusterconfigs_crd.yaml",
 		"crds/k11n.dev_nodepools_crd.yaml",
+		"crds/k11n.dev_releases_crd.yaml",
 		// "operator.yaml",
 	}
 )

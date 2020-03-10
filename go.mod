@@ -15,6 +15,7 @@ require (
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.11 // indirect
 	github.com/mattn/go-runewidth v0.0.8 // indirect
+	github.com/nkovacs/streamquote v1.0.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/operator-framework/operator-sdk v0.13.0
 	github.com/pkg/errors v0.9.1
@@ -22,6 +23,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/thoas/go-funk v0.5.0
 	github.com/urfave/cli v1.22.2
+	github.com/valyala/fasttemplate v1.1.0 // indirect
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad // indirect
 	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect

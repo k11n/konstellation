@@ -7,9 +7,9 @@ import (
 
 // AppTargetSpec defines the desired state of AppTarget
 type AppTargetSpec struct {
-	App    string `json:"app"`
-	Target string `json:"target"`
-	Build  string `json:"build"`
+	App     string `json:"app"`
+	Target  string `json:"target"`
+	Release string `json:"release"`
 
 	// +optional
 	Ports []PortSpec `json:"ports,omitempty"`
@@ -33,12 +33,12 @@ type AppTargetSpec struct {
 
 // AppTargetStatus defines the observed state of AppTarget
 type AppTargetStatus struct {
-	ActiveReleases []ReleaseStatus `json:"pods,omitempty"`
-	CanaryRelease  string          `json:"canaryRelease"`
-	LastScaleTime  *metav1.Time    `json:"lastScaleTime,omitempty"`
-	NumDesired     int32           `json:"numDesired"`
-	NumReady       int32           `json:"numReady"`
-	NumAvailable   int32           `json:"numAvailable"`
+	ActiveReleases []AppReleaseStatus `json:"pods,omitempty"`
+	CanaryRelease  string             `json:"canaryRelease"`
+	LastScaleTime  *metav1.Time       `json:"lastScaleTime,omitempty"`
+	NumDesired     int32              `json:"numDesired"`
+	NumReady       int32              `json:"numReady"`
+	NumAvailable   int32              `json:"numAvailable"`
 	// +optional
 	Hostname string `json:"hostname,omitempty"`
 	// +optional
@@ -47,7 +47,7 @@ type AppTargetStatus struct {
 	// State AppTargetState `json:"state"`
 }
 
-type ReleaseStatus struct {
+type AppReleaseStatus struct {
 	Release      string       `json:"release"`
 	ReplicaSet   string       `json:"replicaSet"`
 	State        ReleaseState `json:"state"`

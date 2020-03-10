@@ -50,8 +50,6 @@ spec:
               items:
                 type: string
               type: array
-            build:
-              type: string
             command:
               items:
                 type: string
@@ -457,6 +455,8 @@ spec:
                       type: integer
                   type: object
               type: object
+            release:
+              type: string
             resources:
               description: ResourceRequirements describes the compute resource requirements.
               properties:
@@ -509,7 +509,7 @@ spec:
               type: string
           required:
           - app
-          - build
+          - release
           - target
           type: object
         status:

@@ -135,7 +135,7 @@ func (r *ReconcileAppTarget) Reconcile(request reconcile.Request) (res reconcile
 
 func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) (deployment *appsv1.Deployment, updated bool, err error) {
 	// find build
-	build := &v1alpha1.Build{}
+	build := &v1alpha1.Release{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: appTarget.Spec.Build}, build)
 	if err != nil {
 		return
@@ -207,8 +207,76 @@ func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) 
 }
 
 func (r *ReconcileAppTarget) syncReleaseStatus(at *v1alpha1.AppTarget, deployment *appsv1.Deployment) error {
+	newReplica, olderReplicas, err := resources.GetReplicasetsForDeployment(r.client, deployment)
+	if err != nil {
+		return err
+	}
 
+	releases := []v1alpha1.AppReleaseStatus{}
+	rs, err := r.createReleaseStatusForReplicaSet(deployment, newReplica, true)
+	if err != nil {
+		return err
+	}
+	releases = append(releases, *rs)
+
+	for _, replica := range olderReplicas {
+		rs, err = r.createReleaseStatusForReplicaSet(deployment, replica, false)
+		if err != nil {
+			return err
+		}
+		if rs == nil {
+			continue
+		}
+		releases = append(releases, *rs)
+	}
+
+	at.Status.ActiveReleases = releases
 	return nil
+}
+
+func (r *ReconcileAppTarget) createReleaseStatusForReplicaSet(deployment *appsv1.Deployment, replicaset *appsv1.ReplicaSet, isTarget bool) (status *v1alpha1.AppReleaseStatus, err error) {
+	// find pods and see how they are doing
+	podList := corev1.PodList{}
+	err = r.client.List(context.TODO(), &podList, client.InNamespace(replicaset.Namespace),
+		client.MatchingLabels(replicaset.Spec.Template.Labels))
+	if err != nil {
+		return
+	}
+
+	status = &v1alpha1.AppReleaseStatus{
+		Release:      replicaset.Labels[resources.RELEASE_LABEL],
+		ReplicaSet:   replicaset.Name,
+		State:        v1alpha1.ReleaseStateNew,
+		NumReady:     replicaset.Status.ReadyReplicas,
+		NumAvailable: replicaset.Status.AvailableReplicas,
+	}
+	if replicaset.Spec.Replicas != nil {
+		status.NumDesired = *replicaset.Spec.Replicas
+	}
+
+	if isTarget {
+		status.State = v1alpha1.ReleaseStateReleasing
+		if *deployment.Spec.Replicas == status.NumDesired && status.NumDesired == status.NumAvailable {
+			status.State = v1alpha1.ReleaseStateReleased
+		} else {
+			// loop through the pods and see what's going on
+			for _, pod := range podList.Items {
+				if pod.Status.Phase == corev1.PodPending || pod.Status.Phase == corev1.PodFailed {
+					status.Reason = pod.Status.Message
+					break
+				}
+			}
+		}
+	} else {
+		// when scaled down, don't pollute listing
+		if status.NumAvailable == 0 {
+			return nil, nil
+		}
+		status.State = v1alpha1.ReleaseStateReleased
+		// TODO: maybe an archived status would be useful
+	}
+
+	return
 }
 
 func (r *ReconcileAppTarget) reconcileService(at *v1alpha1.AppTarget, deployment *appsv1.Deployment) (service *corev1.Service, updated bool, err error) {
@@ -326,10 +394,12 @@ func (r *ReconcileAppTarget) reconcileAutoscaler(at *v1alpha1.AppTarget, deploym
 	return
 }
 
-func newDeploymentForAppTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build) *appsv1.Deployment {
+func newDeploymentForAppTarget(at *v1alpha1.AppTarget, build *v1alpha1.Release) *appsv1.Deployment {
 	namespace := namespaceForAppTarget(at)
 	replicas := int32(at.Spec.Scale.Min)
 	ls := labelsForAppTarget(at)
+	// add release version for deployment
+	ls[resources.RELEASE_LABEL] = build.Name
 
 	container := corev1.Container{
 		Name:      "app",
