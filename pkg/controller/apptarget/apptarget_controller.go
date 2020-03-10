@@ -136,7 +136,7 @@ func (r *ReconcileAppTarget) Reconcile(request reconcile.Request) (res reconcile
 func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) (deployment *appsv1.Deployment, updated bool, err error) {
 	// find build
 	build := &v1alpha1.Release{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: appTarget.Spec.Build}, build)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: appTarget.Spec.Release}, build)
 	if err != nil {
 		return
 	}

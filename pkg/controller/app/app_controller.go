@@ -255,7 +255,7 @@ func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Releas
 			App:       app.Name,
 			Target:    target,
 			Ports:     app.Spec.Ports,
-			Build:     build.GetName(),
+			Release:   build.GetName(),
 			Command:   app.Spec.Command,
 			Args:      app.Spec.Args,
 			Env:       app.Spec.EnvForTarget(target),
