@@ -35,7 +35,8 @@ type AppSpec struct {
 	// +optional
 	Probes ProbeConfig `json:"probes,omitempty"`
 
-	//+kubebuilder:validation:MinItems:=1
+	// +kubebuilder:validation:Optional
+	// +nullable
 	Targets []TargetConfig `json:"targets"`
 }
 

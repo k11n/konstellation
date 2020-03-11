@@ -947,11 +947,10 @@ spec:
                 required:
                 - name
                 type: object
-              minItems: 1
+              nullable: true
               type: array
           required:
           - image
-          - targets
           type: object
         status:
           description: AppStatus defines the observed state of App

@@ -14,7 +14,9 @@ type ClusterComponent struct {
 
 // ClusterConfigSpec defines the desired state of ClusterConfig
 type ClusterConfigSpec struct {
-	Version    string             `json:"version"`
+	Version string `json:"version"`
+	// +kubebuilder:validation:Optional
+	// +nullable
 	Targets    []string           `json:"targets"`
 	Components []ClusterComponent `json:"components"`
 }
