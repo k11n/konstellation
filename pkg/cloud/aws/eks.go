@@ -83,11 +83,12 @@ func (s *EKSService) GetCluster(ctx context.Context, name string) (cluster *type
 	if ec.Endpoint != nil {
 		cluster.Endpoint = *ec.Endpoint
 	}
-	decoded, err := base64.StdEncoding.DecodeString(*ec.CertificateAuthority.Data)
-	if err != nil {
-		return
-	}
 	if ec.CertificateAuthority != nil && ec.CertificateAuthority.Data != nil {
+		var decoded []byte
+		decoded, err = base64.StdEncoding.DecodeString(*ec.CertificateAuthority.Data)
+		if err != nil {
+			return
+		}
 		cluster.CertificateAuthorityData = decoded
 	}
 	return

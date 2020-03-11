@@ -4,17 +4,17 @@ metadata:
   name: apptargets.k11n.dev
 spec:
   additionalPrinterColumns:
-  - JSONPath: .status.currentReplicas
-    name: CurrentReplicas
+  - JSONPath: .status.numDesired
+    name: NumDesired
     type: integer
-  - JSONPath: .status.desiredReplicas
-    name: DesiredReplicas
+  - JSONPath: .status.numReady
+    name: NumReady
+    type: integer
+  - JSONPath: .status.numAvailable
+    name: NumAvailable
     type: integer
   - JSONPath: .status.hostname
     name: Hostname
-    type: string
-  - JSONPath: .status.state
-    name: State
     type: string
   group: k11n.dev
   names:

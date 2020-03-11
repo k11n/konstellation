@@ -114,15 +114,16 @@ func clusterList(c *cli.Context) error {
 
 		infos := []*clusterInfo{}
 		for _, cluster := range clusters {
-			contextName := resources.ContextNameForCluster(c.ID(), cluster.Name)
-			kclient, err := KubernetesClientWithContext(contextName)
-			if err != nil {
-				return err
-			}
 			info := &clusterInfo{
 				Cluster: cluster,
 			}
 			infos = append(infos, info)
+
+			contextName := resources.ContextNameForCluster(c.ID(), cluster.Name)
+			kclient, err := KubernetesClientWithContext(contextName)
+			if err != nil {
+				continue
+			}
 			config, err := resources.GetClusterConfig(kclient)
 			if err != nil {
 				continue

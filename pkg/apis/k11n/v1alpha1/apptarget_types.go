@@ -73,10 +73,10 @@ const (
 // AppTarget is the Schema for the apptargets API
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=apptargets,scope=Cluster
-// +kubebuilder:printcolumn:name="CurrentReplicas",type=integer,JSONPath=`.status.currentReplicas`
-// +kubebuilder:printcolumn:name="DesiredReplicas",type=integer,JSONPath=`.status.desiredReplicas`
+// +kubebuilder:printcolumn:name="NumDesired",type=integer,JSONPath=`.status.numDesired`
+// +kubebuilder:printcolumn:name="NumReady",type=integer,JSONPath=`.status.numReady`
+// +kubebuilder:printcolumn:name="NumAvailable",type=integer,JSONPath=`.status.numAvailable`
 // +kubebuilder:printcolumn:name="Hostname",type=string,JSONPath=`.status.hostname`
-// +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
 type AppTarget struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
