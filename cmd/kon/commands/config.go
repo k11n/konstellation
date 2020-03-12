@@ -5,11 +5,11 @@ import (
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/manifoldco/promptui"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
-var ConfigCommands = []cli.Command{
-	cli.Command{
+var ConfigCommands = []*cli.Command{
+	&cli.Command{
 		Name:   "configure",
 		Usage:  "Setup Konstellation CLI",
 		Action: configureStart,

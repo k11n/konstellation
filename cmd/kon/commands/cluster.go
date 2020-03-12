@@ -15,7 +15,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sJson "k8s.io/apimachinery/pkg/runtime/serializer/json"
@@ -37,35 +37,35 @@ import (
 )
 
 var (
-	clusterCloudFlag = cli.StringFlag{
+	clusterCloudFlag = &cli.StringFlag{
 		Name:  "cloud",
 		Usage: "the cloud that the cluster resides",
 		Value: "aws",
 		// Required: true,
 	}
-	clusterNameFlag = cli.StringFlag{
+	clusterNameFlag = &cli.StringFlag{
 		Name:     "cluster",
 		Usage:    "cluster name",
 		Required: true,
 	}
 )
 
-var ClusterCommands = []cli.Command{
-	cli.Command{
+var ClusterCommands = []*cli.Command{
+	&cli.Command{
 		Name:  "cluster",
 		Usage: "Kubernetes cluster management",
-		Subcommands: []cli.Command{
-			cli.Command{
+		Subcommands: []*cli.Command{
+			&cli.Command{
 				Name:   "list",
 				Usage:  "list clusters",
 				Action: clusterList,
 			},
-			cli.Command{
+			&cli.Command{
 				Name:   "create",
 				Usage:  "creates a cluster",
 				Action: clusterCreate,
 			},
-			cli.Command{
+			&cli.Command{
 				Name:   "select",
 				Usage:  "select an active cluster to work with",
 				Action: clusterSelect,
@@ -74,12 +74,12 @@ var ClusterCommands = []cli.Command{
 					clusterNameFlag,
 				},
 			},
-			cli.Command{
+			&cli.Command{
 				Name:   "configure",
 				Usage:  "configure cluster settings",
 				Action: clusterConfigure,
 			},
-			cli.Command{
+			&cli.Command{
 				Name:   "get-token",
 				Usage:  "returns a kubernetes compatible token",
 				Action: clusterGetToken,
@@ -261,17 +261,9 @@ func clusterSelect(c *cli.Context) error {
  * Configures cluster, including targets it should run
  */
 func clusterConfigure(c *cli.Context) error {
-	conf := config.GetConfig()
-	if conf.SelectedCloud == "" || conf.SelectedCluster == "" {
-		return fmt.Errorf("Cluster not selected yet. Select one with 'kon cluster select ...'")
-	}
-	cloud := CloudProviderByID(conf.SelectedCloud)
-	if cloud == nil {
-		return fmt.Errorf("Unable to find cloud provider for %s", conf.SelectedCloud)
-	}
-	ac := activeCluster{
-		Cloud:   cloud,
-		Cluster: conf.SelectedCluster,
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
 	}
 
 	return ac.configureCluster()
@@ -291,6 +283,29 @@ func clusterGetToken(c *cli.Context) error {
 	fmt.Println(string(result))
 
 	return nil
+}
+
+func getActiveCluster() (*activeCluster, error) {
+	conf := config.GetConfig()
+	if conf.SelectedCloud == "" || conf.SelectedCluster == "" {
+		return nil, fmt.Errorf("Cluster not selected yet. Select one with 'kon cluster select ...'")
+	}
+
+	cloud := CloudProviderByID(conf.SelectedCloud)
+	if cloud == nil {
+		return nil, fmt.Errorf("Unable to find cloud provider for %s", conf.SelectedCloud)
+	}
+
+	ac := activeCluster{
+		Cloud:   cloud,
+		Cluster: conf.SelectedCluster,
+	}
+
+	err := ac.initClient()
+	if err != nil {
+		return nil, err
+	}
+	return &ac, nil
 }
 
 type activeCluster struct {
@@ -543,13 +558,21 @@ func (c *activeCluster) generateKubeConfig() error {
 
 func (c *activeCluster) kubernetesClient() client.Client {
 	if c.kclient == nil {
-		kclient, err := KubernetesClientWithContext(resources.ContextNameForCluster(c.Cloud.ID(), c.Cluster))
+		err := c.initClient()
 		if err != nil {
 			log.Fatalf("Unable to acquire client to Kubernetes, err: %v", err)
 		}
-		c.kclient = kclient
 	}
 	return c.kclient
+}
+
+func (c *activeCluster) initClient() error {
+	kclient, err := KubernetesClientWithContext(resources.ContextNameForCluster(c.Cloud.ID(), c.Cluster))
+	if err != nil {
+		return errors.Wrap(err, "Unable to create Kubernetes Client")
+	}
+	c.kclient = kclient
+	return nil
 }
 
 func printClusterSection(section providers.CloudProvider, clusters []*clusterInfo) {

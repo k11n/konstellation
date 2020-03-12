@@ -6,7 +6,7 @@ import (
 
 	"github.com/davidzhao/konstellation/cmd/kon/commands"
 	"github.com/davidzhao/konstellation/version"
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
 func main() {
@@ -15,9 +15,10 @@ func main() {
 	app.Usage = "Konstellation CLI. Manage Kubernetes clusters and deploy apps"
 	app.EnableBashCompletion = true
 	app.Version = version.Version
-	commandSets := [][]cli.Command{
+	commandSets := [][]*cli.Command{
 		commands.ConfigCommands,
 		commands.ClusterCommands,
+		commands.AppCommands,
 	}
 	for _, cmds := range commandSets {
 		app.Commands = append(app.Commands, cmds...)

@@ -178,7 +178,8 @@ func (a *AWSProvider) CreateCluster() (name string, err error) {
 	}
 
 	// fetch VPC security groups
-	// TODO: include a selection, instead of automatically selecting everything
+	// TODO: allow user to choose a security group.
+	// EKS will create its own anyways
 	securityGroups, err := kaws.ListSecurityGroups(ec2Svc, *selectedVpc.VpcId)
 	if err != nil {
 		return

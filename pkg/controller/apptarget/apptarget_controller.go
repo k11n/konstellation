@@ -365,10 +365,10 @@ func (r *ReconcileAppTarget) reconcileAutoscaler(at *v1alpha1.AppTarget, deploym
 		// existing.Spec.Metrics = autoscaler.Spec.Metrics
 		objects.MergeSlice(&existing.Spec.Metrics, &autoscaler.Spec.Metrics)
 		if existing.CreationTimestamp.IsZero() {
+			existing.Spec.ScaleTargetRef = autoscaler.Spec.ScaleTargetRef
 			if err := controllerutil.SetControllerReference(at, autoscaler, r.scheme); err != nil {
 				return err
 			}
-			existing.Spec.ScaleTargetRef = autoscaler.Spec.ScaleTargetRef
 		}
 		return nil
 	})
