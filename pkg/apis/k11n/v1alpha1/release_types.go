@@ -60,6 +60,14 @@ func (b *Release) FullImageWithTag() string {
 	return fullImage
 }
 
+func (b *Release) ShortName() string {
+	name := b.Spec.Image
+	if b.Spec.Tag != "" {
+		name += ":" + b.Spec.Tag
+	}
+	return name
+}
+
 func (s *ReleaseSpec) NameFromSpec() string {
 	image := strings.ReplaceAll(s.Image, "/", "-")
 	name := fmt.Sprintf("%s-%s", s.Registry, image)

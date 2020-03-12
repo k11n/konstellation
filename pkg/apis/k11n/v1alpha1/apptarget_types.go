@@ -60,6 +60,10 @@ type AppReleaseStatus struct {
 
 type ReleaseState string
 
+func (rs ReleaseState) String() string {
+	return string(rs)
+}
+
 const (
 	ReleaseStateNew       ReleaseState = "new"
 	ReleaseStateCanarying ReleaseState = "canarying"
