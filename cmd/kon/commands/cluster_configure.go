@@ -11,7 +11,7 @@ import (
 )
 
 func (c *activeCluster) configureCluster() error {
-	fmt.Printf("Configuring %s (%s)\n\n", c.Cluster, c.Cloud.ID())
+	fmt.Printf("Configuring cluster %s (%s)\n\n", c.Cluster, c.Cloud.ID())
 	kclient := c.kubernetesClient()
 	// pull existing config
 	cc, err := resources.GetClusterConfig(kclient)
@@ -19,27 +19,32 @@ func (c *activeCluster) configureCluster() error {
 		return err
 	}
 
-	actions := []string{
-		"Add target",
-		"Remove target",
-	}
+	if len(cc.Spec.Targets) == 0 {
+		fmt.Println("Which deployment targets should run on this cluster? You can add more later.")
+		return c.addTargetPrompt(cc)
+	} else {
+		actions := []string{
+			"Add target",
+			"Remove target",
+		}
 
-	s := promptui.Select{
-		Label: "Configure action",
-		Items: actions,
-	}
-	idx, _, err := s.Run()
-	if err != nil {
+		s := promptui.Select{
+			Label: "Configure action",
+			Items: actions,
+		}
+		idx, _, err := s.Run()
+		if err != nil {
+			return err
+		}
+
+		switch idx {
+		case 0:
+			err = c.addTargetPrompt(cc)
+		case 1:
+			err = c.removeTargetPrompt(cc)
+		}
 		return err
 	}
-
-	switch idx {
-	case 0:
-		err = c.addTargetPrompt(cc)
-	case 1:
-		err = c.removeTargetPrompt(cc)
-	}
-	return err
 }
 
 func (c *activeCluster) addTargetPrompt(cc *v1alpha1.ClusterConfig) error {

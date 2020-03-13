@@ -248,6 +248,7 @@ func clusterSelect(c *cli.Context) error {
 	// see if we have a nodepool
 	_, err = resources.GetNodepoolOfType(kclient, resources.NODEPOOL_PRIMARY)
 	if err != nil {
+		fmt.Println("Your cluster requires a nodepool to function, let's create that now")
 		err = ac.configureNodepool()
 	}
 	if err != nil {
@@ -447,24 +448,29 @@ func (c *activeCluster) installComponents() error {
 		installed[comp.Name] = comp.Version
 	}
 
-	for _, comp := range config.Components {
-		if installed[comp.Name()] != "" {
+	for _, comp := range cc.Spec.Components {
+		if installed[comp.Name] != "" {
 			continue
 		}
-		fmt.Printf("Installing Kubernetes components for %s\n", comp.Name())
-		err = comp.InstallComponent(kclient)
-		if err != nil {
-			return err
-		}
+		for _, compInstaller := range config.Components {
+			if compInstaller.Name() != comp.Name {
+				continue
+			}
+			fmt.Printf("Installing Kubernetes components for %s\n", compInstaller.Name())
+			err = compInstaller.InstallComponent(kclient)
+			if err != nil {
+				return err
+			}
 
-		// mark it as installed
-		cc.Status.InstalledComponents = append(cc.Status.InstalledComponents, v1alpha1.ComponentSpec{
-			Name:    comp.Name(),
-			Version: comp.Version(),
-		})
-		err = kclient.Status().Update(context.Background(), cc)
-		if err != nil {
-			return err
+			// mark it as installed
+			cc.Status.InstalledComponents = append(cc.Status.InstalledComponents, v1alpha1.ComponentSpec{
+				Name:    compInstaller.Name(),
+				Version: compInstaller.Version(),
+			})
+			err = kclient.Status().Update(context.Background(), cc)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil

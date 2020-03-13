@@ -177,21 +177,28 @@ func (a *AWSProvider) CreateCluster() (name string, err error) {
 		subnetIds = append(subnetIds, sub.SubnetId)
 	}
 
-	// fetch VPC security groups
-	// TODO: allow user to choose a security group.
+	// fetch VPC security groups and prompt user to select one
 	// EKS will create its own anyways
 	securityGroups, err := kaws.ListSecurityGroups(ec2Svc, *selectedVpc.VpcId)
 	if err != nil {
 		return
 	}
-	sgIds := []*string{}
+	groups := []string{}
 	for _, sg := range securityGroups {
-		sgIds = append(sgIds, sg.GroupId)
+		groups = append(groups, *sg.GroupId)
+	}
+	sgSelect := promptui.Select{
+		Label: "Primary security group",
+		Items: groups,
+	}
+	idx, _, err = sgSelect.Run()
+	if err != nil {
+		return
 	}
 
 	resConf := &eks.VpcConfigRequest{
 		SubnetIds:        subnetIds,
-		SecurityGroupIds: sgIds,
+		SecurityGroupIds: []*string{&groups[idx]},
 	}
 	resConf.SetEndpointPrivateAccess(true)
 	resConf.SetEndpointPublicAccess(true)
