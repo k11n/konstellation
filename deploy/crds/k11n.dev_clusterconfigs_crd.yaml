@@ -64,7 +64,15 @@ spec:
           properties:
             components:
               items:
-                type: string
+                properties:
+                  name:
+                    type: string
+                  version:
+                    type: string
+                required:
+                - name
+                - version
+                type: object
               type: array
           required:
           - components

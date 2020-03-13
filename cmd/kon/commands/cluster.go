@@ -93,8 +93,8 @@ var ClusterCommands = []*cli.Command{
 }
 
 type clusterInfo struct {
-	Cluster    *types.Cluster
-	ConfigSpec *v1alpha1.ClusterConfigSpec
+	Cluster *types.Cluster
+	Config  *v1alpha1.ClusterConfig
 }
 
 func clusterList(c *cli.Context) error {
@@ -128,7 +128,7 @@ func clusterList(c *cli.Context) error {
 			if err != nil {
 				continue
 			}
-			info.ConfigSpec = &config.Spec
+			info.Config = config
 		}
 		printClusterSection(c, infos)
 	}
@@ -347,8 +347,10 @@ func (c *activeCluster) createClusterConfig() error {
 		}
 		for _, comp := range config.Components {
 			cc.Spec.Components = append(cc.Spec.Components, v1alpha1.ClusterComponent{
-				Name:    comp.Name(),
-				Version: comp.Version(),
+				ComponentSpec: v1alpha1.ComponentSpec{
+					Name:    comp.Name(),
+					Version: comp.Version(),
+				},
 			})
 		}
 		return nil
@@ -440,13 +442,13 @@ func (c *activeCluster) installComponents() error {
 		return err
 	}
 	// now install all these resources
-	installed := make(map[string]bool)
+	installed := make(map[string]string)
 	for _, comp := range cc.Status.InstalledComponents {
-		installed[comp] = true
+		installed[comp.Name] = comp.Version
 	}
 
 	for _, comp := range config.Components {
-		if installed[comp.Name()] {
+		if installed[comp.Name()] != "" {
 			continue
 		}
 		fmt.Printf("Installing Kubernetes components for %s\n", comp.Name())
@@ -456,7 +458,10 @@ func (c *activeCluster) installComponents() error {
 		}
 
 		// mark it as installed
-		cc.Status.InstalledComponents = append(cc.Status.InstalledComponents, comp.Name())
+		cc.Status.InstalledComponents = append(cc.Status.InstalledComponents, v1alpha1.ComponentSpec{
+			Name:    comp.Name(),
+			Version: comp.Version(),
+		})
 		err = kclient.Status().Update(context.Background(), cc)
 		if err != nil {
 			return err
@@ -579,12 +584,17 @@ func printClusterSection(section providers.CloudProvider, clusters []*clusterInf
 	fmt.Printf("\nCloud: %s\n", section.ID())
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Cluster", "Version", "Status", "Targets", "Provider ID"})
+	table.SetHeader([]string{"Cluster", "Version", "Status", "Konstellation", "Targets", "Provider ID"})
 	for _, ci := range clusters {
 		c := ci.Cluster
 		targets := []string{}
-		if ci.ConfigSpec != nil {
-			targets = ci.ConfigSpec.Targets
+		konVersion := ""
+		if ci.Config != nil {
+			targets = ci.Config.Spec.Targets
+			konVersion = ci.Config.Spec.Version
+			if konVersion != version.Version {
+				konVersion = fmt.Sprintf("%s (current %s)", konVersion, version.Version)
+			}
 		} else {
 			if c.Status == types.StatusActive {
 				c.Status = types.StatusUnconfigured
@@ -594,6 +604,7 @@ func printClusterSection(section providers.CloudProvider, clusters []*clusterInf
 			c.Name,
 			c.Version,
 			c.Status.String(),
+			konVersion,
 			strings.Join(targets, ","),
 			c.ID,
 		})

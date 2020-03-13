@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/davidzhao/konstellation/pkg/components"
+	"github.com/davidzhao/konstellation/pkg/components/kubedash"
 	"github.com/davidzhao/konstellation/pkg/components/linkerd"
 )
 
@@ -15,6 +16,7 @@ var (
 	config           *ClientConfig
 	Components       = []components.ComponentInstaller{
 		&linkerd.LinkerdInstaller{},
+		&kubedash.KubeDash{},
 	}
 )
 

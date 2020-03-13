@@ -23,3 +23,13 @@ func KubeApplyReader(reader io.Reader) error {
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
+
+func KubeApply(url string) error {
+	args := []string{
+		"apply", "-f", url,
+	}
+	cmd := exec.Command("kubectl", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}

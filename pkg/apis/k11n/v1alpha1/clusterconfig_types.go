@@ -5,11 +5,15 @@ import (
 )
 
 type ClusterComponent struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
+	ComponentSpec `json:",inline"`
 	// +kubebuilder:validation:Optional
 	// +nullable
 	Config map[string]string `json:"config"`
+}
+
+type ComponentSpec struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
 }
 
 // ClusterConfigSpec defines the desired state of ClusterConfig
@@ -23,7 +27,7 @@ type ClusterConfigSpec struct {
 
 // ClusterConfigStatus defines the observed state of ClusterConfig
 type ClusterConfigStatus struct {
-	InstalledComponents []string `json:"components"`
+	InstalledComponents []ComponentSpec `json:"components"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

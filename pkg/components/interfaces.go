@@ -1,7 +1,6 @@
 package components
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -14,8 +13,4 @@ type ComponentInstaller interface {
 	InstallCLI() error
 	// installs the component onto the kube cluster
 	InstallComponent(client.Client) error
-}
-
-type ObjectPatcher interface {
-	PatchObject(runtime.Object) (runtime.Object, error)
 }
