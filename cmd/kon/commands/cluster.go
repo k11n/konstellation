@@ -248,6 +248,7 @@ func clusterSelect(c *cli.Context) error {
 	// see if we have a nodepool
 	_, err = resources.GetNodepoolOfType(kclient, resources.NODEPOOL_PRIMARY)
 	if err != nil {
+		fmt.Println()
 		fmt.Println("Your cluster requires a nodepool to function, let's create that now")
 		err = ac.configureNodepool()
 	}
@@ -333,7 +334,7 @@ func (c *activeCluster) createClusterConfig() error {
 		}
 	})
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Failed to load required resources into Kube")
 	}
 
 	// create initial config
