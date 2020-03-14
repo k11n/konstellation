@@ -18,7 +18,7 @@ func NewIAMService(s *session.Session) *IAMService {
 }
 
 /**
- * Lists roles that are not servoce linked
+ * Lists roles that are not service linked
  */
 func (s *IAMService) ListStandardRoles() ([]*iam.Role, error) {
 	roleObjs, err := s.IAM.ListRoles(&iam.ListRolesInput{})

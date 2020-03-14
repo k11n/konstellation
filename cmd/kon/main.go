@@ -19,7 +19,7 @@ func main() {
 		commands.ConfigCommands,
 		commands.ClusterCommands,
 		commands.AppCommands,
-		commands.WebCommands,
+		commands.UICommands,
 	}
 	for _, cmds := range commandSets {
 		app.Commands = append(app.Commands, cmds...)

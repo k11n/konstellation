@@ -11,12 +11,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/manifoldco/promptui"
+	"github.com/pkg/errors"
+
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/cloud"
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
-	"github.com/manifoldco/promptui"
-	"github.com/pkg/errors"
 )
 
 type AWSProvider struct {

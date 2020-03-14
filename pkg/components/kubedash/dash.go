@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	LOCAL_URL = "http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/"
+	PROXY_PATH = "/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/"
 )
 
 type KubeDash struct {
