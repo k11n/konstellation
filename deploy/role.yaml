@@ -75,6 +75,7 @@ rules:
   - apps
   - apptargets
   - builds
+  - ingressrequests
   verbs:
   - create
   - delete

@@ -10,7 +10,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalev2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,7 +57,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		&appsv1.Deployment{},
 		&corev1.Service{},
 		&autoscalev2beta2.HorizontalPodAutoscaler{},
-		&netv1beta1.Ingress{},
+		&v1alpha1.IngressRequest{},
 	}
 	for _, t := range secondaryTypes {
 		err = c.Watch(&source.Kind{Type: t}, &handler.EnqueueRequestForOwner{

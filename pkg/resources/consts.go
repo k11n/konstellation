@@ -3,16 +3,16 @@ package resources
 import "fmt"
 
 const (
-	NODEPOOL_PREFIX  = "kon-nodepool"
-	NODEPOOL_LABEL   = "k11n.dev/nodepool"
-	NODEPOOL_PRIMARY = "primary"
-	APP_LABEL        = "k11n.dev/app"
-	TARGET_LABEL     = "k11n.dev/target"
-	APPTARGET_LABEL  = "k11n.dev/appTarget"
-	// TODO: change to release registry/etc
-	RELEASE_REGISTRY_LABEL = "k11n.dev/buildRegistry"
-	RELEASE_IMAGE_LABEL    = "k11n.dev/buildImage"
+	NODEPOOL_PREFIX        = "kon-nodepool"
+	NODEPOOL_LABEL         = "k11n.dev/nodepool"
+	NODEPOOL_PRIMARY       = "primary"
+	APP_LABEL              = "k11n.dev/app"
+	TARGET_LABEL           = "k11n.dev/target"
+	APPTARGET_LABEL        = "k11n.dev/appTarget"
+	RELEASE_REGISTRY_LABEL = "k11n.dev/releaseRegistry"
+	RELEASE_IMAGE_LABEL    = "k11n.dev/releaseImage"
 	RELEASE_LABEL          = "k11n.dev/release"
+	INGRESS_HOST_LABEL     = "k11n.dev/ingressHost"
 )
 
 var (
