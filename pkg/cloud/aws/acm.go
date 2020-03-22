@@ -41,7 +41,27 @@ func (a *ACMService) ListCertificates(ctx context.Context) (certificates []*type
 	return
 }
 
-func (a *ACMService) ImportCertificate(ctx context.Context, cert []byte, pkey []byte, chain []byte) (certificate *types.Certificate, err error) {
+func (a *ACMService) ImportCertificate(ctx context.Context, cert []byte, pkey []byte, chain []byte, existingID string) (certificate *types.Certificate, err error) {
+	input := &acm.ImportCertificateInput{
+		Certificate:      cert,
+		PrivateKey:       pkey,
+		CertificateChain: chain,
+	}
+	if existingID != "" {
+		input.SetCertificateArn(existingID)
+	}
+	out, err := a.ACM.ImportCertificateWithContext(ctx, input)
+	if err != nil {
+		return
+	}
+
+	res, err := a.ACM.DescribeCertificateWithContext(ctx, &acm.DescribeCertificateInput{
+		CertificateArn: out.CertificateArn,
+	})
+	if err != nil {
+		return
+	}
+	certificate = certificateFromDetails(res.Certificate)
 	return
 }
 

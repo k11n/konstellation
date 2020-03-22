@@ -17,5 +17,5 @@ type KubernetesProvider interface {
 
 type CertificateProvider interface {
 	ListCertificates(context.Context) ([]*types.Certificate, error)
-	ImportCertificate(ctx context.Context, cert []byte, pkey []byte, chain []byte) (*types.Certificate, error)
+	ImportCertificate(ctx context.Context, cert []byte, pkey []byte, chain []byte, existingID string) (*types.Certificate, error)
 }

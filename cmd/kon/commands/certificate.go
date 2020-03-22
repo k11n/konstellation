@@ -43,6 +43,11 @@ var CertificateCommands = []*cli.Command{
 				Action: certImport,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
+						Name:     "domain",
+						Usage:    "the domain to load this certificate",
+						Required: true,
+					},
+					&cli.StringFlag{
 						Name:     "certificate",
 						Usage:    "certificate file",
 						Required: true,
@@ -137,7 +142,7 @@ func certImport(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
+	domain := c.String("domain")
 	certPath := c.String("certificate")
 	pkeyPath := c.String("private-key")
 	chainPath := c.String("chain")
@@ -160,8 +165,14 @@ func certImport(c *cli.Context) error {
 		}
 	}
 
+	// find existing cert if exists
+	existingID := ""
+	if existingCert, err := resources.GetCertificateForDomain(ac.kubernetesClient(), domain); err == nil {
+		existingID = existingCert.Spec.ProviderID
+	}
+
 	certificate, err := ac.Cloud.CertificateProvider().ImportCertificate(context.TODO(),
-		cert, pkey, chain)
+		cert, pkey, chain, existingID)
 	if err != nil {
 		return err
 	}
