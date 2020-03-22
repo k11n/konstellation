@@ -76,6 +76,7 @@ rules:
   - apptargets
   - builds
   - ingressrequests
+  - certificates
   verbs:
   - create
   - delete

@@ -14,3 +14,8 @@ type KubernetesProvider interface {
 	IsNodepoolReady(ctx context.Context, clusterName string, nodepoolName string) (bool, error)
 	CreateNodepool(ctx context.Context, clusterName string, np *v1alpha1.Nodepool, purpose string) error
 }
+
+type CertificateProvider interface {
+	ListCertificates(context.Context) ([]*types.Certificate, error)
+	ImportCertificate(ctx context.Context, cert []byte, pkey []byte, chain []byte) (*types.Certificate, error)
+}

@@ -16,9 +16,10 @@ func main() {
 	app.EnableBashCompletion = true
 	app.Version = version.Version
 	commandSets := [][]*cli.Command{
+		commands.AppCommands,
+		commands.CertificateCommands,
 		commands.ConfigCommands,
 		commands.ClusterCommands,
-		commands.AppCommands,
 		commands.UICommands,
 	}
 	for _, cmds := range commandSets {

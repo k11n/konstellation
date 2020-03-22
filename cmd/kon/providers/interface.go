@@ -15,4 +15,5 @@ type CloudProvider interface {
 
 	// utils
 	KubernetesProvider() cloud.KubernetesProvider
+	CertificateProvider() cloud.CertificateProvider
 }

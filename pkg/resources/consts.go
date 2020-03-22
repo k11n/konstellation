@@ -13,6 +13,7 @@ const (
 	RELEASE_IMAGE_LABEL    = "k11n.dev/releaseImage"
 	RELEASE_LABEL          = "k11n.dev/release"
 	INGRESS_HOST_LABEL     = "k11n.dev/ingressHost"
+	DOMAIN_LABEL           = "k11n.dev/domain"
 )
 
 var (

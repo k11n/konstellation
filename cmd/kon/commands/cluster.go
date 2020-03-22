@@ -61,11 +61,6 @@ var ClusterCommands = []*cli.Command{
 				Action: clusterList,
 			},
 			&cli.Command{
-				Name:   "create",
-				Usage:  "creates a cluster",
-				Action: clusterCreate,
-			},
-			&cli.Command{
 				Name:   "select",
 				Usage:  "select an active cluster to work with",
 				Action: clusterSelect,
@@ -80,9 +75,20 @@ var ClusterCommands = []*cli.Command{
 				Action: clusterConfigure,
 			},
 			&cli.Command{
+				Name:   "create",
+				Usage:  "creates a cluster",
+				Action: clusterCreate,
+			},
+			&cli.Command{
+				Name:   "reset",
+				Usage:  "resets current active cluster",
+				Action: clusterReset,
+			},
+			&cli.Command{
 				Name:   "get-token",
 				Usage:  "returns a kubernetes compatible token",
 				Action: clusterGetToken,
+				Hidden: true,
 				Flags: []cli.Flag{
 					clusterCloudFlag,
 					clusterNameFlag,
@@ -257,6 +263,18 @@ func clusterSelect(c *cli.Context) error {
 	}
 
 	return ac.installComponents()
+}
+
+func clusterReset(c *cli.Context) error {
+	conf := config.GetConfig()
+	conf.SelectedCloud = ""
+	conf.SelectedCluster = ""
+	err := conf.Persist()
+	if err != nil {
+		return err
+	}
+	fmt.Println("Active cluster has been reset.")
+	return nil
 }
 
 /**

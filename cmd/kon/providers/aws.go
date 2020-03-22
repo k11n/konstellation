@@ -24,6 +24,7 @@ type AWSProvider struct {
 	id          string
 	DisplayName string
 	kubeSvc     cloud.KubernetesProvider
+	acmSvc      cloud.CertificateProvider
 }
 
 func NewAWSProvider() *AWSProvider {
@@ -266,6 +267,16 @@ func (a *AWSProvider) KubernetesProvider() cloud.KubernetesProvider {
 		}
 	}
 	return a.kubeSvc
+}
+
+func (a *AWSProvider) CertificateProvider() cloud.CertificateProvider {
+	if a.acmSvc == nil {
+		if a.IsSetup() {
+			session := session.Must(a.awsSession())
+			a.acmSvc = kaws.NewACMService(session)
+		}
+	}
+	return a.acmSvc
 }
 
 func (a *AWSProvider) awsSession() (*session.Session, error) {
