@@ -33,7 +33,7 @@ func (c *LinkerdInstaller) NeedsCLI() bool {
 	}
 
 	// check version
-	output, err := c.runBufferedCommand("version")
+	output, err := cli.RunBufferedCommand(c.cliPath(), "version")
 	if err != nil {
 		// should be able to run this but couldn't
 		return true
@@ -61,7 +61,6 @@ func (c *LinkerdInstaller) InstallCLI() error {
 		return err
 	}
 
-	// set env before running this
 	err = os.Chmod(installCmd, files.ExecutableFileMode)
 	if err != nil {
 		return err
@@ -69,6 +68,7 @@ func (c *LinkerdInstaller) InstallCLI() error {
 
 	// fmt.Printf("running install cmd: %s\n", installCmd)
 	cmd := exec.Command(installCmd)
+	// set env before running this
 	cmd.Env = []string{
 		fmt.Sprintf("LINKERD2_VERSION=%s", c.Version()),
 		fmt.Sprintf("INSTALLROOT=%s", c.installRoot()),
@@ -106,9 +106,4 @@ func (c *LinkerdInstaller) installRoot() string {
 
 func (c *LinkerdInstaller) cliPath() string {
 	return path.Join(cli.GetBinDir(), "linkerd")
-}
-
-func (c *LinkerdInstaller) runBufferedCommand(args ...string) ([]byte, error) {
-	cmd := exec.Command(c.cliPath(), args...)
-	return cmd.CombinedOutput()
 }

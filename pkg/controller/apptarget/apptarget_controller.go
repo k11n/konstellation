@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-	"github.com/davidzhao/konstellation/pkg/resources"
-	"github.com/davidzhao/konstellation/pkg/utils/objects"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalev2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +20,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/davidzhao/konstellation/pkg/resources"
+	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
 var log = logf.Log.WithName("controller_apptarget")

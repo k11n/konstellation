@@ -57,14 +57,42 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch cluster config changes, as it may make it eligible to deploy a new target
-	err = c.Watch(&source.Kind{Type: &netv1beta1.Ingress{}}, &handler.EnqueueRequestsFromMapFunc{
+	// Watch changes to certificates, it may require the domain to be reconciled
+	err = c.Watch(&source.Kind{Type: &v1alpha1.Certificate{}}, &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: handler.ToRequestsFunc(func(configMapObject handler.MapObject) []reconcile.Request {
 			requests := []reconcile.Request{}
+			cert := configMapObject.Object.(*v1alpha1.Certificate)
+			certDomain := cert.Labels[resources.DOMAIN_LABEL]
+			// load all ingress requests, and see which ones could be handled by cert
+			reqList, err := resources.GetIngressRequests(mgr.GetClient())
 			if err != nil {
 				return requests
 			}
+			requestedHosts := map[string]bool{}
+			for _, ingressReq := range reqList.Items {
+				if requestedHosts[ingressReq.Spec.Host] {
+					continue
+				}
+				if resources.MatchesHost(ingressReq.Spec.Host, certDomain) {
+					requests = append(requests, reconcile.Request{
+						NamespacedName: types.NamespacedName{
+							Name: ingressReq.Name,
+						},
+					})
+					requestedHosts[ingressReq.Spec.Host] = true
+				}
+			}
+			return requests
+		}),
+	})
+	if err != nil {
+		return err
+	}
 
+	// Watch ingress for changes, if it's deleted, we'd need to recreate it
+	err = c.Watch(&source.Kind{Type: &netv1beta1.Ingress{}}, &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: handler.ToRequestsFunc(func(configMapObject handler.MapObject) []reconcile.Request {
+			requests := []reconcile.Request{}
 			ingress := configMapObject.Object.(*netv1beta1.Ingress)
 			// find all IngressRequests of the same domain
 			host := ingress.Labels[resources.INGRESS_HOST_LABEL]

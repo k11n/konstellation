@@ -11,6 +11,11 @@ import (
 	"syscall"
 )
 
+func RunBufferedCommand(name string, args ...string) ([]byte, error) {
+	cmd := exec.Command(name, args...)
+	return cmd.CombinedOutput()
+}
+
 func KubeCtl(args ...string) error {
 	cmd := exec.Command("kubectl", args...)
 	cmd.Stdout = os.Stdout
