@@ -7,15 +7,15 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/davidzhao/konstellation/pkg/components"
+	"github.com/davidzhao/konstellation/pkg/components/istio"
 	"github.com/davidzhao/konstellation/pkg/components/kubedash"
-	"github.com/davidzhao/konstellation/pkg/components/linkerd"
 )
 
 var (
 	defaultConfigDir = os.ExpandEnv("$HOME/.konstellation")
 	config           *ClientConfig
 	Components       = []components.ComponentInstaller{
-		&linkerd.LinkerdInstaller{},
+		&istio.IstioInstaller{},
 		&kubedash.KubeDash{},
 	}
 )

@@ -30,6 +30,8 @@ import (
 	"github.com/davidzhao/konstellation/pkg/apis"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
+	"github.com/davidzhao/konstellation/pkg/components"
+	"github.com/davidzhao/konstellation/pkg/components/ingress"
 	"github.com/davidzhao/konstellation/pkg/resources"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
 	"github.com/davidzhao/konstellation/pkg/utils/objects"
@@ -603,6 +605,12 @@ func (c *activeCluster) initClient() error {
 	}
 	c.kclient = kclient
 	return nil
+}
+
+func (c *activeCluster) getSupportedComponents() []components.ComponentInstaller {
+	comps := config.Components
+	comps = append(comps, ingress.NewIngressForCluster(c.Cloud.ID(), c.Cluster))
+	return comps
 }
 
 func printClusterSection(section providers.CloudProvider, clusters []*clusterInfo) {

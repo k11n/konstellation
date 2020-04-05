@@ -42,6 +42,7 @@ func configShow(c *cli.Context) error {
 
 func configureStart(c *cli.Context) error {
 	// install components
+	// this only requires components that has a CLI
 	installConfirmed := false
 	var err error
 	for _, comp := range config.Components {
@@ -67,7 +68,6 @@ func configureStart(c *cli.Context) error {
 				return err
 			}
 		}
-
 	}
 
 	// cloud, err := ChooseCloudPrompt("Choose a cloud provider to configure (you can use more than one)")
