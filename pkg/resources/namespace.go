@@ -29,7 +29,7 @@ func EnsureNamespaceCreated(kclient client.Client, namespace string) error {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 			Annotations: map[string]string{
-				"linkerd.io/inject": "enabled",
+				"istio-injection": "enabled",
 			},
 		},
 	}

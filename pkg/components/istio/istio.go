@@ -1,6 +1,7 @@
 package istio
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -86,7 +87,7 @@ func (i *IstioInstaller) InstallComponent(client.Client) error {
 		return err
 	}
 
-	return cli.KubeApplyReader(output)
+	return cli.KubeApplyReader(bytes.NewBuffer(output))
 }
 
 func (i *IstioInstaller) cliPath() string {
