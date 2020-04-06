@@ -38,6 +38,12 @@ func (i *AWSALBIngress) InstallCLI() error {
 }
 
 func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
+	// deploy roles xml
+	url := fmt.Sprintf("https://raw.githubusercontent.com/kubernetes-sigs/aws-alb-ingress-controller/v%s/docs/examples/rbac-role.yaml", i.Version())
+	err := cli.KubeApply(url)
+	if err != nil {
+		return nil
+	}
 	dep := i.deploymentForIngress()
 	existing := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -45,7 +51,7 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 			Namespace:                  "kube-system",
 		},
 	}
-	_, err := controllerutil.CreateOrUpdate(context.TODO(), kclient, existing, func() error {
+	_, err = controllerutil.CreateOrUpdate(context.TODO(), kclient, existing, func() error {
 		if existing.GetCreationTimestamp().IsZero() {
 			existing.Spec = dep.Spec
 		}
