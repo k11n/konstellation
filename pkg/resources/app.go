@@ -35,3 +35,12 @@ func GetAppTargets(kclient client.Client, appName string) (targets []v1alpha1.Ap
 	targets = appTargetList.Items
 	return
 }
+
+func GetAppTarget(kclient client.Client, name string) (*v1alpha1.AppTarget, error) {
+	at := &v1alpha1.AppTarget{}
+	err := kclient.Get(context.TODO(), types.NamespacedName{Name: name}, at)
+	if err != nil {
+		return nil, err
+	}
+	return at, nil
+}

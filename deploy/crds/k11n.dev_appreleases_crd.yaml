@@ -1,33 +1,20 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: apptargets.k11n.dev
+  name: appreleases.k11n.dev
 spec:
-  additionalPrinterColumns:
-  - JSONPath: .status.numDesired
-    name: NumDesired
-    type: integer
-  - JSONPath: .status.numReady
-    name: NumReady
-    type: integer
-  - JSONPath: .status.numAvailable
-    name: NumAvailable
-    type: integer
-  - JSONPath: .status.hostname
-    name: Hostname
-    type: string
   group: k11n.dev
   names:
-    kind: AppTarget
-    listKind: AppTargetList
-    plural: apptargets
-    singular: apptarget
-  scope: Cluster
+    kind: AppRelease
+    listKind: AppReleaseList
+    plural: appreleases
+    singular: apprelease
+  scope: Namespaced
   subresources:
     status: {}
   validation:
     openAPIV3Schema:
-      description: AppTarget is the Schema for the apptargets API
+      description: AppRelease is the Schema for the appreleases API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -42,7 +29,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: AppTargetSpec defines a deployment target for App
+          description: AppReleaseSpec defines a release of AppTarget
           properties:
             app:
               type: string
@@ -50,9 +37,7 @@ spec:
               items:
                 type: string
               type: array
-            buildImage:
-              type: string
-            buildRegistry:
+            build:
               type: string
             command:
               items:
@@ -155,11 +140,13 @@ spec:
                 - name
                 type: object
               type: array
-            ingressHosts:
-              items:
-                type: string
-              type: array
+            numDesired:
+              description: num desired default state, autoscaling could change desired
+                in status
+              format: int32
+              type: integer
             ports:
+              description: '------ dupe of app target fields ------//'
               items:
                 properties:
                   ingressPath:
@@ -477,53 +464,24 @@ spec:
                     value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
                   type: object
               type: object
-            scale:
-              properties:
-                max:
-                  format: int32
-                  type: integer
-                min:
-                  format: int32
-                  type: integer
-                scaleDown:
-                  properties:
-                    delay:
-                      format: int32
-                      type: integer
-                    step:
-                      format: int32
-                      type: integer
-                  type: object
-                scaleUp:
-                  properties:
-                    delay:
-                      format: int32
-                      type: integer
-                    step:
-                      format: int32
-                      type: integer
-                  type: object
-                targetCPUUtilizationPercentage:
-                  format: int32
-                  type: integer
-              type: object
+            role:
+              type: string
             target:
               type: string
+            trafficPercentage:
+              format: int32
+              type: integer
           required:
           - app
-          - buildImage
-          - buildRegistry
+          - build
+          - numDesired
+          - role
           - target
+          - trafficPercentage
           type: object
         status:
-          description: AppTargetStatus defines the observed state of AppTarget
+          description: AppReleaseStatus defines the observed state of AppRelease
           properties:
-            activeRelease:
-              type: string
-            hostname:
-              type: string
-            ingress:
-              type: string
             numAvailable:
               format: int32
               type: integer
@@ -533,18 +491,16 @@ spec:
             numReady:
               format: int32
               type: integer
-            targetRelease:
+            reason:
               type: string
-            trafficUpdatedAt:
-              format: date-time
+            state:
               type: string
           required:
-          - activeRelease
           - numAvailable
           - numDesired
           - numReady
-          - targetRelease
-          - trafficUpdatedAt
+          - reason
+          - state
           type: object
       type: object
   version: v1alpha1

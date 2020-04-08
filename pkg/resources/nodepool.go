@@ -3,12 +3,17 @@ package resources
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+func NodepoolName() string {
+	return fmt.Sprintf("%s-%s", NODEPOOL_PREFIX, time.Now().Format(dateTimeFormat))
+}
 
 func GetNodepoolOfType(kclient client.Client, kind string) (np *v1alpha1.Nodepool, err error) {
 	items := v1alpha1.NodepoolList{}

@@ -2,18 +2,18 @@ package resources
 
 import (
 	"fmt"
-	"time"
 
 	corev1 "k8s.io/api/core/v1"
 )
 
 const (
-	dateTimeFormat = "20060102-1504"
+	dateTimeFormat  = "20060102-1504"
+	defaultListSize = 10
 )
 
-func NodepoolName() string {
-	return fmt.Sprintf("%s-%s", NODEPOOL_PREFIX, time.Now().Format(dateTimeFormat))
-}
+var (
+	ErrNotFound = fmt.Errorf("The resource is not found")
+)
 
 func GetPodNames(pods []corev1.Pod) []string {
 	podNames := make([]string, 0, len(pods))

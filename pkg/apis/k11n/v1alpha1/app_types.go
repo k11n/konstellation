@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/davidzhao/konstellation/pkg/utils/objects"
 	corev1 "k8s.io/api/core/v1"
@@ -219,6 +220,18 @@ func (p *Probe) ToCoreProbe() *corev1.Probe {
 		FailureThreshold:    p.FailureThreshold,
 	}
 	return &coreP
+}
+
+func (p *ProbeConfig) GetReadinessTimeout() time.Duration {
+	timeout := int32(60)
+	if p.Readiness != nil {
+		if p.Readiness.InitialDelaySeconds > 0 {
+			timeout = p.Readiness.InitialDelaySeconds
+		} else if p.Readiness.PeriodSeconds > 0 {
+			timeout = p.Readiness.PeriodSeconds + p.Readiness.TimeoutSeconds
+		}
+	}
+	return time.Second * time.Duration(timeout)
 }
 
 // ---------------------------------------------------------------------------//

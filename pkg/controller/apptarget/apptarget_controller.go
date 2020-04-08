@@ -53,6 +53,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	// TODO: watch Releases and reconcile app target when new releases are created
+
 	// Watch for changes to secondary resource Pods and requeue the owner App
 	secondaryTypes := []runtime.Object{
 		&appsv1.Deployment{},
@@ -135,7 +137,7 @@ func (r *ReconcileAppTarget) Reconcile(request reconcile.Request) (res reconcile
 
 func (r *ReconcileAppTarget) reconcileDeployment(appTarget *v1alpha1.AppTarget) (deployment *appsv1.Deployment, updated bool, err error) {
 	// find build
-	build := &v1alpha1.Release{}
+	build := &v1alpha1.Build{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: appTarget.Spec.Release}, build)
 	if err != nil {
 		return
@@ -244,7 +246,7 @@ func (r *ReconcileAppTarget) createReleaseStatusForReplicaSet(deployment *appsv1
 	}
 
 	status = &v1alpha1.AppReleaseStatus{
-		Release:      replicaset.Labels[resources.RELEASE_LABEL],
+		Release:      replicaset.Labels[resources.BUILD_LABEL],
 		ReplicaSet:   replicaset.Name,
 		State:        v1alpha1.ReleaseStateNew,
 		NumReady:     replicaset.Status.ReadyReplicas,
@@ -394,12 +396,12 @@ func (r *ReconcileAppTarget) reconcileAutoscaler(at *v1alpha1.AppTarget, deploym
 	return
 }
 
-func newDeploymentForAppTarget(at *v1alpha1.AppTarget, build *v1alpha1.Release) *appsv1.Deployment {
+func newDeploymentForAppTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build) *appsv1.Deployment {
 	namespace := namespaceForAppTarget(at)
 	replicas := int32(at.Spec.Scale.Min)
 	ls := labelsForAppTarget(at)
 	// add release version for deployment
-	ls[resources.RELEASE_LABEL] = build.Name
+	ls[resources.BUILD_LABEL] = build.Name
 
 	container := corev1.Container{
 		Name:      "app",
@@ -520,6 +522,7 @@ func namespaceForAppTarget(at *v1alpha1.AppTarget) string {
 
 func labelsForAppTarget(appTarget *v1alpha1.AppTarget) map[string]string {
 	return map[string]string{
-		resources.APPTARGET_LABEL: appTarget.Name,
+		resources.APP_LABEL:    appTarget.Spec.App,
+		resources.TARGET_LABEL: appTarget.Spec.Target,
 	}
 }

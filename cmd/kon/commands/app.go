@@ -107,21 +107,19 @@ func appStatus(c *cli.Context) error {
 	requiredTarget := c.String("target")
 	// what information is useful here?
 	// group by target
-	// Release, date deployed, status, numAvailable/Desired, traffic
+	// Build, date deployed, status, numAvailable/Desired, traffic
 	for _, target := range targets {
 		if requiredTarget != "" && target.Name != requiredTarget {
 			continue
 		}
 
 		// find all targets of this app
-		releases, err := resources.GetReleasesByImage(kclient,
-			target.Labels[resources.RELEASE_REGISTRY_LABEL],
-			target.Labels[resources.RELEASE_IMAGE_LABEL])
+		releases, err := resources.GetBuildsByImage(kclient,
+			target.Labels[resources.BUILD_REGISTRY_LABEL],
+			target.Labels[resources.BUILD_IMAGE_LABEL],
+			5)
 		if err != nil {
 			return err
-		}
-		if len(releases) > 5 {
-			releases = releases[:5] // show last 5
 		}
 
 		activeReleaseMap := map[string]*v1alpha1.AppReleaseStatus{}
@@ -134,7 +132,7 @@ func appStatus(c *cli.Context) error {
 		fmt.Println()
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{
-			"Release", "Date", "Pods", "Status",
+			"Build", "Date", "Pods", "Status",
 		})
 		for _, release := range releases {
 			ar := activeReleaseMap[release.Name]

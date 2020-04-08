@@ -191,12 +191,12 @@ func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Resul
 	return
 }
 
-func (r *ReconcileApp) reconcileBuild(app *v1alpha1.App) (*v1alpha1.Release, error) {
+func (r *ReconcileApp) reconcileBuild(app *v1alpha1.App) (*v1alpha1.Build, error) {
 	// TODO: handle ImageTag being "latest" or empty
-	build := v1alpha1.NewRelease(app.Spec.Registry, app.Spec.Image, app.Spec.ImageTag)
-	build.ObjectMeta.Labels = resources.LabelsForRelease(build)
+	build := v1alpha1.NewBuild(app.Spec.Registry, app.Spec.Image, app.Spec.ImageTag)
+	build.ObjectMeta.Labels = resources.LabelsForBuild(build)
 
-	existing := &v1alpha1.Release{}
+	existing := &v1alpha1.Build{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: build.GetName()}, existing)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -214,7 +214,7 @@ func (r *ReconcileApp) reconcileBuild(app *v1alpha1.App) (*v1alpha1.Release, err
 	return existing, nil
 }
 
-func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string, build *v1alpha1.Release) (updated bool, err error) {
+func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string, build *v1alpha1.Build) (updated bool, err error) {
 	appTarget := newAppTargetForApp(app, target, build)
 
 	// see if we already have a target for this
@@ -241,9 +241,9 @@ func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string, buil
 	return
 }
 
-func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Release) *v1alpha1.AppTarget {
+func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Build) *v1alpha1.AppTarget {
 	ls := labelsForAppTarget(app, target)
-	for k, v := range resources.LabelsForRelease(build) {
+	for k, v := range resources.LabelsForBuild(build) {
 		ls[k] = v
 	}
 	at := &v1alpha1.AppTarget{
@@ -252,16 +252,17 @@ func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Releas
 			Labels: ls,
 		},
 		Spec: v1alpha1.AppTargetSpec{
-			App:       app.Name,
-			Target:    target,
-			Ports:     app.Spec.Ports,
-			Release:   build.GetName(),
-			Command:   app.Spec.Command,
-			Args:      app.Spec.Args,
-			Env:       app.Spec.EnvForTarget(target),
-			Resources: *app.Spec.ResourcesForTarget(target),
-			Scale:     *app.Spec.ScaleSpecForTarget(target),
-			Probes:    *app.Spec.ProbesForTarget(target),
+			App:           app.Name,
+			Target:        target,
+			Ports:         app.Spec.Ports,
+			BuildRegistry: build.Spec.Registry,
+			BuildImage:    build.Spec.Image,
+			Command:       app.Spec.Command,
+			Args:          app.Spec.Args,
+			Env:           app.Spec.EnvForTarget(target),
+			Resources:     *app.Spec.ResourcesForTarget(target),
+			Scale:         *app.Spec.ScaleSpecForTarget(target),
+			Probes:        *app.Spec.ProbesForTarget(target),
 		},
 	}
 

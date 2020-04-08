@@ -29,8 +29,9 @@ require (
 	golang.org/x/sys v0.0.0-20200120151820-655fe14d7479 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
-	google.golang.org/appengine v1.6.5 // indirect
 	gopkg.in/yaml.v2 v2.2.7
+	istio.io/api v0.0.0-20200407171655-fb462ece86fb
+	istio.io/client-go v0.0.0-20200324231647-289a91f51a8e
 	k8s.io/api v0.17.1
 	k8s.io/apimachinery v0.17.1
 	k8s.io/client-go v12.0.0+incompatible

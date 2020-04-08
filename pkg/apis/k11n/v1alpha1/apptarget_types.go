@@ -1,15 +1,18 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// AppTargetSpec defines the desired state of AppTarget
+// AppTargetSpec defines a deployment target for App
 type AppTargetSpec struct {
-	App     string `json:"app"`
-	Target  string `json:"target"`
-	Release string `json:"release"`
+	App           string `json:"app"`
+	Target        string `json:"target"`
+	BuildRegistry string `json:"buildRegistry"`
+	BuildImage    string `json:"buildImage"`
 
 	// +optional
 	Ports []PortSpec `json:"ports,omitempty"`
@@ -33,44 +36,17 @@ type AppTargetSpec struct {
 
 // AppTargetStatus defines the observed state of AppTarget
 type AppTargetStatus struct {
-	ActiveReleases []AppReleaseStatus `json:"pods,omitempty"`
-	CanaryRelease  string             `json:"canaryRelease"`
-	LastScaleTime  *metav1.Time       `json:"lastScaleTime,omitempty"`
-	NumDesired     int32              `json:"numDesired"`
-	NumReady       int32              `json:"numReady"`
-	NumAvailable   int32              `json:"numAvailable"`
+	TargetRelease   string      `json:"targetRelease"`
+	ActiveRelease   string      `json:"activeRelease"`
+	DeployUpdatedAt metav1.Time `json:"trafficUpdatedAt"`
+	NumDesired      int32       `json:"numDesired"`
+	NumReady        int32       `json:"numReady"`
+	NumAvailable    int32       `json:"numAvailable"`
 	// +optional
 	Hostname string `json:"hostname,omitempty"`
 	// +optional
 	Ingress string `json:"ingress,omitempty"`
-
-	// State AppTargetState `json:"state"`
 }
-
-type AppReleaseStatus struct {
-	Release      string       `json:"release"`
-	ReplicaSet   string       `json:"replicaSet"`
-	State        ReleaseState `json:"state"`
-	NumDesired   int32        `json:"numDesired"`
-	NumReady     int32        `json:"numReady"`
-	NumAvailable int32        `json:"numAvailable"`
-	Pods         []string     `json:"pods,omitempty"`
-	Reason       string       `json:"reason"`
-}
-
-type ReleaseState string
-
-func (rs ReleaseState) String() string {
-	return string(rs)
-}
-
-const (
-	ReleaseStateNew       ReleaseState = "new"
-	ReleaseStateCanarying ReleaseState = "canarying"
-	ReleaseStateReleasing ReleaseState = "releasing"
-	ReleaseStateReleased  ReleaseState = "released"
-	ReleaseStateFailed    ReleaseState = "failed"
-)
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -102,14 +78,17 @@ func init() {
 	SchemeBuilder.Register(&AppTarget{}, &AppTargetList{})
 }
 
-func (a *AppTargetSpec) ContainerPorts() []corev1.ContainerPort {
-	ports := []corev1.ContainerPort{}
-	for _, p := range a.Ports {
-		ports = append(ports, corev1.ContainerPort{
-			Name:          p.Name,
-			ContainerPort: p.Port,
-			Protocol:      p.Protocol,
-		})
+/**
+ * Namespace for all of resources that this obj owns
+ */
+func (at *AppTarget) ScopedName() string {
+	return fmt.Sprintf("%s-%s", at.Spec.App, at.Spec.Target)
+}
+
+func (at *AppTarget) DesiredInstances() int32 {
+	instances := at.Spec.Scale.Min
+	if at.Status.NumDesired > instances {
+		instances = at.Status.NumDesired
 	}
-	return ports
+	return instances
 }
