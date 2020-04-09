@@ -3,6 +3,7 @@ package deployment
 import (
 	"context"
 
+	"github.com/thoas/go-funk"
 	istio "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -125,12 +126,21 @@ func (r *ReconcileDeployment) Reconcile(request reconcile.Request) (res reconcil
 	}
 
 	// reconcile Service
-	_, err = r.reconcileService(at)
+	service, err := r.reconcileService(at)
 	if err != nil {
 		return
 	}
 
-	err = r.reconcileVirtualService(at, releases)
+	// filter only releases with traffic
+	activeReleases := funk.Filter(releases, func(ar *v1alpha1.AppRelease) bool {
+		return ar.Spec.TrafficPercentage > 0
+	}).([]*v1alpha1.AppRelease)
+	err = r.reconcileDestinationRule(at, activeReleases)
+	if err != nil {
+		return
+	}
+
+	err = r.reconcileVirtualService(at, service, activeReleases)
 	if err != nil {
 		return
 	}
