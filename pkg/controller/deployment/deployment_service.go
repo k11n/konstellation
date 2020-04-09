@@ -88,11 +88,15 @@ func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, r
 		},
 	}
 	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, dr, func() error {
-		err := controllerutil.SetControllerReference(at, dr, r.scheme)
-		if err != nil {
-			return err
+		if dr.CreationTimestamp.IsZero() {
+			err := controllerutil.SetControllerReference(at, dr, r.scheme)
+			if err != nil {
+				return err
+			}
 		}
-		dr.Spec = drTemplate.Spec
+
+		// use merge to avoid defaults clearing out
+		objects.MergeObject(&dr.Spec, &drTemplate.Spec)
 		return nil
 	})
 
@@ -125,7 +129,19 @@ func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, se
 		}
 	}
 
-	return nil
+	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, vs, func() error {
+		if vs.CreationTimestamp.IsZero() {
+			err := controllerutil.SetControllerReference(at, vs, r.scheme)
+			if err != nil {
+				return err
+			}
+		}
+		vs.Labels = vsTemplate.Labels
+		objects.MergeObject(&vs.Spec, &vsTemplate.Spec)
+		return nil
+	})
+
+	return err
 }
 
 func newServiceForAppTarget(at *v1alpha1.AppTarget) *corev1.Service {
@@ -224,14 +240,4 @@ func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) 
 		},
 	}
 	return vs
-}
-
-func newVirtualServiceForAppTarget(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) *istio.VirtualService {
-	return &istio.VirtualService{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: at.ScopedName(),
-			Name:      at.Name,
-		},
-		Spec: networkingv1beta1.VirtualService{},
-	}
 }

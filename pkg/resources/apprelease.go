@@ -4,15 +4,10 @@ import (
 	"context"
 	"sort"
 	"strings"
-	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-)
-
-const (
-	DefaultStepDelay = 1 * time.Minute
 )
 
 func GetAppReleases(kclient client.Client, app string, target string, count int) ([]*v1alpha1.AppRelease, error) {

@@ -12,6 +12,7 @@ import (
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
+	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
 func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget) (releases []*v1alpha1.AppRelease, res *reconcile.Result, err error) {
@@ -68,11 +69,13 @@ func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget) (rele
 			},
 		}
 		_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, existing, func() error {
-			if err := controllerutil.SetControllerReference(at, existing, r.scheme); err != nil {
-				return err
+			if existing.CreationTimestamp.IsZero() {
+				if err := controllerutil.SetControllerReference(at, existing, r.scheme); err != nil {
+					return err
+				}
 			}
 			existing.Labels = ar.Labels
-			existing.Spec = ar.Spec
+			objects.MergeObject(&existing.Spec, &ar.Spec)
 			return nil
 		})
 		if err != nil {

@@ -21,6 +21,7 @@ import (
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
+	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
 var log = logf.Log.WithName("controller_apprelease")
@@ -110,10 +111,12 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	} else {
 		_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, &rs, func() error {
 			rs.ObjectMeta.Labels = rsTemplate.ObjectMeta.Labels
-			if err := controllerutil.SetControllerReference(ar, &rs, r.scheme); err != nil {
-				return err
+			if rs.CreationTimestamp.IsZero() {
+				if err := controllerutil.SetControllerReference(ar, &rs, r.scheme); err != nil {
+					return err
+				}
 			}
-			rs.Spec = rsTemplate.Spec
+			objects.MergeObject(&rs.Spec, &rsTemplate.Spec)
 			return nil
 		})
 	}
@@ -128,12 +131,10 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 		NumReady:     rs.Status.ReadyReplicas,
 		NumAvailable: rs.Status.AvailableReplicas,
 	}
-	if ar.Spec.TargetRelease {
-		if status.NumAvailable >= ar.Spec.NumDesired {
-			status.State = v1alpha1.ReleaseStateReleased
-		} else {
-			status.State = v1alpha1.ReleaseStateReleasing
-		}
+	if ar.Spec.Role == v1alpha1.ReleaseRoleActive {
+		status.State = v1alpha1.ReleaseStateReleased
+	} else if ar.Spec.Role == v1alpha1.ReleaseRoleTarget {
+		status.State = v1alpha1.ReleaseStateReleasing
 	} else {
 		if ar.Spec.NumDesired == 0 {
 			status.State = v1alpha1.ReleaseStateRetired
