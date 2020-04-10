@@ -1,12 +1,10 @@
-package ingressrequest
+package ingress
 
 import (
 	"context"
 
-	corev1 "k8s.io/api/core/v1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -14,9 +12,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -25,15 +25,8 @@ import (
 	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
-var log = logf.Log.WithName("controller_ingressrequest")
+var log = logf.Log.WithName("controller_ingress")
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
-
-// Add creates a new IngressRequest Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
 }
@@ -46,7 +39,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("ingressrequest-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("ingress-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -58,29 +51,24 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch changes to certificates, it may require the domain to be reconciled
-	err = c.Watch(&source.Kind{Type: &v1alpha1.Certificate{}}, &handler.EnqueueRequestsFromMapFunc{
+	err = c.Watch(&source.Kind{Type: &v1alpha1.CertificateRef{}}, &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: handler.ToRequestsFunc(func(configMapObject handler.MapObject) []reconcile.Request {
 			requests := []reconcile.Request{}
-			cert := configMapObject.Object.(*v1alpha1.Certificate)
-			certDomain := cert.Labels[resources.DOMAIN_LABEL]
-			// load all ingress requests, and see which ones could be handled by cert
+
+			// load all ingress requests, and trigger
 			reqList, err := resources.GetIngressRequests(mgr.GetClient())
 			if err != nil {
 				return requests
 			}
-			requestedHosts := map[string]bool{}
+
+			// just need to request once. there'll be one ingress with all of the hosts
 			for _, ingressReq := range reqList.Items {
-				if requestedHosts[ingressReq.Spec.Host] {
-					continue
-				}
-				if resources.MatchesHost(ingressReq.Spec.Host, certDomain) {
-					requests = append(requests, reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Name: ingressReq.Name,
-						},
-					})
-					requestedHosts[ingressReq.Spec.Host] = true
-				}
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name: ingressReq.Name,
+					},
+				})
+				break
 			}
 			return requests
 		}),
@@ -94,23 +82,17 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		ToRequests: handler.ToRequestsFunc(func(configMapObject handler.MapObject) []reconcile.Request {
 			requests := []reconcile.Request{}
 			ingress := configMapObject.Object.(*netv1beta1.Ingress)
-			// find all IngressRequests of the same domain
-			host := ingress.Labels[resources.INGRESS_HOST_LABEL]
-			if host == "" {
-				return requests
-			}
 
 			if configMapObject.Meta.GetDeletionTimestamp() == nil {
 				return requests
 			}
 
-			log.Info("Ingress deleted, requesting reconcile", "ingress", ingress.Name,
-				"host", host)
+			log.Info("Ingress deleted, requesting reconcile", "ingress", ingress.Name)
 			// only thing is if it gets deleted.. we'll need to reconcile
 			// since the reconcile loops are a bit diff here..
 			// any changes to one resource in the domain, will require us
 			// to load all requests for that domain to get merged
-			reqList, err := resources.GetIngressRequestsForHost(mgr.GetClient(), host)
+			reqList, err := resources.GetIngressRequests(mgr.GetClient())
 			if err != nil || len(reqList.Items) == 0 {
 				return requests
 			}
@@ -121,6 +103,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			})
 			return requests
 		}),
+	}, predicate.Funcs{
+		// only care about deletes
+		CreateFunc:  func(e event.CreateEvent) bool { return false },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return false },
+		GenericFunc: func(e event.GenericEvent) bool { return false },
 	})
 	if err != nil {
 		return err
@@ -148,35 +135,22 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 
 	res := reconcile.Result{}
 
-	// Fetch the IngressRequest instance
-	instance := &v1alpha1.IngressRequest{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return res, nil
-		}
-		// Error reading the object - requeue the request.
-		return res, err
-	}
-
-	host := instance.Labels[resources.INGRESS_HOST_LABEL]
-
 	// fetch all requests to reconcile
-	requestList, err := resources.GetIngressRequestsForHost(r.client, host)
+	requestList, err := resources.GetIngressRequests(r.client)
 	if err != nil {
 		return res, err
 	}
 
 	// make a copy so we can compare Status changes
 	requestListCopy := requestList.DeepCopy()
-	ingress := r.createIngress(host, requestList.Items)
+	ingress := r.createIngress(requestList.Items)
 
 	existing := netv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: ingress.GetName(),
 		},
 	}
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, &existing, func() error {
+	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, &existing, func() error {
 		objects.MergeObject(existing.Spec, ingress.Spec)
 		existing.Labels = ingress.Labels
 		return nil
@@ -184,7 +158,7 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 	if err != nil {
 		return res, err
 	}
-	reqLogger.Info("reconciled Ingress", "host", host, "op", op)
+	reqLogger.Info("reconciled Ingress")
 
 	updated := false
 	for i, req := range requestList.Items {
@@ -200,47 +174,50 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 	if updated {
 		res.Requeue = true
 	}
+
+	// TODO: create gateway
 	return res, nil
 }
 
-func (r *ReconcileIngressRequest) createIngress(host string, requests []v1alpha1.IngressRequest) *netv1beta1.Ingress {
-	pathUsed := map[string]bool{}
-	rule := netv1beta1.IngressRule{
-		Host: host,
-		IngressRuleValue: netv1beta1.IngressRuleValue{
-			HTTP: &netv1beta1.HTTPIngressRuleValue{},
-		},
-	}
+func (r *ReconcileIngressRequest) createIngress(requests []v1alpha1.IngressRequest) *netv1beta1.Ingress {
 	ingress := netv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: host,
-			Labels: map[string]string{
-				resources.INGRESS_HOST_LABEL: host,
-			},
+			Name: "kon-gateway",
+			// TODO: set ALB annotations
+			// https://medium.com/@cy.chiang/how-to-integrate-aws-alb-with-istio-v1-0-b17e07cae156
 			Annotations: map[string]string{},
 		},
 		Spec: netv1beta1.IngressSpec{
-			Rules: []netv1beta1.IngressRule{
-				rule,
-			},
+			Rules: []netv1beta1.IngressRule{},
 		},
 	}
 
+	hostsUsed := map[string]bool{}
 	for _, r := range requests {
-		for _, p := range r.Spec.Ports {
-			if p.IngressPath == "" || p.Protocol != corev1.ProtocolTCP {
+		for _, host := range r.Spec.Hosts {
+			if hostsUsed[host] {
 				continue
 			}
-			pathUsed[p.IngressPath] = true
-			rulePath := netv1beta1.HTTPIngressPath{
-				Path: p.IngressPath,
-				Backend: netv1beta1.IngressBackend{
-					ServiceName: r.Spec.Service,
-					ServicePort: intstr.FromInt(int(p.Port)),
+			rule := netv1beta1.IngressRule{
+				Host: host,
+				IngressRuleValue: netv1beta1.IngressRuleValue{
+					HTTP: &netv1beta1.HTTPIngressRuleValue{
+						Paths: []netv1beta1.HTTPIngressPath{
+							{
+								Path: "/*",
+								Backend: netv1beta1.IngressBackend{
+									ServiceName: "istio-ingressgateway",
+									ServicePort: intstr.FromInt(80),
+								},
+							},
+						},
+					},
 				},
 			}
-			rule.IngressRuleValue.HTTP.Paths = append(rule.IngressRuleValue.HTTP.Paths, rulePath)
+			ingress.Spec.Rules = append(ingress.Spec.Rules, rule)
+			hostsUsed[host] = true
 		}
+
 	}
 	return &ingress
 }

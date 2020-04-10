@@ -81,6 +81,7 @@ func (i *IstioInstaller) InstallCLI() error {
 // installs the component onto the kube cluster
 func (i *IstioInstaller) InstallComponent(client.Client) error {
 	output, err := cli.RunBufferedCommand(i.cliPath(), "manifest", "generate",
+		"--set", "components.sidecarInjector.enabled=true",
 		"--set", "addonComponents.kiali.enabled=true",
 		"--set", "addonComponents.grafana.enabled=true")
 	if err != nil {

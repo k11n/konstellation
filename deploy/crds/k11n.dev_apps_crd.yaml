@@ -144,10 +144,6 @@ spec:
             ports:
               items:
                 properties:
-                  ingressPath:
-                    description: ingressPath indicates the path at which the current
-                      port should be exposed. Only for HTTP apps
-                    type: string
                   name:
                     type: string
                   port:
@@ -597,11 +593,20 @@ spec:
                       - name
                       type: object
                     type: array
-                  ingressHosts:
-                    description: the host to match for the ingress,
-                    items:
-                      type: string
-                    type: array
+                  ingress:
+                    description: if ingress is needed
+                    properties:
+                      hosts:
+                        items:
+                          type: string
+                        type: array
+                      port:
+                        format: int32
+                        type: integer
+                    required:
+                    - hosts
+                    - port
+                    type: object
                   name:
                     type: string
                   probes:

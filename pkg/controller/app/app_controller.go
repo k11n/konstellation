@@ -271,7 +271,7 @@ func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Build)
 	tc := app.Spec.GetTargetConfig(target)
 	// TODO: this should never be nil
 	if tc != nil {
-		at.Spec.IngressHosts = tc.IngressHosts
+		at.Spec.Ingress = tc.Ingress
 	}
 
 	return at

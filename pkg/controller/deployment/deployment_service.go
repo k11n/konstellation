@@ -18,9 +18,9 @@ import (
 
 func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *corev1.Service, err error) {
 	// do we need a service? if no ports defined, we don't
-	serviceNeeded := len(at.Spec.Ports) > 0
+	serviceNeeded := at.NeedsService()
 	svcTemplate := newServiceForAppTarget(at)
-	namespace := at.ScopedName()
+	namespace := at.TargetNamespace()
 
 	// find existing service obj
 	svc = &corev1.Service{
@@ -69,12 +69,7 @@ func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *cor
 	log.Info("Updated service", "operation", op)
 
 	// update service hostname
-	hostname := svc.Spec.ExternalName
-	if at.Status.Hostname != hostname {
-		log.Info("app hostname", "existing", at.Status.Hostname, "new", hostname)
-		at.Status.Hostname = hostname
-		err = r.client.Status().Update(context.TODO(), at)
-	}
+	at.Status.Hostname = svc.Spec.ExternalName
 	return
 }
 
@@ -84,7 +79,7 @@ func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, r
 	dr := &istio.DestinationRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      at.Spec.App,
-			Namespace: at.ScopedName(),
+			Namespace: at.TargetNamespace(),
 		},
 	}
 	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, dr, func() error {
@@ -104,10 +99,8 @@ func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, r
 }
 
 func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) error {
-	// do we need a service? if no ports defined, we don't
-	serviceNeeded := len(at.Spec.Ports) > 0
 	vsTemplate := newVirtualService(at, releases)
-	namespace := at.ScopedName()
+	namespace := at.TargetNamespace()
 
 	// find existing service obj
 	vs := &corev1.Service{
@@ -119,7 +112,7 @@ func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, se
 	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: vs.GetName()}, vs)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			if !serviceNeeded {
+			if !at.NeedsService() {
 				// don't need a service and none found
 				return nil
 			}
@@ -127,6 +120,12 @@ func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, se
 			// other errors, just return
 			return err
 		}
+	}
+
+	// found existing service, but not needed anymore
+	if !at.NeedsService() {
+		// delete existing service
+		return r.client.Delete(context.TODO(), vs)
 	}
 
 	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, vs, func() error {
@@ -145,7 +144,7 @@ func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, se
 }
 
 func newServiceForAppTarget(at *v1alpha1.AppTarget) *corev1.Service {
-	namespace := at.ScopedName()
+	namespace := at.TargetNamespace()
 	ls := labelsForAppTarget(at)
 
 	var ports []corev1.ServicePort
@@ -187,7 +186,7 @@ func newDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease)
 	dr := &istio.DestinationRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: at.ScopedName(),
+			Namespace: at.TargetNamespace(),
 		},
 		Spec: networkingv1beta1.DestinationRule{
 			Host:    name,
@@ -206,12 +205,12 @@ func newDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease)
 }
 
 func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) *istio.VirtualService {
-	namespace := at.ScopedName()
+	namespace := at.TargetNamespace()
 	ls := labelsForAppTarget(at)
 	name := at.Spec.App
 	hosts := []string{name}
-	if len(at.Spec.IngressHosts) != 0 {
-		hosts = append(hosts, at.Spec.IngressHosts...)
+	if at.Spec.Ingress != nil {
+		hosts = append(hosts, at.Spec.Ingress.Hosts...)
 	}
 	routeDestinations := make([]*networkingv1beta1.HTTPRouteDestination, 0, len(releases))
 	for _, ar := range releases {

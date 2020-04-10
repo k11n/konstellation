@@ -6,6 +6,7 @@ import (
 	"github.com/thoas/go-funk"
 	istio "istio.io/client-go/pkg/apis/networking/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -106,6 +107,9 @@ func (r *ReconcileDeployment) Reconcile(request reconcile.Request) (res reconcil
 		return
 	}
 
+	// copy status to detect changes
+	atStatus := at.Status.DeepCopy()
+
 	err = r.ensureNamespaceCreated(at)
 	if err != nil {
 		return
@@ -123,6 +127,12 @@ func (r *ReconcileDeployment) Reconcile(request reconcile.Request) (res reconcil
 		if arRes.RequeueAfter != 0 {
 			res.RequeueAfter = arRes.RequeueAfter
 		}
+	}
+
+	// see which releases we need to autoscale
+	err = r.reconcileAutoScaler(at, releases)
+	if err != nil {
+		return
 	}
 
 	// reconcile Service
@@ -145,12 +155,20 @@ func (r *ReconcileDeployment) Reconcile(request reconcile.Request) (res reconcil
 		return
 	}
 
-	// cleanup older resources
+	err = r.reconcileIngressRequest(at)
+	if err != nil {
+		return
+	}
+
+	// update at status
+	if !apiequality.Semantic.DeepEqual(atStatus, at.Status) {
+		err = r.client.Status().Update(context.TODO(), at)
+	}
 	return
 }
 
 func (r *ReconcileDeployment) ensureNamespaceCreated(at *v1alpha1.AppTarget) error {
-	namespace := at.ScopedName()
+	namespace := at.TargetNamespace()
 	_, err := resources.GetNamespace(r.client, namespace)
 	if err == nil {
 		return nil

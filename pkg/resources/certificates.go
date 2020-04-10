@@ -8,8 +8,8 @@ import (
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 )
 
-func ListCertificates(kclient client.Client) (certificates []v1alpha1.Certificate, err error) {
-	certList := v1alpha1.CertificateList{}
+func ListCertificates(kclient client.Client) (certificates []v1alpha1.CertificateRef, err error) {
+	certList := v1alpha1.CertificateRefList{}
 	err = kclient.List(context.TODO(), &certList)
 	if err == nil {
 		certificates = certList.Items
@@ -17,8 +17,8 @@ func ListCertificates(kclient client.Client) (certificates []v1alpha1.Certificat
 	return
 }
 
-func GetCertificateForDomain(kclient client.Client, domain string) (cert *v1alpha1.Certificate, err error) {
-	certList := v1alpha1.CertificateList{}
+func GetCertificateForDomain(kclient client.Client, domain string) (cert *v1alpha1.CertificateRef, err error) {
+	certList := v1alpha1.CertificateRefList{}
 	err = kclient.List(context.TODO(), &certList, client.MatchingLabels{
 		DOMAIN_LABEL: domain,
 	})

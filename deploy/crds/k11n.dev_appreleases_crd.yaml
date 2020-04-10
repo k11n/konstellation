@@ -149,10 +149,6 @@ spec:
               description: '------ dupe of app target fields ------//'
               items:
                 properties:
-                  ingressPath:
-                    description: ingressPath indicates the path at which the current
-                      port should be exposed. Only for HTTP apps
-                    type: string
                   name:
                     type: string
                   port:

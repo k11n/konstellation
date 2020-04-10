@@ -189,7 +189,7 @@ func certImport(c *cli.Context) error {
 }
 
 func syncCertificate(kclient client.Client, cert *types.Certificate) error {
-	existing := v1alpha1.Certificate{
+	existing := v1alpha1.CertificateRef{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: cert.ID,
 		},
@@ -199,7 +199,7 @@ func syncCertificate(kclient client.Client, cert *types.Certificate) error {
 		existing.Labels = map[string]string{
 			resources.DOMAIN_LABEL: cert.Domain,
 		}
-		existing.Spec = v1alpha1.CertificateSpec{
+		existing.Spec = v1alpha1.CertificateRefSpec{
 			ProviderID:         cert.ProviderID,
 			Domain:             cert.Domain,
 			Issuer:             cert.Issuer,

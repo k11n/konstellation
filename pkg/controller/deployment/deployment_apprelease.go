@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	autoscalev2beta2 "k8s.io/api/autoscaling/v2beta2"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -143,7 +145,7 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		if targetRelease.Status.NumAvailable < targetRelease.Status.NumDesired {
 			// not ready  yet.. requeue and try later
 			res = &reconcile.Result{
-				RequeueAfter: at.Spec.Probes.GetReadinessTimeout(),
+				RequeueAfter: at.Spec.Probes.GetReadinessTimeout() / 2,
 			}
 		} else {
 			if trafficPercentage >= targetRelease.Spec.TrafficPercentage {
@@ -162,6 +164,9 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 				res = &reconcile.Result{
 					RequeueAfter: at.Spec.Probes.GetReadinessTimeout(),
 				}
+			} else {
+				// we are fully switched over, update roles
+				activeRelease = targetRelease
 			}
 		}
 	}
@@ -191,11 +196,91 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 	return
 }
 
+/**
+ * Configure autoscaler for the active release. If active release has changed, then delete and recreate scaler
+ * when active release and target release aren't the same, we will want to pause the scaler
+ * reconciler auto updates appTarget status with current number desired by scaler
+ */
+func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) error {
+	// find active release and target
+	var activeRelease, targetRelease *v1alpha1.AppRelease
+	for _, ar := range releases {
+		if ar.Spec.Role == v1alpha1.ReleaseRoleActive {
+			activeRelease = ar
+		} else if ar.Spec.Role == v1alpha1.ReleaseRoleTarget {
+			targetRelease = ar
+		}
+	}
+
+	ctx := context.TODO()
+
+	needsScaler := activeRelease != nil && targetRelease == nil
+	// find all existing scalers
+	scalerList := autoscalev2beta2.HorizontalPodAutoscalerList{}
+	err := r.client.List(ctx, &scalerList, client.MatchingLabels(labelsForAppTarget(at)))
+	if err != nil {
+		return err
+	}
+
+	// remove all the existing scalers and exit
+	if !needsScaler {
+		for _, scaler := range scalerList.Items {
+			if err = r.client.Delete(ctx, &scaler); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	var scaler *autoscalev2beta2.HorizontalPodAutoscaler
+	scalerTemplate := newAutoscalerForAppTarget(at, activeRelease)
+	// see if any of the existing scalers match the current template
+	for _, s := range scalerList.Items {
+		if s.Labels[resources.APP_RELEASE_LABEL] == scalerTemplate.Labels[resources.APP_RELEASE_LABEL] {
+			scaler = &s
+		} else {
+			// delete the other ones (there should be only one scaler at any time
+			if err := r.client.Delete(ctx, &s); err != nil {
+				return err
+			}
+		}
+	}
+
+	if scaler == nil {
+		scaler = &autoscalev2beta2.HorizontalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: scalerTemplate.Namespace,
+				Name:      scalerTemplate.Name,
+			},
+		}
+	}
+
+	_, err = controllerutil.CreateOrUpdate(ctx, r.client, scaler, func() error {
+		if scaler.CreationTimestamp.IsZero() {
+			err := controllerutil.SetControllerReference(activeRelease, scaler, r.scheme)
+			if err != nil {
+				return err
+			}
+		}
+		scaler.Labels = scalerTemplate.Labels
+		objects.MergeObject(&scaler.Spec, &scalerTemplate.Spec)
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// update status
+	at.Status.LastScaledAt = scaler.Status.LastScaleTime
+
+	return err
+}
+
 func appReleaseForTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build) *v1alpha1.AppRelease {
 	labels := labelsForAppTarget(at)
 	ar := &v1alpha1.AppRelease{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: at.ScopedName(),
+			Namespace: at.TargetNamespace(),
 			Labels:    labels,
 			// name will be set later with a helper
 		},
@@ -214,4 +299,48 @@ func appReleaseForTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build) *v1alpha
 	}
 	ar.Name = ar.NameFromBuild(build)
 	return ar
+}
+
+func newAutoscalerForAppTarget(at *v1alpha1.AppTarget, ar *v1alpha1.AppRelease) *autoscalev2beta2.HorizontalPodAutoscaler {
+	minReplicas := at.Spec.Scale.Min
+	maxReplicas := at.Spec.Scale.Max
+	if minReplicas == 0 {
+		minReplicas = 1
+	}
+	if maxReplicas < minReplicas {
+		maxReplicas = minReplicas
+	}
+	var metrics []autoscalev2beta2.MetricSpec
+	if at.Spec.Scale.TargetCPUUtilization > 0 {
+		metrics = append(metrics, autoscalev2beta2.MetricSpec{
+			Type: autoscalev2beta2.ResourceMetricSourceType,
+			Resource: &autoscalev2beta2.ResourceMetricSource{
+				Name: "cpu",
+				Target: autoscalev2beta2.MetricTarget{
+					Type:               autoscalev2beta2.UtilizationMetricType,
+					AverageUtilization: &at.Spec.Scale.TargetCPUUtilization,
+				},
+			},
+		})
+	}
+
+	labels := labelsForAppTarget(at)
+	labels[resources.APP_RELEASE_LABEL] = ar.Name
+	autoscaler := autoscalev2beta2.HorizontalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-scaler", at.Spec.App),
+			Namespace: at.TargetNamespace(),
+			Labels:    labels,
+		},
+		Spec: autoscalev2beta2.HorizontalPodAutoscalerSpec{
+			ScaleTargetRef: autoscalev2beta2.CrossVersionObjectReference{
+				Kind: "ReplicaSet",
+				Name: ar.Name,
+			},
+			MinReplicas: &minReplicas,
+			MaxReplicas: maxReplicas,
+			Metrics:     metrics,
+		},
+	}
+	return &autoscaler
 }

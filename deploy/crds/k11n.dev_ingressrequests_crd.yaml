@@ -8,7 +8,7 @@ spec:
     kind: IngressRequest
     listKind: IngressRequestList
     plural: ingressrequests
-    singular: ingressrequest
+    singular: ingress
   scope: Cluster
   subresources:
     status: {}
@@ -31,33 +31,17 @@ spec:
         spec:
           description: IngressRequestSpec defines the desired state of IngressRequest
           properties:
-            host:
-              type: string
-            ports:
+            hosts:
               items:
-                properties:
-                  ingressPath:
-                    description: ingressPath indicates the path at which the current
-                      port should be exposed. Only for HTTP apps
-                    type: string
-                  name:
-                    type: string
-                  port:
-                    format: int32
-                    type: integer
-                  protocol:
-                    description: TCP by default. IngressPath works only with HTTP
-                      services
-                    type: string
-                required:
-                - name
-                - port
-                type: object
+                type: string
               type: array
+            port:
+              format: int32
+              type: integer
             service:
               type: string
           required:
-          - host
+          - hosts
           - service
           type: object
         status:

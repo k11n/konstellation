@@ -6,9 +6,8 @@ import (
 
 // IngressRequestSpec defines the desired state of IngressRequest
 type IngressRequestSpec struct {
-	Host    string     `json:"host"`
-	Ports   []PortSpec `json:"ports,omitempty"`
-	Service string     `json:"service"`
+	Hosts []string `json:"hosts"`
+	Port  int32    `json:"port,omitempty"`
 }
 
 // IngressRequestStatus defines the observed state of IngressRequest

@@ -31,21 +31,23 @@ type AppTargetSpec struct {
 	// +optional
 	Probes ProbeConfig `json:"probes,omitempty"`
 	// +optional
-	IngressHosts []string `json:"ingressHosts,omitempty"`
+	Ingress *IngressConfig `json:"ingress,omitempty"`
 }
 
 // AppTargetStatus defines the observed state of AppTarget
 type AppTargetStatus struct {
-	TargetRelease   string      `json:"targetRelease"`
-	ActiveRelease   string      `json:"activeRelease"`
-	DeployUpdatedAt metav1.Time `json:"trafficUpdatedAt"`
-	NumDesired      int32       `json:"numDesired"`
-	NumReady        int32       `json:"numReady"`
-	NumAvailable    int32       `json:"numAvailable"`
+	TargetRelease   string       `json:"targetRelease"`
+	ActiveRelease   string       `json:"activeRelease"`
+	DeployUpdatedAt metav1.Time  `json:"deployUpdatedAt"`
+	LastScaledAt    *metav1.Time `json:"lastScaledAt"`
+	NumDesired      int32        `json:"numDesired"`
+	NumReady        int32        `json:"numReady"`
+	NumAvailable    int32        `json:"numAvailable"`
 	// +optional
 	Hostname string `json:"hostname,omitempty"`
 	// +optional
-	Ingress string `json:"ingress,omitempty"`
+	Ingress  string   `json:"ingress,omitempty"`
+	Messages []string `json:"messages,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -85,10 +87,26 @@ func (at *AppTarget) ScopedName() string {
 	return fmt.Sprintf("%s-%s", at.Spec.App, at.Spec.Target)
 }
 
+func (at *AppTarget) TargetNamespace() string {
+	return at.ScopedName()
+}
+
 func (at *AppTarget) DesiredInstances() int32 {
 	instances := at.Spec.Scale.Min
 	if at.Status.NumDesired > instances {
 		instances = at.Status.NumDesired
 	}
 	return instances
+}
+
+func (at *AppTarget) NeedsService() bool {
+	// TODO: allow local ports w/o creating a service
+	return len(at.Spec.Ports) > 0
+}
+
+func (at *AppTarget) NeedsIngress() bool {
+	if at.Spec.Ingress == nil {
+		return false
+	}
+	return len(at.Spec.Ingress.Hosts) > 0
 }

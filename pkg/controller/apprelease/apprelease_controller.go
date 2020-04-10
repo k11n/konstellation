@@ -171,6 +171,7 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	if !apiequality.Semantic.DeepEqual(status, ar.Status) {
 		err = r.client.Status().Update(context.TODO(), ar)
 	}
+
 	return res, err
 }
 

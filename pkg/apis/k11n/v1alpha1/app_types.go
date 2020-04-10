@@ -74,10 +74,6 @@ type PortSpec struct {
 	// TCP by default. IngressPath works only with HTTP services
 	// +optional
 	Protocol corev1.Protocol `json:"protocol,omitempty"`
-	// ingressPath indicates the path at which the current port should be
-	// exposed. Only for HTTP apps
-	// +optional
-	IngressPath string `json:"ingressPath,omitempty"`
 }
 
 type ResourceLimits struct {
@@ -112,9 +108,9 @@ type ProbeConfig struct {
 type TargetConfig struct {
 	Name string `json:"name"`
 
-	// the host to match for the ingress,
+	// if ingress is needed
 	// +optional
-	IngressHosts []string `json:"ingressHosts,omitempty"`
+	Ingress *IngressConfig `json:"ingress,omitempty"`
 	// +optional
 	Env []corev1.EnvVar `json:"env,omitempty"`
 	// +optional
@@ -123,6 +119,11 @@ type TargetConfig struct {
 	Scale ScaleSpec `json:"scale,omitempty"`
 	// +optional
 	Probes ProbeConfig `json:"probes,omitempty"`
+}
+
+type IngressConfig struct {
+	Hosts []string `json:"hosts"`
+	Port  int32    `json:"port"`
 }
 
 func init() {
