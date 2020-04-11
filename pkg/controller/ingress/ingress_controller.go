@@ -3,8 +3,9 @@ package ingress
 import (
 	"context"
 
+	"istio.io/api/networking/v1beta1"
+	istio "istio.io/client-go/pkg/apis/networking/v1beta1"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -141,18 +142,33 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 		return res, err
 	}
 
-	// make a copy so we can compare Status changes
-	requestListCopy := requestList.DeepCopy()
-	ingress := r.createIngress(requestList.Items)
-
-	existing := netv1beta1.Ingress{
+	// create gateway, shared across all domains
+	gwTemplate := gatewayForRequests(requestList.Items)
+	gw := &istio.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: ingress.GetName(),
+			Name:      gwTemplate.Name,
+			Namespace: gwTemplate.Namespace,
 		},
 	}
-	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, &existing, func() error {
-		objects.MergeObject(existing.Spec, ingress.Spec)
-		existing.Labels = ingress.Labels
+	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, gw, func() error {
+		objects.MergeObject(&gw.Spec, &gwTemplate.Spec)
+		gw.Labels = gwTemplate.Labels
+		return nil
+	})
+	if err != nil {
+		return res, err
+	}
+
+	// create ingress, one for all hosts
+	ingressTemplate := ingressForRequests(requestList.Items)
+	ingress := netv1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: ingressTemplate.GetName(),
+		},
+	}
+	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, &ingress, func() error {
+		objects.MergeObject(&ingress.Spec, &ingressTemplate.Spec)
+		ingress.Labels = ingressTemplate.Labels
 		return nil
 	})
 	if err != nil {
@@ -160,29 +176,44 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 	}
 	reqLogger.Info("reconciled Ingress")
 
-	updated := false
-	for i, req := range requestList.Items {
-		rCopy := requestListCopy.Items[i]
-		if !apiequality.Semantic.DeepEqual(&req.Status, &rCopy.Status) {
-			if err := r.client.Status().Update(context.TODO(), &req); err != nil {
-				return res, err
-			}
-			updated = true
-		}
-	}
-
-	if updated {
-		res.Requeue = true
-	}
-
-	// TODO: create gateway
 	return res, nil
 }
 
-func (r *ReconcileIngressRequest) createIngress(requests []v1alpha1.IngressRequest) *netv1beta1.Ingress {
-	ingress := netv1beta1.Ingress{
+func gatewayForRequests(requests []v1alpha1.IngressRequest) *istio.Gateway {
+	var hosts []string
+	for _, r := range requests {
+		for _, h := range r.Spec.Hosts {
+			hosts = append(hosts, h)
+		}
+	}
+	gw := &istio.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "kon-gateway",
+		},
+		Spec: v1beta1.Gateway{
+			Selector: map[string]string{
+				"istio": "ingressgateway",
+			},
+			Servers: []*v1beta1.Server{
+				{
+					Hosts: hosts,
+					Port: &v1beta1.Port{
+						Number:   80,
+						Protocol: "HTTP",
+						Name:     "http",
+					},
+				},
+			},
+		},
+	}
+	return gw
+}
+
+func ingressForRequests(requests []v1alpha1.IngressRequest) *netv1beta1.Ingress {
+	ingress := netv1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "istio-system",
+			Name:      "kon-ingress",
 			// TODO: set ALB annotations
 			// https://medium.com/@cy.chiang/how-to-integrate-aws-alb-with-istio-v1-0-b17e07cae156
 			Annotations: map[string]string{},
@@ -217,7 +248,6 @@ func (r *ReconcileIngressRequest) createIngress(requests []v1alpha1.IngressReque
 			ingress.Spec.Rules = append(ingress.Spec.Rules, rule)
 			hostsUsed[host] = true
 		}
-
 	}
 	return &ingress
 }
