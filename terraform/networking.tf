@@ -1,6 +1,6 @@
 locals {
-  public_cidr = cidrsubnet(var.vpc_cidr, 1, 0)
-  private_cidr = cidrsubnet(var.vpc_cidr, 1, 1)
+  private_cidr = cidrsubnet(var.vpc_cidr, 1, 0)
+  public_cidr = cidrsubnet(var.vpc_cidr, 1, 1)
 }
 
 output "vpc_id" {
