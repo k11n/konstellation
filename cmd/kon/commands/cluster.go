@@ -67,7 +67,6 @@ var ClusterCommands = []*cli.Command{
 				Usage:  "select an active cluster to work with",
 				Action: clusterSelect,
 				Flags: []cli.Flag{
-					clusterCloudFlag,
 					clusterNameFlag,
 				},
 			},
@@ -92,7 +91,6 @@ var ClusterCommands = []*cli.Command{
 				Action: clusterGetToken,
 				Hidden: true,
 				Flags: []cli.Flag{
-					clusterCloudFlag,
 					clusterNameFlag,
 				},
 			},
@@ -108,10 +106,10 @@ type clusterInfo struct {
 func clusterList(c *cli.Context) error {
 	conf := config.GetConfig()
 	if conf.IsClusterSelected() {
-		fmt.Printf("\nSelected cluster %s (%s)\n", conf.SelectedCluster, conf.SelectedCloud)
+		fmt.Printf("\nSelected cluster %s\n", conf.SelectedCluster)
 	}
-	for _, c := range AvailableClouds {
-		ksvc := c.KubernetesProvider()
+	for _, cm := range GetClusterManagers() {
+		ksvc := cm.KubernetesProvider()
 		if ksvc == nil {
 			continue
 		}
@@ -127,7 +125,7 @@ func clusterList(c *cli.Context) error {
 			}
 			infos = append(infos, info)
 
-			contextName := resources.ContextNameForCluster(c.ID(), cluster.Name)
+			contextName := resources.ContextNameForCluster(cm.Cloud(), cluster.Name)
 			kclient, err := KubernetesClientWithContext(contextName)
 			if err != nil {
 				continue
@@ -138,7 +136,7 @@ func clusterList(c *cli.Context) error {
 			}
 			info.Config = config
 		}
-		printClusterSection(c, infos)
+		printClusterSection(cm, infos)
 	}
 
 	return nil
@@ -146,17 +144,17 @@ func clusterList(c *cli.Context) error {
 
 func clusterCreate(c *cli.Context) error {
 	fmt.Println(CLUSTER_CREATE_HELP)
-	cloud, err := ChooseCloudPrompt("")
+	cm, err := ChooseClusterManagerPrompt("")
 	if err != nil {
 		return err
 	}
-	name, err := cloud.CreateCluster()
+	name, err := cm.CreateCluster()
 	if err != nil {
 		return err
 	}
 	fmt.Printf("Successfully created cluster %s. Waiting for cluster to become ready\n", name)
 	err = utils.WaitUntilComplete(utils.LongTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
-		cluster, err := cloud.KubernetesProvider().GetCluster(context.Background(), name)
+		cluster, err := cm.KubernetesProvider().GetCluster(context.Background(), name)
 		if err != nil {
 			return false, err
 		}
@@ -175,28 +173,33 @@ func clusterCreate(c *cli.Context) error {
 		return err
 	}
 
-	c.Set("cloud", cloud.ID())
 	c.Set("cluster", name)
 
 	return clusterSelect(c)
 }
 
 func clusterSelect(c *cli.Context) error {
+	if err := updateClusterLocations(); err != nil {
+		return err
+	}
 	conf := config.GetConfig()
-	conf.SelectedCloud = c.String("cloud")
-	conf.SelectedCluster = c.String("cluster")
+	clusterName := c.String("cluster")
+	cl, err := conf.GetClusterLocation(clusterName)
+	if err == nil {
+		return err
+	}
 
-	cloud := CloudProviderByID(c.String("cloud"))
-	if cloud == nil {
+	cm := NewClusterManager(cl.Cloud, cl.Region)
+	if cm == nil {
 		return nil
 	}
 	ac := activeCluster{
-		Cloud:   cloud,
+		Manager: cm,
 		Cluster: conf.SelectedCluster,
 	}
 
-	kubeProvider := cloud.KubernetesProvider()
-	cluster, err := kubeProvider.GetCluster(context.Background(), conf.SelectedCluster)
+	kubeProvider := cm.KubernetesProvider()
+	cluster, err := kubeProvider.GetCluster(context.Background(), clusterName)
 	if err != nil {
 		return err
 	}
@@ -269,7 +272,6 @@ func clusterSelect(c *cli.Context) error {
 
 func clusterReset(c *cli.Context) error {
 	conf := config.GetConfig()
-	conf.SelectedCloud = ""
 	conf.SelectedCluster = ""
 	err := conf.Persist()
 	if err != nil {
@@ -292,11 +294,12 @@ func clusterConfigure(c *cli.Context) error {
 }
 
 func clusterGetToken(c *cli.Context) error {
-	cloud := CloudProviderByID(c.String("cloud"))
-	if cloud == nil {
+	clusterName := c.String("cluster")
+	cm := NewClusterManager(c.String("cloud"), clusterName)
+	if cm == nil {
 		return nil
 	}
-	token, err := cloud.KubernetesProvider().GetAuthToken(context.Background(), c.String("cluster"))
+	token, err := cm.KubernetesProvider().GetAuthToken(context.Background(), clusterName)
 	if err != nil {
 		return err
 	}
@@ -309,21 +312,21 @@ func clusterGetToken(c *cli.Context) error {
 
 func getActiveCluster() (*activeCluster, error) {
 	conf := config.GetConfig()
-	if conf.SelectedCloud == "" || conf.SelectedCluster == "" {
+	if conf.SelectedCluster == "" {
 		return nil, fmt.Errorf("Cluster not selected yet. Select one with 'kon cluster select ...'")
 	}
 
-	cloud := CloudProviderByID(conf.SelectedCloud)
-	if cloud == nil {
-		return nil, fmt.Errorf("Unable to find cloud provider for %s", conf.SelectedCloud)
+	cl, err := conf.GetClusterLocation(conf.SelectedCluster)
+	if err != nil {
+		return nil, err
 	}
 
 	ac := activeCluster{
-		Cloud:   cloud,
+		Manager: NewClusterManager(cl.Cloud, cl.Region),
 		Cluster: conf.SelectedCluster,
 	}
 
-	err := ac.initClient()
+	err = ac.initClient()
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +334,7 @@ func getActiveCluster() (*activeCluster, error) {
 }
 
 type activeCluster struct {
-	Cloud   providers.CloudProvider
+	Manager providers.ClusterManager
 	Cluster string
 	kclient client.Client
 }
@@ -397,7 +400,7 @@ func (c *activeCluster) configureNodepool() error {
 	kclient := c.kubernetesClient()
 
 	// set configuration for the first time
-	np, err := c.Cloud.ConfigureNodepool(c.Cluster)
+	np, err := c.Manager.ConfigureNodepool(c.Cluster)
 	if err != nil {
 		return err
 	}
@@ -427,7 +430,7 @@ func (c *activeCluster) configureNodepool() error {
 	fmt.Println("Creating nodepool...")
 
 	// check aws nodepool status. if it doesn't exist, then create it
-	kubeProvider := c.Cloud.KubernetesProvider()
+	kubeProvider := c.Manager.KubernetesProvider()
 	ready, err := kubeProvider.IsNodepoolReady(context.Background(), c.Cluster, np.Name)
 	if err != nil {
 		// nodepool doesn't exist, create it
@@ -499,9 +502,6 @@ func (c *activeCluster) installComponents() error {
 
 func (c *activeCluster) generateKubeConfig() error {
 	// spec from: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins
-	if !c.Cloud.IsSetup() {
-		return fmt.Errorf("%s has not been setup", c.Cloud)
-	}
 	// find current executable path
 	cmdPath, err := os.Executable()
 	if err != nil {
@@ -514,8 +514,8 @@ func (c *activeCluster) generateKubeConfig() error {
 
 	clusterConfs := []*resources.KubeClusterConfig{}
 	selectedIdx := -1
-	for _, cloud := range AvailableClouds {
-		ksvc := cloud.KubernetesProvider()
+	for _, cm := range GetClusterManagers() {
+		ksvc := cm.KubernetesProvider()
 		if ksvc == nil {
 			continue
 		}
@@ -525,14 +525,14 @@ func (c *activeCluster) generateKubeConfig() error {
 		}
 		for i, cluster := range clusters {
 			cc := &resources.KubeClusterConfig{
-				Cloud:       cloud.ID(),
+				Cloud:       cm.Cloud(),
 				Cluster:     cluster.Name,
 				CAData:      []byte(cluster.CertificateAuthorityData),
 				EndpointUrl: cluster.Endpoint,
 			}
 			clusterConfs = append(clusterConfs, cc)
 
-			if cloud.ID() == c.Cloud.ID() && c.Cluster == cluster.Name {
+			if c.Manager.Cloud() == cm.Cloud() && c.Cluster == cluster.Name {
 				selectedIdx = i
 			}
 		}
@@ -553,8 +553,8 @@ func (c *activeCluster) generateKubeConfig() error {
 		_, err = prompt.Run()
 		if err != nil {
 			// prompt aborted
-			fmt.Printf("selecting a cluster requires writing to ~/.kube/config. To try this again run `%s cluster select --cloud %s --cluster %s`\n",
-				config.ExecutableName, c.Cloud.ID(), c.Cluster)
+			fmt.Printf("selecting a cluster requires writing to ~/.kube/config. To try this again run `%s cluster select --cluster %s`\n",
+				config.ExecutableName, c.Cluster)
 			return fmt.Errorf("select aborted")
 		}
 	}
@@ -599,7 +599,7 @@ func (c *activeCluster) kubernetesClient() client.Client {
 }
 
 func (c *activeCluster) initClient() error {
-	kclient, err := KubernetesClientWithContext(resources.ContextNameForCluster(c.Cloud.ID(), c.Cluster))
+	kclient, err := KubernetesClientWithContext(resources.ContextNameForCluster(c.Manager.Cloud(), c.Cluster))
 	if err != nil {
 		return errors.Wrap(err, "Unable to create Kubernetes Client")
 	}
@@ -609,12 +609,12 @@ func (c *activeCluster) initClient() error {
 
 func (c *activeCluster) getSupportedComponents() []components.ComponentInstaller {
 	comps := config.Components
-	comps = append(comps, ingress.NewIngressForCluster(c.Cloud.ID(), c.Cluster))
+	comps = append(comps, ingress.NewIngressForCluster(c.Manager.Cloud(), c.Cluster))
 	return comps
 }
 
-func printClusterSection(section providers.CloudProvider, clusters []*clusterInfo) {
-	fmt.Printf("\nCloud: %s\n", section.ID())
+func printClusterSection(section providers.ClusterManager, clusters []*clusterInfo) {
+	fmt.Printf("\nCloud: %v\n", section)
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Cluster", "Version", "Status", "Konstellation", "Targets", "Provider ID"})
@@ -694,4 +694,28 @@ func kubeConfigPath() (string, error) {
 		return "", err
 	}
 	return path.Join(homedir, ".kube", "config"), nil
+}
+
+func updateClusterLocations() error {
+	conf := config.GetConfig()
+	conf.Clusters = make(map[string]*config.ClusterLocation)
+
+	for _, cm := range GetClusterManagers() {
+		ksvc := cm.KubernetesProvider()
+		if ksvc == nil {
+			continue
+		}
+		clusters, err := ksvc.ListClusters(context.Background())
+		if err != nil {
+			return err
+		}
+
+		for _, cluster := range clusters {
+			conf.Clusters[cluster.Name] = &config.ClusterLocation{
+				Cloud:  cm.Cloud(),
+				Region: cm.Region(),
+			}
+		}
+	}
+	return conf.Persist()
 }

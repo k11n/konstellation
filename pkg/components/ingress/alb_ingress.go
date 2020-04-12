@@ -47,12 +47,12 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 	dep := i.deploymentForIngress()
 	existing := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:                       albIngressName,
-			Namespace:                  "kube-system",
+			Name:      albIngressName,
+			Namespace: "kube-system",
 		},
 	}
 	_, err = controllerutil.CreateOrUpdate(context.TODO(), kclient, existing, func() error {
-		if existing.GetCreationTimestamp().IsZero() {
+		if existing.CreationTimestamp.IsZero() {
 			existing.Spec = dep.Spec
 		}
 		return nil
@@ -60,28 +60,27 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 	return err
 }
 
-
 func (i *AWSALBIngress) deploymentForIngress() *appsv1.Deployment {
 	labels := map[string]string{
-				"app.kubernetes.io/name": albIngressName,
-			}
+		"app.kubernetes.io/name": albIngressName,
+	}
 	// mapped from: https://raw.githubusercontent.com/kubernetes-sigs/aws-alb-ingress-controller/v1.1.6/docs/examples/alb-ingress-controller.yaml
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: albIngressName,
+			Name:      albIngressName,
 			Namespace: "kube-system",
-			Labels: labels,
+			Labels:    labels,
 		},
-		Spec:       appsv1.DeploymentSpec{
+		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels:      labels,
+				MatchLabels: labels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					Containers:                    []corev1.Container{
+					Containers: []corev1.Container{
 						{
 							Name: albIngressName,
 							Args: []string{

@@ -16,6 +16,14 @@ func RunBufferedCommand(name string, args ...string) ([]byte, error) {
 	return cmd.CombinedOutput()
 }
 
+func RunCommandWithStd(name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
 func KubeCtl(args ...string) error {
 	cmd := exec.Command("kubectl", args...)
 	cmd.Stdout = os.Stdout

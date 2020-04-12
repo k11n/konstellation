@@ -37,7 +37,7 @@ func kubeDashboard(c *cli.Context) error {
 	}
 
 	// print token
-	token, err := ac.Cloud.KubernetesProvider().GetAuthToken(context.TODO(), ac.Cluster)
+	token, err := ac.Manager.KubernetesProvider().GetAuthToken(context.TODO(), ac.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to get authentication token")
 	}

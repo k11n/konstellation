@@ -123,9 +123,9 @@ func appStatus(c *cli.Context) error {
 		}
 
 		activeReleaseMap := map[string]*v1alpha1.AppReleaseStatus{}
-		for _, ar := range target.Status.ActiveReleases {
-			activeReleaseMap[ar.Release] = &ar
-		}
+		//for _, ar := range target.Status.ActiveReleases {
+		//	activeReleaseMap[ar.Release] = &ar
+		//}
 
 		fmt.Printf("Target: %s\n", target.Name)
 		fmt.Printf("Scale: %d-%d\n", target.Spec.Scale.Min, target.Spec.Scale.Max)

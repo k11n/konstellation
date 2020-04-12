@@ -106,7 +106,7 @@ func certSync(c *cli.Context) error {
 		return err
 	}
 
-	certs, err := ac.Cloud.CertificateProvider().ListCertificates(context.TODO())
+	certs, err := ac.Manager.CertificateProvider().ListCertificates(context.TODO())
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func certImport(c *cli.Context) error {
 		existingID = existingCert.Spec.ProviderID
 	}
 
-	certificate, err := ac.Cloud.CertificateProvider().ImportCertificate(context.TODO(),
+	certificate, err := ac.Manager.CertificateProvider().ImportCertificate(context.TODO(),
 		cert, pkey, chain, existingID)
 	if err != nil {
 		return err

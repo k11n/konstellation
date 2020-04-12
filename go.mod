@@ -15,20 +15,24 @@ require (
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.11 // indirect
 	github.com/mattn/go-runewidth v0.0.8 // indirect
+	github.com/nkovacs/streamquote v1.0.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/operator-framework/operator-sdk v0.13.0
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cast v1.3.1
 	github.com/spf13/pflag v1.0.5
+	github.com/stretchr/testify v1.5.1
 	github.com/thoas/go-funk v0.5.0
 	github.com/urfave/cli/v2 v2.2.0
+	github.com/valyala/fasttemplate v1.1.0 // indirect
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad // indirect
 	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
 	golang.org/x/sys v0.0.0-20200120151820-655fe14d7479 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
+	gopkg.in/ini.v1 v1.55.0
 	gopkg.in/yaml.v2 v2.2.7
 	istio.io/api v0.0.0-20200407171655-fb462ece86fb
 	istio.io/client-go v0.0.0-20200324231647-289a91f51a8e

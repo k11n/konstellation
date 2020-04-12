@@ -13,17 +13,17 @@ import (
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/pricing"
-	"github.com/davidzhao/konstellation/cmd/kon/config"
+	"github.com/manifoldco/promptui"
+	"github.com/spf13/cast"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
 	"github.com/davidzhao/konstellation/pkg/resources"
-	"github.com/manifoldco/promptui"
-	"github.com/spf13/cast"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (a *AWSProvider) ConfigureNodepool(name string) (np *v1alpha1.Nodepool, err error) {
+func (a *AWSManager) ConfigureNodepool(name string) (np *v1alpha1.Nodepool, err error) {
 	sess, err := a.awsSession()
 	if err != nil {
 		return
@@ -201,7 +201,7 @@ func (a *AWSProvider) ConfigureNodepool(name string) (np *v1alpha1.Nodepool, err
 	return
 }
 
-func (a *AWSProvider) promptSelectOrCreateNodeRole(iamSvc *kaws.IAMService) (role *iam.Role, err error) {
+func (a *AWSManager) promptSelectOrCreateNodeRole(iamSvc *kaws.IAMService) (role *iam.Role, err error) {
 	// list all the IAM roles
 	roles, err := iamSvc.ListEKSNodeRoles()
 	if err != nil {
@@ -244,7 +244,7 @@ func (a *AWSProvider) promptSelectOrCreateNodeRole(iamSvc *kaws.IAMService) (rol
 	return
 }
 
-func (a *AWSProvider) promptCreateKeypair(ec2Svc *ec2.EC2, name string) (keyName string, err error) {
+func (a *AWSManager) promptCreateKeypair(ec2Svc *ec2.EC2, name string) (keyName string, err error) {
 	res, err := ec2Svc.CreateKeyPair(&ec2.CreateKeyPairInput{
 		KeyName: &name,
 	})
@@ -281,11 +281,10 @@ func (a *AWSProvider) promptCreateKeypair(ec2Svc *ec2.EC2, name string) (keyName
 	return
 }
 
-func (a *AWSProvider) promptInstanceType(session *session.Session, gpu bool) (instance *kaws.EC2InstancePricing, err error) {
+func (a *AWSManager) promptInstanceType(session *session.Session, gpu bool) (instance *kaws.EC2InstancePricing, err error) {
 	// find all ec2 instances and create listing for price
 	pricingSvc := pricing.New(session, aws.NewConfig().WithRegion("us-east-1"))
-	conf := config.GetConfig().Clouds.AWS
-	instances, err := kaws.ListEC2Instances(pricingSvc, conf.Region, true)
+	instances, err := kaws.ListEC2Instances(pricingSvc, a.region, true)
 	if err != nil {
 		return
 	}
@@ -338,7 +337,7 @@ func (a *AWSProvider) promptInstanceType(session *session.Session, gpu bool) (in
 	return
 }
 
-func (a *AWSProvider) promptInstanceSizing() (minNodes int64, maxNodes int64, err error) {
+func (a *AWSManager) promptInstanceSizing() (minNodes int64, maxNodes int64, err error) {
 	sizePrompt := promptui.Prompt{
 		Label:    "Minimum/initial number of nodes (recommend 3 minimum for a production setup)",
 		Validate: utils.ValidateInt,
@@ -357,7 +356,7 @@ func (a *AWSProvider) promptInstanceSizing() (minNodes int64, maxNodes int64, er
 	return
 }
 
-func (a *AWSProvider) promptConfirmBudget(instance *kaws.EC2InstancePricing, minNodes, maxNodes int64) (bool, error) {
+func (a *AWSManager) promptConfirmBudget(instance *kaws.EC2InstancePricing, minNodes, maxNodes int64) (bool, error) {
 	instanceMonthlyCost := instance.OnDemandPriceUSD * 24 * 30
 	minCost := instanceMonthlyCost * float32(minNodes)
 	maxCost := instanceMonthlyCost * float32(maxNodes)

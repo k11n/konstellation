@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"os/exec"
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/manifoldco/promptui"
@@ -10,9 +11,9 @@ import (
 
 var ConfigCommands = []*cli.Command{
 	&cli.Command{
-		Name:   "configure",
+		Name:   "setup",
 		Usage:  "Setup Konstellation CLI",
-		Action: configureStart,
+		Action: setupStart,
 	},
 	// cli.Command{
 	// 	Name:  "config",
@@ -25,6 +26,11 @@ var ConfigCommands = []*cli.Command{
 	// 		},
 	// 	},
 	// },
+}
+
+var neededExes = []string{
+	"aws",
+	"kubectl",
 }
 
 func configShow(c *cli.Context) error {
@@ -40,7 +46,10 @@ func configShow(c *cli.Context) error {
 	return nil
 }
 
-func configureStart(c *cli.Context) error {
+func setupStart(c *cli.Context) error {
+	if err := checkDependencies(); err != nil {
+		return err
+	}
 	// install components
 	// this only requires components that has a CLI
 	installConfirmed := false
@@ -70,10 +79,19 @@ func configureStart(c *cli.Context) error {
 		}
 	}
 
-	// cloud, err := ChooseCloudPrompt("Choose a cloud provider to configure (you can use more than one)")
-	// if err != nil {
-	// 	return err
-	// }
-	cloud := CloudAWS
+	cloud, err := ChooseCloudPrompt("Choose a cloud provider to configure")
+	if err != nil {
+		return err
+	}
 	return cloud.Setup()
+}
+
+func checkDependencies() error {
+	for _, exe := range neededExes {
+		_, err := exec.LookPath(exe)
+		if err != nil {
+			return fmt.Errorf("Konstellation requires %s, but could find it. Please ensure it's installed and in your PATH", exe)
+		}
+	}
+	return nil
 }

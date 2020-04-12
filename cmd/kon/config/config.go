@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path"
 
@@ -25,24 +26,16 @@ const (
 	ExecutableName = "kon"
 )
 
-type AWSConfig struct {
-	AccessKey string
-	SecretKey string
-	Region    string
-}
-
-func (c *AWSConfig) IsSetup() bool {
-	if c.AccessKey != "" && c.SecretKey != "" && c.Region != "" {
-		return true
-	}
-	return false
+type ClusterLocation struct {
+	Cloud  string
+	Region string
 }
 
 type ClientConfig struct {
 	Clouds struct {
 		AWS AWSConfig `yaml:"aws,omitempty"`
 	} `yaml:"clouds,omitempty"`
-	SelectedCloud   string
+	Clusters        map[string]*ClusterLocation
 	SelectedCluster string
 
 	persisted bool
@@ -83,7 +76,15 @@ func (c *ClientConfig) IsSetup() bool {
 }
 
 func (c *ClientConfig) IsClusterSelected() bool {
-	return c.SelectedCloud != "" && c.SelectedCluster != ""
+	return c.SelectedCluster != ""
+}
+
+func (c *ClientConfig) GetClusterLocation(cluster string) (*ClusterLocation, error) {
+	cl := c.Clusters[cluster]
+	if cl == nil {
+		return nil, fmt.Errorf("Could not find cluster %s", cluster)
+	}
+	return cl, nil
 }
 
 func (c *ClientConfig) ToYAML() (str string, err error) {

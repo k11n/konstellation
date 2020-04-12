@@ -9,8 +9,13 @@ type CloudProvider interface {
 	ID() string
 	IsSetup() bool
 	Setup() error
+}
+
+type ClusterManager interface {
+	Cloud() string
+	Region() string
+
 	CreateCluster() (name string, err error)
-	// ConfigureCluster(name string) (*v1alpha1.Nodepool, error)
 	ConfigureNodepool(name string) (np *v1alpha1.Nodepool, err error)
 
 	// utils
