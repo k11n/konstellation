@@ -4,13 +4,20 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/davidzhao/konstellation/pkg/utils/cli"
+)
+
+const (
+	terraformRegion = "us-west-2"
+	terraformBucket = "konstellation"
 )
 
 type AWSProvider struct {
@@ -56,7 +63,7 @@ func (a *AWSProvider) Setup() error {
 
 	regions := awsConf.Regions
 	if len(regions) == 0 {
-		regions = []string{"us-east-1", "us-west-2"}
+		regions = []string{"us-west-2", "us-east-2"}
 	}
 
 	// prompt for regions
@@ -117,6 +124,33 @@ func (a *AWSProvider) Setup() error {
 	}
 
 	// TODO: ensure that the permissions we need are accessible
+
+	// ensure S3 bucket is created for terraform
+	s3Svc := s3.New(session)
+	_, err = s3Svc.HeadBucket(&s3.HeadBucketInput{
+		Bucket: aws.String(terraformBucket),
+	})
+	if err != nil {
+		// bucket doesn't exist, try to create it
+		bucketPrompt := promptui.Prompt{
+			Label: fmt.Sprintf("Konstellation needs to store configuration in a S3 bucket, ok to create bucket %s in %s?",
+				terraformBucket, terraformRegion,
+			),
+			IsConfirm: true,
+		}
+		if _, err = bucketPrompt.Run(); err != nil {
+			return err
+		}
+		_, err = s3Svc.CreateBucket(&s3.CreateBucketInput{
+			Bucket: aws.String(terraformBucket),
+			CreateBucketConfiguration: &s3.CreateBucketConfiguration{
+				LocationConstraint: aws.String(terraformRegion),
+			},
+		})
+		if err != nil {
+			return errors.Wrap(err, "Could not create bucket")
+		}
+	}
 
 	return conf.Persist()
 }

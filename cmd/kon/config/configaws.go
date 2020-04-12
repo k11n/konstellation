@@ -14,7 +14,6 @@ const (
 )
 
 type AWSConfig struct {
-	Profile string
 	Regions []string
 }
 

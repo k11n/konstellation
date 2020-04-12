@@ -31,6 +31,7 @@ var ConfigCommands = []*cli.Command{
 var neededExes = []string{
 	"aws",
 	"kubectl",
+	"terraform",
 }
 
 func configShow(c *cli.Context) error {

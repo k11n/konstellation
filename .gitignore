@@ -2,6 +2,7 @@
 build/_output
 build/_test
 build/bin/*
+.terraform
 # bin files
 cmd/kon/kon
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
