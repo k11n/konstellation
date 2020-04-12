@@ -8,11 +8,11 @@ output "vpc_id" {
 }
 
 output "private_subnets" {
-  value = aws_subnet.private
+  value = values(aws_subnet.private)
 }
 
 output "public_subnets" {
-  value = aws_subnet.public
+  value = values(aws_subnet.public)
 }
 
 output "main_route_table" {

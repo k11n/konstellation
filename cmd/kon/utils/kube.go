@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	rice "github.com/GeertJohan/go.rice"
 	"github.com/davidzhao/konstellation/pkg/utils/cli"
 )
 
@@ -17,10 +16,6 @@ func KubeApplyFile(filename string) error {
 	defer os.Remove(filepath)
 
 	return cli.KubeCtl("apply", "-f", filepath)
-}
-
-func DeployResourcesBox() *rice.Box {
-	return rice.MustFindBox("../../../deploy")
 }
 
 func TempfileFromDeployResource(name string) (temppath string, err error) {

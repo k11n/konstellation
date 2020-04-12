@@ -10,6 +10,7 @@ import (
 	"github.com/davidzhao/konstellation/pkg/components"
 	"github.com/davidzhao/konstellation/pkg/components/istio"
 	"github.com/davidzhao/konstellation/pkg/components/kubedash"
+	"github.com/davidzhao/konstellation/pkg/utils/files"
 )
 
 var (
@@ -119,4 +120,13 @@ func (c *ClientConfig) Persist() error {
 		c.persisted = true
 	}
 	return err
+}
+
+func (c *ClientConfig) TFDir() string {
+	d := path.Join(defaultConfigDir, "terraform")
+	if _, err := os.Stat(d); err != nil {
+		// create it
+		os.MkdirAll(d, files.DefaultDirectoryMode)
+	}
+	return d
 }

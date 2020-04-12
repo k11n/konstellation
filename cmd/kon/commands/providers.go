@@ -5,11 +5,13 @@ import (
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/davidzhao/konstellation/cmd/kon/providers"
+	"github.com/davidzhao/konstellation/cmd/kon/providers/aws"
+
 	"github.com/manifoldco/promptui"
 )
 
 var (
-	AWSCloud        = providers.NewAWSProvider()
+	AWSCloud        = aws.NewAWSProvider()
 	AvailableClouds = []providers.CloudProvider{
 		AWSCloud,
 	}
@@ -24,9 +26,19 @@ func CloudProviderByID(id string) providers.CloudProvider {
 	return nil
 }
 
-func ClusterManagerForCluster(cluster string) providers.ClusterManager {
+func ClusterManagerForCluster(cluster string) (cm providers.ClusterManager, err error) {
 	// read config and return the correct manager
-	return nil
+	conf := config.GetConfig()
+	cl, err := conf.GetClusterLocation(cluster)
+	if err == nil {
+		return
+	}
+
+	cm = NewClusterManager(cl.Cloud, cl.Region)
+	if cm == nil {
+		err = fmt.Errorf("Could not find manager for cloud %s", cl.Cloud)
+	}
+	return
 }
 
 func ChooseCloudPrompt(label string) (providers.CloudProvider, error) {
@@ -53,7 +65,7 @@ func ChooseCloudPrompt(label string) (providers.CloudProvider, error) {
 
 func ChooseClusterManagerPrompt(label string) (providers.ClusterManager, error) {
 	if label == "" {
-		label = "Where would you like to create the cluster?"
+		label = "Choose a region"
 	}
 
 	managers := GetClusterManagers()
@@ -78,14 +90,14 @@ func GetClusterManagers() []providers.ClusterManager {
 	awsConf := conf.Clouds.AWS
 	var items []providers.ClusterManager
 	for _, r := range awsConf.Regions {
-		items = append(items, providers.NewAWSManager(r))
+		items = append(items, aws.NewAWSManager(r))
 	}
 	return items
 }
 
 func NewClusterManager(cloud string, region string) providers.ClusterManager {
 	if cloud == "aws" {
-		return providers.NewAWSManager(region)
+		return aws.NewAWSManager(region)
 	}
 	return nil
 }

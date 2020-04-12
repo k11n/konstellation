@@ -53,16 +53,16 @@ var (
 )
 
 var ClusterCommands = []*cli.Command{
-	&cli.Command{
+	{
 		Name:  "cluster",
 		Usage: "Kubernetes cluster management",
 		Subcommands: []*cli.Command{
-			&cli.Command{
+			{
 				Name:   "list",
 				Usage:  "list clusters",
 				Action: clusterList,
 			},
-			&cli.Command{
+			{
 				Name:   "select",
 				Usage:  "select an active cluster to work with",
 				Action: clusterSelect,
@@ -70,22 +70,22 @@ var ClusterCommands = []*cli.Command{
 					clusterNameFlag,
 				},
 			},
-			&cli.Command{
+			{
 				Name:   "configure",
 				Usage:  "configure cluster settings",
 				Action: clusterConfigure,
 			},
-			&cli.Command{
+			{
 				Name:   "create",
 				Usage:  "creates a cluster",
 				Action: clusterCreate,
 			},
-			&cli.Command{
+			{
 				Name:   "reset",
 				Usage:  "resets current active cluster",
 				Action: clusterReset,
 			},
-			&cli.Command{
+			{
 				Name:   "get-token",
 				Usage:  "returns a kubernetes compatible token",
 				Action: clusterGetToken,
@@ -144,7 +144,7 @@ func clusterList(c *cli.Context) error {
 
 func clusterCreate(c *cli.Context) error {
 	fmt.Println(CLUSTER_CREATE_HELP)
-	cm, err := ChooseClusterManagerPrompt("")
+	cm, err := ChooseClusterManagerPrompt("Where would you like to create the cluster?")
 	if err != nil {
 		return err
 	}
@@ -182,20 +182,15 @@ func clusterSelect(c *cli.Context) error {
 	if err := updateClusterLocations(); err != nil {
 		return err
 	}
-	conf := config.GetConfig()
 	clusterName := c.String("cluster")
-	cl, err := conf.GetClusterLocation(clusterName)
-	if err == nil {
-		return err
-	}
 
-	cm := NewClusterManager(cl.Cloud, cl.Region)
-	if cm == nil {
-		return nil
+	cm, err := ClusterManagerForCluster(clusterName)
+	if err != nil {
+		return err
 	}
 	ac := activeCluster{
 		Manager: cm,
-		Cluster: conf.SelectedCluster,
+		Cluster: clusterName,
 	}
 
 	kubeProvider := cm.KubernetesProvider()
@@ -207,7 +202,7 @@ func clusterSelect(c *cli.Context) error {
 	if cluster.Status == types.StatusCreating {
 		fmt.Println("Waiting for cluster to become ready")
 		err = utils.WaitUntilComplete(utils.LongTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
-			cluster, err := kubeProvider.GetCluster(context.Background(), conf.SelectedCluster)
+			cluster, err := kubeProvider.GetCluster(context.Background(), clusterName)
 			if err != nil {
 				return false, err
 			}
@@ -231,6 +226,8 @@ func clusterSelect(c *cli.Context) error {
 		return err
 	}
 
+	conf := config.GetConfig()
+	conf.SelectedCluster = clusterName
 	err = conf.Persist()
 	if err != nil {
 		return err
@@ -316,13 +313,13 @@ func getActiveCluster() (*activeCluster, error) {
 		return nil, fmt.Errorf("Cluster not selected yet. Select one with 'kon cluster select ...'")
 	}
 
-	cl, err := conf.GetClusterLocation(conf.SelectedCluster)
+	cm, err := ClusterManagerForCluster(conf.SelectedCluster)
 	if err != nil {
 		return nil, err
 	}
 
 	ac := activeCluster{
-		Manager: NewClusterManager(cl.Cloud, cl.Region),
+		Manager: cm,
 		Cluster: conf.SelectedCluster,
 	}
 
