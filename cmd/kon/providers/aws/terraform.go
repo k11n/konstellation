@@ -51,17 +51,28 @@ var (
 	}
 )
 
-func NewNetworkingTFAction(region string, vpcCidr string, zones []string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+func NewNetworkingTFAction(region string, vpcCidr string, zones []string, usePrivateSubnet bool, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
 	targetDir := path.Join(config.GetConfig().TFDir(), "aws", "networking")
-	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, networkingFiles...)
+	tfFiles := make([]string, 0, len(networkingFiles))
+	tfFiles = append(tfFiles, networkingFiles...)
+	if usePrivateSubnet {
+		tfFiles = append(tfFiles, "aws/private_subnet.tf")
+	}
+	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, tfFiles...)
 	if err != nil {
 		return
 	}
 
-	// TODO: extract tf files to temp folder
+	var zoneSuffixes []string
+	regionLen := len(region)
+	for _, zone := range zones {
+		zoneSuffixes = append(zoneSuffixes, zone[regionLen:])
+	}
+
 	a = terraform.NewTerraformAction(targetDir, terraform.TerraformVars{
-		"region":   region,
-		"vpc_cidr": vpcCidr,
+		"region":      region,
+		"vpc_cidr":    vpcCidr,
+		"az_suffixes": zoneSuffixes,
 	})
 	for _, o := range opts {
 		a.Option(o)
@@ -69,7 +80,7 @@ func NewNetworkingTFAction(region string, vpcCidr string, zones []string, opts .
 	return
 }
 
-func ParseOutput(data []byte) (tf *TFVPCOutput, err error) {
+func ParseTerraformOutput(data []byte) (tf *TFVPCOutput, err error) {
 	oc, err := terraform.ParseOutput(data)
 	if err != nil {
 		return

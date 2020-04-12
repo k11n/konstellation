@@ -1,7 +1,6 @@
 package aws
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"strconv"
@@ -62,6 +61,8 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	}
 	numZones := len(zones)
 
+	usePrivate, err := a.promptUsePrivateSubnet()
+
 	// explicit confirmation about confirmation, or look at terraform file
 	fmt.Println("---------------------------------------")
 	fmt.Println(" NOTE: PLEASE READ BEFORE CONTINUING")
@@ -72,14 +73,17 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	fmt.Println("These resources will be tagged Konstellation=1")
 	fmt.Println("\nThe following resources will be created or updated")
 	fmt.Printf("* VPC with CIDR (%s)\n", vpcCidr)
-	fmt.Printf("* %d private subnets (one per availability zone)\n", numZones)
-	fmt.Printf("* %d NAT gateways (one for each subnet)\n", numZones)
-	fmt.Printf("* %d Elastic IPs (for use with NAT gateways)\n", numZones)
-	fmt.Printf("* %d public subnets\n", numZones)
+	fmt.Printf("* %d subnets (one per availability zone)\n", numZones)
 	fmt.Println("* an internet gateway")
-	fmt.Println("* a routing table for public subnets")
 	fmt.Println("* an IAM role for EKS Service")
 	fmt.Println("* an IAM role for EKS Nodes")
+	if usePrivate {
+		fmt.Printf("* %d private subnets\n", numZones)
+		fmt.Printf("* %d NAT gateways (one for each subnet)\n", numZones)
+		fmt.Printf("* %d Elastic IPs (for use with NAT gateways)\n", numZones)
+		fmt.Println("* a routing table for private subnets")
+	}
+
 	fmt.Println()
 
 	confirmPrompt := promptui.Prompt{
@@ -96,7 +100,7 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	}
 
 	// run terraform
-	tf, err := NewNetworkingTFAction(a.region, vpcCidr, zones, terraform.OptionDisplayOutput)
+	tf, err := NewNetworkingTFAction(a.region, vpcCidr, zones, usePrivate, terraform.OptionDisplayOutput)
 	if err != nil {
 		return
 	}
@@ -111,18 +115,20 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 		return
 	}
 
-	fmt.Println("returned data", string(out))
-
-	tfOut := TFVPCOutput{}
-	if err = json.Unmarshal(out, &tfOut); err != nil {
+	tfOut, err := ParseTerraformOutput(out)
+	if err != nil {
 		return
 	}
 
 	input.SetRoleArn(EKSServiceRole)
 
 	// fetch VPC subnets
+	subnets := tfOut.PublicSubnets
+	if usePrivate {
+		subnets = tfOut.PrivateSubnets
+	}
 	subnetIds := []*string{}
-	for _, sub := range tfOut.PrivateSubnets {
+	for _, sub := range subnets {
 		subnetIds = append(subnetIds, aws.String(sub.Id))
 	}
 
@@ -225,7 +231,8 @@ func (a *AWSManager) promptChooseVPC(ec2Svc *ec2.EC2) (cidrBlock string, err err
 	vpcSelect := promptui.SelectWithAdd{
 		Label:    "VPC (to use for your EKS Cluster resources)",
 		Items:    vpcItems,
-		AddLabel: "New VPC (enter CIDR Block)",
+		AddLabel: "New VPC (enter CIDR Block, i.e. 10.0.0.0/16)",
+
 		Validate: func(v string) error {
 			_, newCidr, err := net.ParseCIDR(v)
 			if err != nil {
@@ -252,6 +259,23 @@ func (a *AWSManager) promptChooseVPC(ec2Svc *ec2.EC2) (cidrBlock string, err err
 		cidrBlock = *vpcs[idx].CidrBlock
 	}
 	return
+}
+
+func (a *AWSManager) promptUsePrivateSubnet() (bool, error) {
+	fmt.Println(subnetMessage)
+	prompt := promptui.Select{
+		Label: "Create additional private subnets?",
+		Items: []string{
+			"No",
+			"Yes",
+		},
+	}
+
+	idx, _, err := prompt.Run()
+	if err != nil {
+		return false, err
+	}
+	return idx == 1, nil
 }
 
 func (a *AWSManager) Region() string {

@@ -9,11 +9,12 @@ import (
 )
 
 func TestGetAWSOutput(t *testing.T) {
-	tf, err := aws.ParseOutput([]byte(exampleOutput))
+	tf, err := aws.ParseTerraformOutput([]byte(exampleOutput))
 
 	assert.NoError(t, err)
 	assert.Equal(t, "rtb-0e855a2598de968f8", tf.MainRouteTable)
 	assert.Len(t, tf.PrivateSubnets, 2)
+	assert.Equal(t, "subnet-039e883c22bdd4532", tf.PrivateSubnets[0].Id)
 }
 
 const exampleOutput = `
