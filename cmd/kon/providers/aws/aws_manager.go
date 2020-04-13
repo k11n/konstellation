@@ -62,6 +62,7 @@ func (a *AWSManager) UpdateClusterSettings(cc *v1alpha1.ClusterConfig) error {
 
 	for _, sub := range subnetRes.Subnets {
 		isPublic := false
+		fmt.Printf("tags: %+v", sub.Tags)
 		for _, tag := range sub.Tags {
 			if *tag.Key == kaws.TagSubnetScope {
 				isPublic = *tag.Value == kaws.TagValuePublic
@@ -116,7 +117,7 @@ func (a *AWSManager) enableOIDCProvider(iamSvc *iam.IAM, oidcIssuer string) (oid
 		}
 		if oidcIssuer == *oidcRes.Url {
 			oidcArn = *provider.Arn
-			return
+			return oidcArn, nil
 		}
 	}
 

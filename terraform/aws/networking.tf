@@ -38,7 +38,7 @@ resource "aws_subnet" "public" {
   tags = merge(
     local.common_tags,
     {
-      "k11n.dev/subnetScope" = "private",
+      "k11n.dev/subnetScope" = "public",
       "k11n.dev/az" = "${var.region}${each.key}",
       "kubernetes.io/role/elb" = "1",
     }
