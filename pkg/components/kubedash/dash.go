@@ -3,8 +3,9 @@ package kubedash
 import (
 	"fmt"
 
-	"github.com/davidzhao/konstellation/pkg/utils/cli"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/davidzhao/konstellation/pkg/utils/cli"
 )
 
 const (

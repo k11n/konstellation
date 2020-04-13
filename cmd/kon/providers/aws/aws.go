@@ -72,7 +72,7 @@ func (a *AWSProvider) Setup() error {
 	partitions := resolver.(endpoints.EnumPartitions).Partitions()
 	for _, p := range partitions {
 		if p.ID() == "aws" {
-			for id, _ := range p.Regions() {
+			for id := range p.Regions() {
 				validRegions[id] = true
 			}
 		}

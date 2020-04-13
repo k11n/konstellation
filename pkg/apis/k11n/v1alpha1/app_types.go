@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/davidzhao/konstellation/pkg/utils/objects"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
 // AppSpec defines the desired state of App
@@ -185,7 +186,7 @@ func (a *AppSpec) ProbesForTarget(target string) *ProbeConfig {
 
 func (a *AppSpec) GetTargetConfig(target string) *TargetConfig {
 	var targetConf *TargetConfig
-	for i, _ := range a.Targets {
+	for i := range a.Targets {
 		if a.Targets[i].Name == target {
 			targetConf = &a.Targets[i]
 			break

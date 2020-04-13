@@ -48,8 +48,6 @@ func GenerateKubeConfig(cliPath string, clusters []*KubeClusterConfig, selectedI
 					Args: []string{
 						"cluster",
 						"get-token",
-						"--cloud",
-						cluster.Cloud,
 						"--cluster",
 						cluster.Cluster,
 					},

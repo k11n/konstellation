@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-	"github.com/davidzhao/konstellation/pkg/resources"
-	"github.com/davidzhao/konstellation/pkg/utils/objects"
 	"github.com/thoas/go-funk"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,6 +17,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/davidzhao/konstellation/pkg/resources"
+	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
 var log = logf.Log.WithName("controller_app")
@@ -167,7 +168,7 @@ func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Resul
 
 	hasUpdates := false
 	// deploy the intersection of app and cluster targets
-	for target, _ := range appTargets {
+	for target := range appTargets {
 		var targetUpdated bool
 		if !clusterTargets[target] {
 			// skip reconcile, since cluster doesn't support it
@@ -236,7 +237,7 @@ func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string, buil
 	if err != nil {
 		return
 	}
-	updated = (op != controllerutil.OperationResultNone)
+	updated = op != controllerutil.OperationResultNone
 	log.Info("Reconciled appTarget", "target", target, "operation", op)
 	return
 }

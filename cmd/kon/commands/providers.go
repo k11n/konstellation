@@ -17,20 +17,11 @@ var (
 	}
 )
 
-func CloudProviderByID(id string) providers.CloudProvider {
-	for _, c := range AvailableClouds {
-		if c.ID() == id {
-			return c
-		}
-	}
-	return nil
-}
-
 func ClusterManagerForCluster(cluster string) (cm providers.ClusterManager, err error) {
 	// read config and return the correct manager
 	conf := config.GetConfig()
 	cl, err := conf.GetClusterLocation(cluster)
-	if err == nil {
+	if err != nil {
 		return
 	}
 

@@ -9,9 +9,10 @@ import (
 	"path"
 	"strings"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/davidzhao/konstellation/pkg/utils/cli"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type LinkerdInstaller struct {

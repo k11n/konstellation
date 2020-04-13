@@ -292,11 +292,11 @@ func clusterConfigure(c *cli.Context) error {
 
 func clusterGetToken(c *cli.Context) error {
 	clusterName := c.String("cluster")
-	cm := NewClusterManager(c.String("cloud"), clusterName)
-	if cm == nil {
-		return nil
+	cm, err := ClusterManagerForCluster(clusterName)
+	if err != nil {
+		return err
 	}
-	token, err := cm.KubernetesProvider().GetAuthToken(context.Background(), clusterName)
+	token, err := cm.KubernetesProvider().GetAuthToken(context.TODO(), clusterName)
 	if err != nil {
 		return err
 	}

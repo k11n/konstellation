@@ -21,11 +21,11 @@ var targetFlag = &cli.StringFlag{
 }
 
 var AppCommands = []*cli.Command{
-	&cli.Command{
+	{
 		Name:  "app",
 		Usage: "App management",
 		Subcommands: []*cli.Command{
-			&cli.Command{
+			{
 				Name:   "list",
 				Usage:  "list apps",
 				Action: appList,
@@ -33,7 +33,7 @@ var AppCommands = []*cli.Command{
 					targetFlag,
 				},
 			},
-			&cli.Command{
+			{
 				Name:      "status",
 				Usage:     "information about the app and its targets",
 				Action:    appStatus,

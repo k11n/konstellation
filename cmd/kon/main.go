@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/urfave/cli/v2"
+
 	"github.com/davidzhao/konstellation/cmd/kon/commands"
 	"github.com/davidzhao/konstellation/version"
-	"github.com/urfave/cli/v2"
 )
 
 func main() {

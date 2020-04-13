@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 )
 
 func NodepoolName() string {

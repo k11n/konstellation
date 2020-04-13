@@ -3,11 +3,12 @@ package resources
 import (
 	"context"
 
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-	"github.com/davidzhao/konstellation/pkg/utils/objects"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
 func GetClusterConfig(kclient client.Client) (cc *v1alpha1.ClusterConfig, err error) {

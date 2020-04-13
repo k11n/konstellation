@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/manifoldco/promptui"
 	"github.com/urfave/cli/v2"
+
+	"github.com/davidzhao/konstellation/cmd/kon/config"
 )
 
 var ConfigCommands = []*cli.Command{
-	&cli.Command{
+	{
 		Name:   "setup",
 		Usage:  "Setup Konstellation CLI",
 		Action: setupStart,

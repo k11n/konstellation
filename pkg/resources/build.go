@@ -5,9 +5,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 )
 
 func LabelsForBuild(build *v1alpha1.Build) map[string]string {

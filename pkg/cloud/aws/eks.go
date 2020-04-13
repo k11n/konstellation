@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/sts"
+
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
 )
@@ -129,7 +130,7 @@ func (s *EKSService) IsNodepoolReady(ctx context.Context, clusterName string, no
 		return
 	}
 	// https://github.com/aws/aws-sdk-go/blob/ab52e2140da6138c05220ee782cc2bcd85feecee/models/apis/eks/2017-11-01/api-2.json#L1048
-	ready = (*res.Nodegroup.Status == "ACTIVE")
+	ready = *res.Nodegroup.Status == "ACTIVE"
 	return
 }
 
