@@ -8,7 +8,7 @@ spec:
     kind: IngressRequest
     listKind: IngressRequestList
     plural: ingressrequests
-    singular: ingress
+    singular: ingressrequest
   scope: Cluster
   subresources:
     status: {}
@@ -38,11 +38,8 @@ spec:
             port:
               format: int32
               type: integer
-            service:
-              type: string
           required:
           - hosts
-          - service
           type: object
         status:
           description: IngressRequestStatus defines the observed state of IngressRequest

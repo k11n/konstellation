@@ -16,6 +16,7 @@ type ClusterManager interface {
 	Region() string
 
 	CreateCluster() (name string, err error)
+	UpdateClusterSettings(*v1alpha1.ClusterConfig) error
 	ConfigureNodepool(name string) (np *v1alpha1.Nodepool, err error)
 
 	// utils

@@ -2,297 +2,145 @@ package aws
 
 import (
 	"fmt"
-	"net"
-	"strconv"
-	"strings"
 
-	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/manifoldco/promptui"
-	"github.com/spf13/cast"
+	"github.com/pkg/errors"
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
-	"github.com/davidzhao/konstellation/cmd/kon/terraform"
+	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud"
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
+	tlsutil "github.com/davidzhao/konstellation/pkg/utils/tls"
 )
 
 type AWSManager struct {
 	region  string
-	kubeSvc cloud.KubernetesProvider
-	acmSvc  cloud.CertificateProvider
+	kubeSvc *kaws.EKSService
+	acmSvc  *kaws.ACMService
 }
 
 func NewAWSManager(region string) *AWSManager {
 	return &AWSManager{region: region}
 }
 
-func (a *AWSManager) CreateCluster() (name string, err error) {
-	sess, err := a.awsSession()
-	if err != nil {
-		return
-	}
-	eksSvc := kaws.NewEKSService(sess)
-	iamSvc := kaws.NewIAMService(sess)
-	input := eks.CreateClusterInput{}
-	creationConf := config.ClusterCreationConfig{
+// Perform cluster cloud specific setup, including tagging subnets, etc
+func (a *AWSManager) UpdateClusterSettings(cc *v1alpha1.ClusterConfig) error {
+	fmt.Println("updating cluster settings")
+	awsConfig := v1alpha1.AWSCloudConfig{
 		Region: a.region,
 	}
-
-	prompt := promptui.Prompt{
-		Label: "Cluster name",
-	}
-	result, err := prompt.Run()
-	if err != nil {
-		return
-	}
-	input.SetName(result)
-
-	// VPC
+	// ensure it's initialized
+	sess := session.Must(a.awsSession())
+	eksSvc := eks.New(sess)
 	ec2Svc := ec2.New(sess)
-	creationConf.VpcCidr, err = a.promptChooseVPC(ec2Svc)
-	if err != nil {
-		return
-	}
 
-	zones, err := a.promptAZs(ec2Svc)
-	if err != nil {
-		return
-	}
-	creationConf.NumZones = len(zones)
-
-	creationConf.PrivateSubnets, err = a.promptUsePrivateSubnet()
-
-	// explicit confirmation about confirmation, or look at terraform file
-	fmt.Println("---------------------------------------")
-	fmt.Println(" NOTE: PLEASE READ BEFORE CONTINUING")
-	fmt.Println("---------------------------------------")
-	fmt.Println()
-	fmt.Println("Konstellation uses Terraform to manage IAM roles and VPC resources")
-	fmt.Println("If Konstellation managed resources cannot be found, it'll attempt to create them.")
-	fmt.Println("These resources will be tagged Konstellation=1")
-	fmt.Println("\nThe following resources will be created or updated")
-	fmt.Printf("* VPC with CIDR (%s)\n", creationConf.VpcCidr)
-	fmt.Printf("* %d subnets (one per availability zone)\n", creationConf.NumZones)
-	fmt.Println("* an internet gateway")
-	fmt.Println("* an IAM role for EKS Service")
-	fmt.Println("* an IAM role for EKS Nodes")
-	if creationConf.PrivateSubnets {
-		fmt.Printf("* %d private subnets\n", creationConf.NumZones)
-		fmt.Printf("* %d NAT gateways (one for each subnet)\n", creationConf.NumZones)
-		fmt.Printf("* %d Elastic IPs (for use with NAT gateways)\n", creationConf.NumZones)
-		fmt.Println("* a routing table for private subnets")
-	}
-
-	fmt.Println()
-
-	confirmPrompt := promptui.Prompt{
-		Label: "Do you want to proceed? (type yes to continue)",
-	}
-	res, err := confirmPrompt.Run()
-	if err != nil {
-		return
-	}
-
-	if strings.ToLower(res) != "yes" {
-		err = fmt.Errorf("User aborted")
-		return
-	}
-
-	// run terraform
-	tf, err := NewNetworkingTFAction(a.region, creationConf.VpcCidr, zones, creationConf.PrivateSubnets, terraform.OptionDisplayOutput)
-	if err != nil {
-		return
-	}
-
-	if err = tf.Run(); err != nil {
-		return
-	}
-
-	// get output and parse data
-	out, err := tf.GetOutput()
-	if err != nil {
-		return
-	}
-
-	tfOut, err := ParseTerraformOutput(out)
-	if err != nil {
-		return
-	}
-
-	roleRes, err := iamSvc.IAM.GetRole(&iam.GetRoleInput{
-		RoleName: aws.String(EKSServiceRole),
+	res, err := eksSvc.DescribeCluster(&eks.DescribeClusterInput{
+		Name: aws.String(cc.Name),
 	})
 	if err != nil {
-		return
+		return err
 	}
-	input.RoleArn = roleRes.Role.Arn
-
-	// fetch VPC subnets
-	subnets := tfOut.PublicSubnets
-	if creationConf.PrivateSubnets {
-		subnets = tfOut.PrivateSubnets
-	}
-	subnetIds := []*string{}
-	for _, sub := range subnets {
-		subnetIds = append(subnetIds, aws.String(sub.Id))
+	oidcIssuer := *res.Cluster.Identity.Oidc.Issuer
+	vpcConf := res.Cluster.ResourcesVpcConfig
+	awsConfig.Vpc = *vpcConf.VpcId
+	for _, sg := range vpcConf.SecurityGroupIds {
+		awsConfig.SecurityGroups = append(awsConfig.SecurityGroups, *sg)
 	}
 
-	// fetch VPC security groups and prompt user to select one
-	// EKS will create its own anyways
-	securityGroups, err := kaws.ListSecurityGroups(ec2Svc, tfOut.VpcId)
+	// get subnet info
+	subnetRes, err := ec2Svc.DescribeSubnets(&ec2.DescribeSubnetsInput{
+		SubnetIds: vpcConf.SubnetIds,
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, sub := range subnetRes.Subnets {
+		isPublic := false
+		for _, tag := range sub.Tags {
+			if *tag.Key == kaws.TagSubnetScope {
+				isPublic = *tag.Value == kaws.TagValuePublic
+				break
+			}
+		}
+		subConf := v1alpha1.AWSSubnet{
+			SubnetId:         *sub.SubnetId,
+			Ipv4Cidr:         *sub.CidrBlock,
+			IsPublic:         isPublic,
+			AvailabilityZone: *sub.AvailabilityZone,
+		}
+		if isPublic {
+			awsConfig.PublicSubnets = append(awsConfig.PublicSubnets, &subConf)
+		} else {
+			awsConfig.PrivateSubnets = append(awsConfig.PrivateSubnets, &subConf)
+		}
+	}
+
+	_, err = a.createALBRServiceRole(cc.Name, oidcIssuer)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("AWS config %+v", awsConfig)
+	return fmt.Errorf("failure")
+	cc.Spec.AWSConfig = &awsConfig
+	return nil
+}
+
+func (a *AWSManager) createALBRServiceRole(clusterName string, oidcIssuer string) (role string, err error) {
+	// TODO: move to cloud/aws
+	iamSvc := iam.New(session.Must(a.awsSession()))
+
+	oidcArn, err := a.enableOIDCProvider(iamSvc, oidcIssuer)
 	if err != nil {
 		return
 	}
-	groups := []string{}
-	for _, sg := range securityGroups {
-		groups = append(groups, *sg.GroupId)
-	}
-	sgSelect := promptui.Select{
-		Label: "Primary security group",
-		Items: groups,
-	}
-	idx, _, err := sgSelect.Run()
-	if err != nil {
-		return
-	}
-
-	resConf := &eks.VpcConfigRequest{
-		SubnetIds:        subnetIds,
-		SecurityGroupIds: []*string{&groups[idx]},
-	}
-	resConf.SetEndpointPrivateAccess(true)
-	resConf.SetEndpointPublicAccess(true)
-	// create Vpc config request
-	input.SetResourcesVpcConfig(resConf)
-	input.Tags = map[string]*string{
-		"Konstellation": aws.String("1"),
-	}
-
-	// create EKS Cluster
-	eksResult, err := eksSvc.EKS.CreateCluster(&input)
-	if err != nil {
-		return
-	}
-
-	name = *eksResult.Cluster.Name
-	conf := config.GetConfig()
-	conf.Clouds.AWS.SetCreationConfig(name, &creationConf)
-	err = conf.Persist()
+	fmt.Println("oidcArn", oidcArn)
 	return
 }
 
-func (a *AWSManager) promptAZs(ec2Svc *ec2.EC2) (zones []string, err error) {
-	// query availability zones and ask users how many to use
-	zoneRes, err := ec2Svc.DescribeAvailabilityZones(&ec2.DescribeAvailabilityZonesInput{})
+func (a *AWSManager) enableOIDCProvider(iamSvc *iam.IAM, oidcIssuer string) (oidcArn string, err error) {
+	// TODO: move to cloud/aws
+	// find existing oidc provider
+	listRes, err := iamSvc.ListOpenIDConnectProviders(&iam.ListOpenIDConnectProvidersInput{})
+	for _, provider := range listRes.OpenIDConnectProviderList {
+		oidcRes, err := iamSvc.GetOpenIDConnectProvider(&iam.GetOpenIDConnectProviderInput{
+			OpenIDConnectProviderArn: provider.Arn,
+		})
+		if err != nil {
+			return "", err
+		}
+		if oidcIssuer == *oidcRes.Url {
+			oidcArn = *provider.Arn
+			return
+		}
+	}
+
+	// create new
+	thumbprint, err := tlsutil.GetIssuerCAThumbprint(oidcIssuer)
 	if err != nil {
+		err = errors.Wrapf(err, "Could not get issuer thumbprint for %s", oidcIssuer)
 		return
 	}
-	zonePrompt := promptui.SelectWithAdd{
-		Label:    "How many availability zones for this cluster?",
-		Items:    []string{fmt.Sprintf("All %d zones", len(zoneRes.AvailabilityZones))},
-		AddLabel: "Custom",
-		Validate: func(s string) error {
-			num, err := strconv.Atoi(s)
-			if err != nil {
-				return err
-			}
-			if num < 1 || num > len(zoneRes.AvailabilityZones) {
-				return fmt.Errorf("invalid number")
-			}
-			return nil
+	oidcRes, err := iamSvc.CreateOpenIDConnectProvider(&iam.CreateOpenIDConnectProviderInput{
+		Url: &oidcIssuer,
+		ClientIDList: []*string{
+			aws.String("sts.amazonaws.com"),
 		},
-	}
-	idx, res, err := zonePrompt.Run()
-	if err != nil {
-		return
-	}
-
-	var numZones int
-	if idx != -1 {
-		numZones = len(zoneRes.AvailabilityZones)
-	} else {
-		numZones = cast.ToInt(res)
-	}
-	zones = make([]string, 0, numZones)
-	for i := 0; i < numZones; i++ {
-		z := zoneRes.AvailabilityZones[i]
-		// TODO: maybe check availability
-		zones = append(zones, *z.ZoneName)
-	}
-	return
-}
-
-func (a *AWSManager) promptChooseVPC(ec2Svc *ec2.EC2) (cidrBlock string, err error) {
-	vpcResp, err := ec2Svc.DescribeVpcs(&ec2.DescribeVpcsInput{
-		Filters: []*ec2.Filter{
-			{
-				Name:   aws.String("tag:Konstellation"),
-				Values: []*string{aws.String("1")},
-			},
+		ThumbprintList: []*string{
+			&thumbprint,
 		},
 	})
 	if err != nil {
+		err = errors.Wrap(err, "Could not create OIDC provider")
 		return
 	}
-	vpcs := vpcResp.Vpcs
-	vpcItems := make([]string, 0)
-	for _, vpc := range vpcs {
-		vpcItems = append(vpcItems, fmt.Sprintf("%s - %s", *vpc.VpcId, *vpc.CidrBlock))
-	}
-	vpcSelect := promptui.SelectWithAdd{
-		Label:    "VPC (to use for your EKS Cluster resources)",
-		Items:    vpcItems,
-		AddLabel: "New VPC (enter CIDR Block, i.e. 10.0.0.0/16)",
-
-		Validate: func(v string) error {
-			_, newCidr, err := net.ParseCIDR(v)
-			if err != nil {
-				return err
-			}
-			firstIp, lastIp := cidr.AddressRange(newCidr)
-			for _, vpc := range vpcs {
-				_, vpcCidr, err := net.ParseCIDR(*vpc.CidrBlock)
-				if err != nil {
-					return err
-				}
-				if vpcCidr.Contains(firstIp) || vpcCidr.Contains(lastIp) {
-					return fmt.Errorf("CIDR block overlaps with an existing one")
-				}
-			}
-			return nil
-		},
-	}
-	idx, cidrBlock, err := vpcSelect.Run()
-	if err != nil {
-		return
-	}
-	if idx != -1 {
-		cidrBlock = *vpcs[idx].CidrBlock
-	}
+	oidcArn = *oidcRes.OpenIDConnectProviderArn
 	return
-}
-
-func (a *AWSManager) promptUsePrivateSubnet() (bool, error) {
-	fmt.Println(subnetMessage)
-	prompt := promptui.Select{
-		Label: "Create additional private subnets?",
-		Items: []string{
-			"No",
-			"Yes",
-		},
-	}
-
-	idx, _, err := prompt.Run()
-	if err != nil {
-		return false, err
-	}
-	return idx == 1, nil
 }
 
 func (a *AWSManager) Region() string {

@@ -11,7 +11,7 @@ import (
 )
 
 func (c *activeCluster) configureCluster() error {
-	fmt.Printf("Configuring cluster %s (%s)\n\n", c.Cluster)
+	fmt.Printf("Configuring cluster %s\n\n", c.Cluster)
 	kclient := c.kubernetesClient()
 	// pull existing config
 	cc, err := resources.GetClusterConfig(kclient)

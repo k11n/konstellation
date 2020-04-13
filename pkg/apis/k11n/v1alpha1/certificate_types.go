@@ -18,7 +18,7 @@ type CertificateRefSpec struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // CertificateRef is the Schema for the certificates API
-// +kubebuilder:resource:path=certificateRefs,scope=Cluster
+// +kubebuilder:resource:path=certificaterefs,scope=Cluster
 type CertificateRef struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

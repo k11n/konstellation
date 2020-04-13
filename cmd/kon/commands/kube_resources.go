@@ -12,7 +12,7 @@ var (
 		"crds/k11n.dev_apps_crd.yaml",
 		"crds/k11n.dev_apptargets_crd.yaml",
 		"crds/k11n.dev_builds_crd.yaml",
-		"crds/k11n.dev_certificateRefs_crd.yaml",
+		"crds/k11n.dev_certificaterefs_crd.yaml",
 		"crds/k11n.dev_clusterconfigs_crd.yaml",
 		"crds/k11n.dev_ingressrequests_crd.yaml",
 		"crds/k11n.dev_nodepools_crd.yaml",

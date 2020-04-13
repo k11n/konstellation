@@ -31,6 +31,65 @@ spec:
         spec:
           description: ClusterConfigSpec defines the desired state of ClusterConfig
           properties:
+            awsConfig:
+              nullable: true
+              properties:
+                albRoleArn:
+                  type: string
+                privateSubnets:
+                  items:
+                    properties:
+                      availabilityZone:
+                        type: string
+                      ipv4Cidr:
+                        type: string
+                      isPublic:
+                        type: boolean
+                      subnetId:
+                        type: string
+                    required:
+                    - availabilityZone
+                    - ipv4Cidr
+                    - isPublic
+                    - subnetId
+                    type: object
+                  type: array
+                publicSubnets:
+                  items:
+                    properties:
+                      availabilityZone:
+                        type: string
+                      ipv4Cidr:
+                        type: string
+                      isPublic:
+                        type: boolean
+                      subnetId:
+                        type: string
+                    required:
+                    - availabilityZone
+                    - ipv4Cidr
+                    - isPublic
+                    - subnetId
+                    type: object
+                  type: array
+                region:
+                  type: string
+                securityGroups:
+                  items:
+                    type: string
+                  type: array
+                vpc:
+                  type: string
+              required:
+              - albRoleArn
+              - privateSubnets
+              - publicSubnets
+              - region
+              - securityGroups
+              - vpc
+              type: object
+            cloud:
+              type: string
             components:
               items:
                 properties:
@@ -56,6 +115,7 @@ spec:
             version:
               type: string
           required:
+          - cloud
           - components
           - version
           type: object

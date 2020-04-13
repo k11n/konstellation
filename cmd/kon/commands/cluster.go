@@ -358,23 +358,30 @@ func (c *activeCluster) createClusterConfig() error {
 	}
 
 	// create initial config
-	cc := &v1alpha1.ClusterConfig{
+	cc := v1alpha1.ClusterConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: c.Cluster,
 		},
-	}
-	_, err = controllerutil.CreateOrUpdate(context.TODO(), kclient, cc, func() error {
-		cc.Spec = v1alpha1.ClusterConfigSpec{
+		Spec: v1alpha1.ClusterConfigSpec{
 			Version: version.Version,
-		}
-		for _, comp := range config.Components {
-			cc.Spec.Components = append(cc.Spec.Components, v1alpha1.ClusterComponent{
-				ComponentSpec: v1alpha1.ComponentSpec{
-					Name:    comp.Name(),
-					Version: comp.Version(),
-				},
-			})
-		}
+		},
+	}
+	for _, comp := range config.Components {
+		cc.Spec.Components = append(cc.Spec.Components, v1alpha1.ClusterComponent{
+			ComponentSpec: v1alpha1.ComponentSpec{
+				Name:    comp.Name(),
+				Version: comp.Version(),
+			},
+		})
+	}
+	if err = c.Manager.UpdateClusterSettings(&cc); err != nil {
+		return err
+	}
+	existing := v1alpha1.ClusterConfig{
+		ObjectMeta: cc.ObjectMeta,
+	}
+	_, err = controllerutil.CreateOrUpdate(context.TODO(), kclient, &existing, func() error {
+		objects.MergeObject(&existing.Spec, &cc.Spec)
 		return nil
 	})
 	return err
@@ -382,8 +389,9 @@ func (c *activeCluster) createClusterConfig() error {
 
 func (c *activeCluster) loadResourcesIntoKube() error {
 	// load new resources into kube
-	fmt.Println("Loading Konstellation resources")
+	fmt.Println("Loading custom resource definitions into Kubernetes...")
 	for _, file := range KUBE_RESOURCES {
+
 		err := utils.KubeApplyFile(file)
 		if err != nil {
 			return errors.Wrapf(err, "Unable to apply config %s", file)

@@ -18,9 +18,11 @@ type ComponentSpec struct {
 
 // ClusterConfigSpec defines the desired state of ClusterConfig
 type ClusterConfigSpec struct {
-	Version   string          `json:"version"`
-	Cloud     string          `json:"cloud"`
-	AWSConfig *AWSCloudConfig `json:"awsConfig"` // only set if cloud is aws
+	Version string `json:"version"`
+	Cloud   string `json:"cloud"`
+	// +kubebuilder:validation:Optional
+	// +nullable
+	AWSConfig *AWSCloudConfig `json:"awsConfig"`
 	// +kubebuilder:validation:Optional
 	// +nullable
 	Targets    []string           `json:"targets"`
@@ -56,24 +58,18 @@ type ClusterConfigList struct {
 
 type AWSCloudConfig struct {
 	Region         string       `json:"region"`
-	VPC            string       `json:"vpc"`
+	Vpc            string       `json:"vpc"`
+	SecurityGroups []string     `json:"securityGroups"`
 	PrivateSubnets []*AWSSubnet `json:"privateSubnets"`
-	MainRouteTable string       `json:"mainRouteTable"`
-
-	// for external facing clusters
-	PublicRouteTable  string       `json:"publicRouteTable"`
-	PublicSubnets     []*AWSSubnet `json:"publicSubnets"`
-	InternetGatewayId string       `json:"internetGatewayId"`
+	PublicSubnets  []*AWSSubnet `json:"publicSubnets"`
+	AlbRoleArn     string       `json:"albRoleArn"`
 }
 
 type AWSSubnet struct {
-	SubnetId           string `json:"subnetId"`
-	IsPublic           bool   `json:"isPublic"`
-	IPv4CIDR           string `json:"ipv4Cidr"`
-	AvailabilityZone   string `json:"availabilityZone"`
-	AvailabilityZoneId string `json:"availabilityZoneId"`
-	RouteTable         string `json:"routeTableId"`
-	NATGatewayId       string `json:"natGatewayId"`
+	SubnetId         string `json:"subnetId"`
+	IsPublic         bool   `json:"isPublic"`
+	Ipv4Cidr         string `json:"ipv4Cidr"`
+	AvailabilityZone string `json:"availabilityZone"`
 }
 
 func init() {

@@ -39,7 +39,8 @@ resource "aws_subnet" "public" {
     local.common_tags,
     {
       "k11n.dev/subnetScope" = "private",
-      "k11n.dev/az" = "${var.region}${each.key}"
+      "k11n.dev/az" = "${var.region}${each.key}",
+      "kubernetes.io/role/elb" = "1",
     }
   )
   depends_on = [aws_vpc.main]

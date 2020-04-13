@@ -9,7 +9,7 @@ const (
 	MediumCheckInterval = 1000 // 1s
 	LongCheckInterval   = 5000 // 5s
 	LongTimeoutSec      = 600  // 10 mins
-	ShortTimeoutSec     = 60   // 1 mins
+	ShortTimeoutSec     = 180  // 3 mins
 )
 
 func WaitUntilComplete(timeoutSec int, checkInterval int, checkFunc func() (bool, error)) error {

@@ -8,11 +8,6 @@ import (
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 )
 
-const (
-	EKSServiceRole = "kon-eks-service-role"
-	EKSNodeRole    = "kon-eks-node-role"
-)
-
 type ObjContainer struct {
 	Type  string
 	Value interface{}

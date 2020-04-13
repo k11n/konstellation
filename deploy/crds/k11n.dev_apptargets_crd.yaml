@@ -525,9 +525,15 @@ spec:
           properties:
             activeRelease:
               type: string
+            deployUpdatedAt:
+              format: date-time
+              type: string
             hostname:
               type: string
             ingress:
+              type: string
+            lastScaledAt:
+              format: date-time
               type: string
             messages:
               items:
@@ -544,16 +550,14 @@ spec:
               type: integer
             targetRelease:
               type: string
-            trafficUpdatedAt:
-              format: date-time
-              type: string
           required:
           - activeRelease
+          - deployUpdatedAt
+          - lastScaledAt
           - numAvailable
           - numDesired
           - numReady
           - targetRelease
-          - trafficUpdatedAt
           type: object
       type: object
   version: v1alpha1
