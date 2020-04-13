@@ -14,12 +14,20 @@ const (
 )
 
 type AWSConfig struct {
-	Regions []string
+	Regions        []string
+	CreationConfig map[string]*ClusterCreationConfig
 }
 
 type AWSCredentials struct {
 	AccessKeyID     string
 	SecretAccessKey string
+}
+
+type ClusterCreationConfig struct {
+	Region         string
+	VpcCidr        string
+	NumZones       int
+	PrivateSubnets bool
 }
 
 func (c *AWSConfig) IsSetup() bool {
@@ -70,4 +78,11 @@ func (c *AWSConfig) GetCredentials(profile string) (creds *AWSCredentials, err e
 	creds.SecretAccessKey = key.MustString("")
 
 	return
+}
+
+func (c *AWSConfig) SetCreationConfig(name string, cc *ClusterCreationConfig) {
+	if c.CreationConfig == nil {
+		c.CreationConfig = make(map[string]*ClusterCreationConfig)
+	}
+	c.CreationConfig[name] = cc
 }

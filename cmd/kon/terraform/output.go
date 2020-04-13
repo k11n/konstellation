@@ -21,7 +21,10 @@ func ParseOutput(data []byte) (oc *OutputContainer, err error) {
 }
 
 func (oc OutputContainer) GetString(key string) string {
-	return cast.ToString(oc[key].Value)
+	if v, ok := oc[key]; ok {
+		return cast.ToString(v.Value)
+	}
+	return ""
 }
 
 func (oc OutputContainer) ParseField(key string, target interface{}) error {

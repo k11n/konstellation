@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cast"
 
@@ -37,7 +38,11 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 		return
 	}
 	eksSvc := kaws.NewEKSService(sess)
+	iamSvc := kaws.NewIAMService(sess)
 	input := eks.CreateClusterInput{}
+	creationConf := config.ClusterCreationConfig{
+		Region: a.region,
+	}
 
 	prompt := promptui.Prompt{
 		Label: "Cluster name",
@@ -50,7 +55,7 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 
 	// VPC
 	ec2Svc := ec2.New(sess)
-	vpcCidr, err := a.promptChooseVPC(ec2Svc)
+	creationConf.VpcCidr, err = a.promptChooseVPC(ec2Svc)
 	if err != nil {
 		return
 	}
@@ -59,9 +64,9 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	if err != nil {
 		return
 	}
-	numZones := len(zones)
+	creationConf.NumZones = len(zones)
 
-	usePrivate, err := a.promptUsePrivateSubnet()
+	creationConf.PrivateSubnets, err = a.promptUsePrivateSubnet()
 
 	// explicit confirmation about confirmation, or look at terraform file
 	fmt.Println("---------------------------------------")
@@ -72,15 +77,15 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	fmt.Println("If Konstellation managed resources cannot be found, it'll attempt to create them.")
 	fmt.Println("These resources will be tagged Konstellation=1")
 	fmt.Println("\nThe following resources will be created or updated")
-	fmt.Printf("* VPC with CIDR (%s)\n", vpcCidr)
-	fmt.Printf("* %d subnets (one per availability zone)\n", numZones)
+	fmt.Printf("* VPC with CIDR (%s)\n", creationConf.VpcCidr)
+	fmt.Printf("* %d subnets (one per availability zone)\n", creationConf.NumZones)
 	fmt.Println("* an internet gateway")
 	fmt.Println("* an IAM role for EKS Service")
 	fmt.Println("* an IAM role for EKS Nodes")
-	if usePrivate {
-		fmt.Printf("* %d private subnets\n", numZones)
-		fmt.Printf("* %d NAT gateways (one for each subnet)\n", numZones)
-		fmt.Printf("* %d Elastic IPs (for use with NAT gateways)\n", numZones)
+	if creationConf.PrivateSubnets {
+		fmt.Printf("* %d private subnets\n", creationConf.NumZones)
+		fmt.Printf("* %d NAT gateways (one for each subnet)\n", creationConf.NumZones)
+		fmt.Printf("* %d Elastic IPs (for use with NAT gateways)\n", creationConf.NumZones)
 		fmt.Println("* a routing table for private subnets")
 	}
 
@@ -100,7 +105,7 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	}
 
 	// run terraform
-	tf, err := NewNetworkingTFAction(a.region, vpcCidr, zones, usePrivate, terraform.OptionDisplayOutput)
+	tf, err := NewNetworkingTFAction(a.region, creationConf.VpcCidr, zones, creationConf.PrivateSubnets, terraform.OptionDisplayOutput)
 	if err != nil {
 		return
 	}
@@ -120,11 +125,17 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 		return
 	}
 
-	input.SetRoleArn(EKSServiceRole)
+	roleRes, err := iamSvc.IAM.GetRole(&iam.GetRoleInput{
+		RoleName: aws.String(EKSServiceRole),
+	})
+	if err != nil {
+		return
+	}
+	input.RoleArn = roleRes.Role.Arn
 
 	// fetch VPC subnets
 	subnets := tfOut.PublicSubnets
-	if usePrivate {
+	if creationConf.PrivateSubnets {
 		subnets = tfOut.PrivateSubnets
 	}
 	subnetIds := []*string{}
@@ -159,6 +170,9 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	resConf.SetEndpointPublicAccess(true)
 	// create Vpc config request
 	input.SetResourcesVpcConfig(resConf)
+	input.Tags = map[string]*string{
+		"Konstellation": aws.String("1"),
+	}
 
 	// create EKS Cluster
 	eksResult, err := eksSvc.EKS.CreateCluster(&input)
@@ -167,6 +181,9 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	}
 
 	name = *eksResult.Cluster.Name
+	conf := config.GetConfig()
+	conf.Clouds.AWS.SetCreationConfig(name, &creationConf)
+	err = conf.Persist()
 	return
 }
 
