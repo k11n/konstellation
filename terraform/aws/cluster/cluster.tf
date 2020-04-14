@@ -25,7 +25,7 @@ resource "aws_eks_cluster" "main" {
 resource "aws_iam_openid_connect_provider" "main" {
   client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = []
-  url             = "${aws_eks_cluster.main.identity.0.oidc.0.issuer}"
+  url             = aws_eks_cluster.main.identity.0.oidc.0.issuer
 }
 
 data "aws_caller_identity" "current" {}
@@ -53,4 +53,10 @@ resource "aws_iam_role" "cluster_alb_role" {
   assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
 
   tags = local.cluster_tags
+}
+
+// associate ingress policy with it
+resource "aws_iam_role_policy_attachment" "alb_ingress_attachment" {
+  role = aws_iam_role.cluster_alb_role.name
+  policy_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/ALBIngressControllerIAMPolicy"
 }

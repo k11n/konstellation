@@ -39,68 +39,80 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 
 	// VPC
 	ec2Svc := ec2.New(sess)
-	creationConf.VpcCidr, err = a.promptChooseVPC(ec2Svc)
+	var vpcId string
+	vpcId, creationConf.VpcCidr, err = a.promptChooseVPC(ec2Svc)
 	if err != nil {
 		return
 	}
 
-	zones, err := a.promptAZs(ec2Svc)
-	if err != nil {
-		return
-	}
-	creationConf.NumZones = len(zones)
+	var tfVpc *terraform.TerraformAction
+	if vpcId == "" {
+		var zones []string
+		// creating a new VPC
+		zones, err = a.promptAZs(ec2Svc)
+		if err != nil {
+			return
+		}
+		creationConf.NumZones = len(zones)
 
-	creationConf.PrivateSubnets, err = a.promptUsePrivateSubnet()
+		creationConf.PrivateSubnets, err = a.promptUsePrivateSubnet()
 
-	// explicit confirmation about confirmation, or look at terraform file
-	fmt.Println("---------------------------------------")
-	fmt.Println(" NOTE: PLEASE READ BEFORE CONTINUING")
-	fmt.Println("---------------------------------------")
-	fmt.Println()
-	fmt.Println("Konstellation uses Terraform to manage IAM roles and VPC resources")
-	fmt.Println("It'll create or update the VPC and other shared resources that it needs for the EKS cluster.")
-	fmt.Println("If Konstellation managed resources cannot be found, it'll attempt to create them.")
-	fmt.Println("These resources will be tagged Konstellation=1")
-	fmt.Println("\nThe following resources will be created or updated")
-	fmt.Printf("* VPC with CIDR (%s)\n", creationConf.VpcCidr)
-	fmt.Printf("* %d subnets (one per availability zone)\n", creationConf.NumZones)
-	fmt.Println("* an internet gateway")
-	fmt.Println("* an IAM role for EKS Service")
-	fmt.Println("* an IAM role for EKS Nodes")
-	if creationConf.PrivateSubnets {
-		fmt.Printf("* %d private subnets\n", creationConf.NumZones)
-		fmt.Printf("* %d NAT gateways (one for each subnet)\n", creationConf.NumZones)
-		fmt.Printf("* %d Elastic IPs (for use with NAT gateways)\n", creationConf.NumZones)
-		fmt.Println("* a routing table for private subnets")
-	}
+		// explicit confirmation about confirmation, or look at terraform file
+		fmt.Println("---------------------------------------")
+		fmt.Println(" NOTE: PLEASE READ BEFORE CONTINUING")
+		fmt.Println("---------------------------------------")
+		fmt.Println()
+		fmt.Println("Konstellation uses Terraform to manage IAM roles and VPC resources")
+		fmt.Println("It'll create the VPC and other shared resources that it needs for the EKS cluster.")
+		fmt.Println("These resources will be tagged Konstellation=1")
+		fmt.Println("\nThe following resources will be created:")
+		fmt.Printf("* VPC with CIDR (%s)\n", creationConf.VpcCidr)
+		fmt.Printf("* %d subnets (one per availability zone)\n", creationConf.NumZones)
+		fmt.Println("* an internet gateway")
+		fmt.Println("* an IAM role for EKS Service")
+		fmt.Println("* an IAM role for EKS Nodes")
+		if creationConf.PrivateSubnets {
+			fmt.Printf("* %d private subnets\n", creationConf.NumZones)
+			fmt.Printf("* %d NAT gateways (one for each subnet)\n", creationConf.NumZones)
+			fmt.Printf("* %d Elastic IPs (for use with NAT gateways)\n", creationConf.NumZones)
+			fmt.Println("* a routing table for private subnets")
+		}
 
-	fmt.Println()
+		fmt.Println()
 
-	confirmPrompt := promptui.Prompt{
-		Label: "Do you want to proceed? (type yes to continue)",
-	}
-	res, err := confirmPrompt.Run()
-	if err != nil {
-		return
-	}
+		confirmPrompt := promptui.Prompt{
+			Label: "Do you want to proceed? (type yes to continue)",
+		}
+		var res string
+		res, err = confirmPrompt.Run()
+		if err != nil {
+			return
+		}
 
-	if strings.ToLower(res) != "yes" {
-		err = fmt.Errorf("User aborted")
-		return
-	}
+		if strings.ToLower(res) != "yes" {
+			err = fmt.Errorf("User aborted")
+			return
+		}
 
-	// run terraform
-	tf, err := NewNetworkingTFAction(a.region, creationConf.VpcCidr, zones, creationConf.PrivateSubnets)
-	if err != nil {
-		return
-	}
+		// run terraform
+		tfVpc, err = NewNetworkingTFAction(a.region, creationConf.VpcCidr, zones, creationConf.PrivateSubnets)
+		if err != nil {
+			return
+		}
 
-	if err = tf.Apply(); err != nil {
-		return
+		if err = tfVpc.Apply(); err != nil {
+			return
+		}
+	} else {
+		// not going to run create here.
+		tfVpc, err = NewNetworkingTFAction(a.region, creationConf.VpcCidr, []string{}, creationConf.PrivateSubnets)
+		if err != nil {
+			return
+		}
 	}
 
 	// get output and parse data
-	out, err := tf.GetOutput()
+	out, err := tfVpc.GetOutput()
 	if err != nil {
 		return
 	}
@@ -127,6 +139,12 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	}
 	groups := []string{}
 	for _, sg := range securityGroups {
+		for _, tag := range sg.Tags {
+			if strings.HasPrefix(*tag.Key, "kubernetes.io/cluster") {
+				// dedicated security group for clusters
+				continue
+			}
+		}
 		groups = append(groups, *sg.GroupId)
 	}
 	sgSelect := promptui.Select{
@@ -151,7 +169,10 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	fmt.Printf("* an IAM OIDC provider for this cluster\n")
 	fmt.Printf("* an IAM role that allows this cluster to manage Application Load Balancers\n")
 
-	res, err = confirmPrompt.Run()
+	confirmPrompt := promptui.Prompt{
+		Label: "Do you want to proceed? (type yes to continue)",
+	}
+	res, err := confirmPrompt.Run()
 	if err != nil {
 		return
 	}
@@ -190,7 +211,7 @@ func (a *AWSManager) promptAZs(ec2Svc *ec2.EC2) (zones []string, err error) {
 		return
 	}
 	zonePrompt := promptui.SelectWithAdd{
-		Label:    "How many availability zones for this cluster?",
+		Label:    "How many availability zones would you use?",
 		Items:    []string{fmt.Sprintf("All %d zones", len(zoneRes.AvailabilityZones))},
 		AddLabel: "Custom (at least two)",
 		Validate: func(s string) error {
@@ -224,7 +245,7 @@ func (a *AWSManager) promptAZs(ec2Svc *ec2.EC2) (zones []string, err error) {
 	return
 }
 
-func (a *AWSManager) promptChooseVPC(ec2Svc *ec2.EC2) (cidrBlock string, err error) {
+func (a *AWSManager) promptChooseVPC(ec2Svc *ec2.EC2) (vpcId string, cidrBlock string, err error) {
 	vpcResp, err := ec2Svc.DescribeVpcs(&ec2.DescribeVpcsInput{
 		Filters: []*ec2.Filter{
 			{
@@ -242,7 +263,7 @@ func (a *AWSManager) promptChooseVPC(ec2Svc *ec2.EC2) (cidrBlock string, err err
 		vpcItems = append(vpcItems, fmt.Sprintf("%s - %s", *vpc.VpcId, *vpc.CidrBlock))
 	}
 	vpcSelect := promptui.SelectWithAdd{
-		Label:    "VPC (to use for your EKS Cluster resources)",
+		Label:    "Choose a VPC (to use for your EKS Cluster resources)",
 		Items:    vpcItems,
 		AddLabel: "New VPC (enter CIDR Block, i.e. 10.0.0.0/16)",
 
@@ -270,6 +291,7 @@ func (a *AWSManager) promptChooseVPC(ec2Svc *ec2.EC2) (cidrBlock string, err err
 	}
 	if idx != -1 {
 		cidrBlock = *vpcs[idx].CidrBlock
+		vpcId = *vpcs[idx].VpcId
 	}
 	return
 }

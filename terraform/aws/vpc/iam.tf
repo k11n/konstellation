@@ -212,6 +212,18 @@ resource "aws_iam_policy" "alb_policy" {
         "waf:GetWebACL"
       ],
       "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "shield:DescribeProtection",
+        "shield:GetSubscriptionState",
+        "shield:DeleteProtection",
+        "shield:CreateProtection",
+        "shield:DescribeSubscription",
+        "shield:ListProtections"
+      ],
+      "Resource": "*"
     }
   ]
 }

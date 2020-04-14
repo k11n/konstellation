@@ -9,13 +9,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/pkg/errors"
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud"
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
-	tlsutil "github.com/davidzhao/konstellation/pkg/utils/tls"
 )
 
 type AWSManager struct {
@@ -109,57 +107,58 @@ func (a *AWSManager) getAlbRole(cluster string) (*iam.Role, error) {
 	return nil, fmt.Errorf("Could not find ALB role for cluster")
 }
 
-func (a *AWSManager) createALBRServiceRole(clusterName string, oidcIssuer string) (role string, err error) {
-	// TODO: move to cloud/aws
-	iamSvc := iam.New(session.Must(a.awsSession()))
-
-	oidcArn, err := a.enableOIDCProvider(iamSvc, oidcIssuer)
-	if err != nil {
-		return
-	}
-	fmt.Println("oidcArn", oidcArn)
-	return
-}
-
-func (a *AWSManager) enableOIDCProvider(iamSvc *iam.IAM, oidcIssuer string) (oidcArn string, err error) {
-	// TODO: move to cloud/aws
-	// find existing oidc provider
-	listRes, err := iamSvc.ListOpenIDConnectProviders(&iam.ListOpenIDConnectProvidersInput{})
-	for _, provider := range listRes.OpenIDConnectProviderList {
-		oidcRes, err := iamSvc.GetOpenIDConnectProvider(&iam.GetOpenIDConnectProviderInput{
-			OpenIDConnectProviderArn: provider.Arn,
-		})
-		if err != nil {
-			return "", err
-		}
-		if oidcIssuer == *oidcRes.Url {
-			oidcArn = *provider.Arn
-			return oidcArn, nil
-		}
-	}
-
-	// create new
-	thumbprint, err := tlsutil.GetIssuerCAThumbprint(oidcIssuer)
-	if err != nil {
-		err = errors.Wrapf(err, "Could not get issuer thumbprint for %s", oidcIssuer)
-		return
-	}
-	oidcRes, err := iamSvc.CreateOpenIDConnectProvider(&iam.CreateOpenIDConnectProviderInput{
-		Url: &oidcIssuer,
-		ClientIDList: []*string{
-			aws.String("sts.amazonaws.com"),
-		},
-		ThumbprintList: []*string{
-			&thumbprint,
-		},
-	})
-	if err != nil {
-		err = errors.Wrap(err, "Could not create OIDC provider")
-		return
-	}
-	oidcArn = *oidcRes.OpenIDConnectProviderArn
-	return
-}
+//
+//func (a *AWSManager) createALBRServiceRole(clusterName string, oidcIssuer string) (role string, err error) {
+//	// TODO: move to cloud/aws
+//	iamSvc := iam.New(session.Must(a.awsSession()))
+//
+//	oidcArn, err := a.enableOIDCProvider(iamSvc, oidcIssuer)
+//	if err != nil {
+//		return
+//	}
+//	fmt.Println("oidcArn", oidcArn)
+//	return
+//}
+//
+//func (a *AWSManager) enableOIDCProvider(iamSvc *iam.IAM, oidcIssuer string) (oidcArn string, err error) {
+//	// TODO: move to cloud/aws
+//	// find existing oidc provider
+//	listRes, err := iamSvc.ListOpenIDConnectProviders(&iam.ListOpenIDConnectProvidersInput{})
+//	for _, provider := range listRes.OpenIDConnectProviderList {
+//		oidcRes, err := iamSvc.GetOpenIDConnectProvider(&iam.GetOpenIDConnectProviderInput{
+//			OpenIDConnectProviderArn: provider.Arn,
+//		})
+//		if err != nil {
+//			return "", err
+//		}
+//		if oidcIssuer == *oidcRes.Url {
+//			oidcArn = *provider.Arn
+//			return oidcArn, nil
+//		}
+//	}
+//
+//	// create new
+//	thumbprint, err := tlsutil.GetIssuerCAThumbprint(oidcIssuer)
+//	if err != nil {
+//		err = errors.Wrapf(err, "Could not get issuer thumbprint for %s", oidcIssuer)
+//		return
+//	}
+//	oidcRes, err := iamSvc.CreateOpenIDConnectProvider(&iam.CreateOpenIDConnectProviderInput{
+//		Url: &oidcIssuer,
+//		ClientIDList: []*string{
+//			aws.String("sts.amazonaws.com"),
+//		},
+//		ThumbprintList: []*string{
+//			&thumbprint,
+//		},
+//	})
+//	if err != nil {
+//		err = errors.Wrap(err, "Could not create OIDC provider")
+//		return
+//	}
+//	oidcArn = *oidcRes.OpenIDConnectProviderArn
+//	return
+//}
 
 func (a *AWSManager) Region() string {
 	return a.region

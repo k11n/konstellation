@@ -8,8 +8,8 @@ import (
 	"github.com/davidzhao/konstellation/cmd/kon/providers/aws"
 )
 
-func TestGetAWSOutput(t *testing.T) {
-	tf, err := aws.ParseNetworkingTFOutput([]byte(exampleOutput))
+func TestGetNetworkingOutput(t *testing.T) {
+	tf, err := aws.ParseNetworkingTFOutput([]byte(exampleNetworkingOutput))
 
 	assert.NoError(t, err)
 	assert.Equal(t, "rtb-0e855a2598de968f8", tf.MainRouteTable)
@@ -17,7 +17,18 @@ func TestGetAWSOutput(t *testing.T) {
 	assert.Equal(t, "subnet-039e883c22bdd4532", tf.PrivateSubnets[0].Id)
 }
 
-const exampleOutput = `
+func TestGetClusterOutput(t *testing.T) {
+	tf, err := aws.ParseClusterTFOutput([]byte(exampleClusterOutput))
+
+	assert.NoError(t, err)
+	assert.Equal(t, "tf2", tf.ClusterName)
+	assert.Equal(t, "somearn", tf.AlbIngressRoleArn)
+}
+
+const exampleClusterOutput = `
+`
+
+const exampleNetworkingOutput = `
 {
   "main_route_table": {
     "sensitive": false,
