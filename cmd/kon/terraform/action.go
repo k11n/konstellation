@@ -4,10 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
+	"strings"
 
 	"github.com/pkg/errors"
+
+	"github.com/davidzhao/konstellation/pkg/utils/files"
 )
 
 type TerraformFlags string
@@ -22,7 +27,8 @@ type TerraformAction struct {
 	vars            map[string]string
 	displayOutput   bool
 	requireApproval bool
-	initialized     bool
+
+	initialized bool
 }
 
 type TerraformOption interface {
@@ -70,25 +76,47 @@ func (a *TerraformAction) Option(opt TerraformOption) *TerraformAction {
 	return a
 }
 
-func (a *TerraformAction) Run() error {
-	// first initialize terraform
-	if err := a.initIfNeeded(); err != nil {
+func (a *TerraformAction) replaceTemplates() error {
+	files, err := ioutil.ReadDir(a.WorkingDir)
+	if err != nil {
 		return err
 	}
+	for _, fi := range files {
+		if !fi.IsDir() {
+			if err = a.replaceTemplate(path.Join(a.WorkingDir, fi.Name())); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
 
+func (a *TerraformAction) replaceTemplate(filePath string) error {
+	content, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+	s := string(content)
+	hasReplacements := false
+	for key, val := range a.vars {
+		search := fmt.Sprintf("$${%s}", key)
+		if strings.Contains(s, search) {
+			hasReplacements = true
+			s = strings.ReplaceAll(s, search, val)
+		}
+	}
+	if hasReplacements {
+		return ioutil.WriteFile(filePath, []byte(s), files.DefaultFileMode)
+	}
+	return nil
+}
+
+func (a *TerraformAction) Apply() error {
 	args := []string{
 		"apply",
-		//"plan",
 		"-compact-warnings",
 	}
-	connectStdOut := false
-	connectStdIn := false
-	if a.displayOutput || a.requireApproval {
-		connectStdOut = true
-	}
-	if a.requireApproval {
-		connectStdIn = true
-	} else {
+	if !a.requireApproval {
 		args = append(args, "-auto-approve")
 	}
 
@@ -96,8 +124,36 @@ func (a *TerraformAction) Run() error {
 		args = append(args, "-var")
 		args = append(args, fmt.Sprintf("%s=%s", key, val))
 	}
+	return a.runAction(args...)
+}
 
-	fmt.Printf("Running: %v\n", args)
+func (a *TerraformAction) Destroy() error {
+	args := []string{
+		"destroy",
+	}
+	if !a.requireApproval {
+		args = append(args, "-auto-approve")
+	}
+	return a.runAction(args...)
+}
+
+func (a *TerraformAction) runAction(args ...string) error {
+	// first initialize terraform
+	if err := a.initIfNeeded(); err != nil {
+		return err
+	}
+
+	connectStdOut := false
+	connectStdIn := false
+	if a.displayOutput || a.requireApproval {
+		connectStdOut = true
+	}
+	if a.requireApproval {
+		connectStdIn = true
+	}
+
+	fmt.Printf("Generated terraform plan: %s\n", a.WorkingDir)
+	fmt.Printf("Running: terraform %s\n", strings.Join(args, " "))
 	cmd := exec.Command("terraform", args...)
 	cmd.Dir = a.WorkingDir
 	cmd.Stderr = os.Stderr
@@ -117,6 +173,9 @@ func (a *TerraformAction) initIfNeeded() error {
 	}
 
 	fmt.Println("Initializing terraform...")
+	if err := a.replaceTemplates(); err != nil {
+		return err
+	}
 	cmd := exec.Command("terraform", "init")
 	cmd.Dir = a.WorkingDir
 	if err := cmd.Run(); err != nil {

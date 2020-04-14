@@ -45,7 +45,7 @@ func (a *AWSManager) UpdateClusterSettings(cc *v1alpha1.ClusterConfig) error {
 	if err != nil {
 		return err
 	}
-	oidcIssuer := *res.Cluster.Identity.Oidc.Issuer
+	//oidcIssuer := *res.Cluster.Identity.Oidc.Issuer
 	vpcConf := res.Cluster.ResourcesVpcConfig
 	awsConfig.Vpc = *vpcConf.VpcId
 	for _, sg := range vpcConf.SecurityGroupIds {
@@ -62,7 +62,6 @@ func (a *AWSManager) UpdateClusterSettings(cc *v1alpha1.ClusterConfig) error {
 
 	for _, sub := range subnetRes.Subnets {
 		isPublic := false
-		fmt.Printf("tags: %+v", sub.Tags)
 		for _, tag := range sub.Tags {
 			if *tag.Key == kaws.TagSubnetScope {
 				isPublic = *tag.Value == kaws.TagValuePublic
@@ -82,14 +81,32 @@ func (a *AWSManager) UpdateClusterSettings(cc *v1alpha1.ClusterConfig) error {
 		}
 	}
 
-	_, err = a.createALBRServiceRole(cc.Name, oidcIssuer)
+	albRole, err := a.getAlbRole(cc.Name)
 	if err != nil {
 		return err
 	}
+	awsConfig.AlbRoleArn = *albRole.Arn
 	fmt.Printf("AWS config %+v", awsConfig)
-	return fmt.Errorf("failure")
 	cc.Spec.AWSConfig = &awsConfig
 	return nil
+}
+
+func (a *AWSManager) getAlbRole(cluster string) (*iam.Role, error) {
+	sess := session.Must(a.awsSession())
+	iamSvc := iam.New(sess)
+	res, err := iamSvc.ListRoles(&iam.ListRolesInput{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, role := range res.Roles {
+		for _, tag := range role.Tags {
+			if *tag.Key == "k11n.dev/clusterName" && *tag.Value == cluster {
+				return role, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("Could not find ALB role for cluster")
 }
 
 func (a *AWSManager) createALBRServiceRole(clusterName string, oidcIssuer string) (role string, err error) {

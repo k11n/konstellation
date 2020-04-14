@@ -86,3 +86,10 @@ func (c *AWSConfig) SetCreationConfig(name string, cc *ClusterCreationConfig) {
 	}
 	c.CreationConfig[name] = cc
 }
+
+func (c *AWSConfig) GetCreationConfig(name string) *ClusterCreationConfig {
+	if c.CreationConfig == nil {
+		return nil
+	}
+	return c.CreationConfig[name]
+}

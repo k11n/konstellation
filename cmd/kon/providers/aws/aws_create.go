@@ -9,8 +9,6 @@ import (
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/eks"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cast"
 
@@ -24,21 +22,20 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	if err != nil {
 		return
 	}
-	eksSvc := kaws.NewEKSService(sess)
-	iamSvc := kaws.NewIAMService(sess)
-	input := eks.CreateClusterInput{}
-	creationConf := config.ClusterCreationConfig{
-		Region: a.region,
-	}
 
 	prompt := promptui.Prompt{
 		Label: "Cluster name",
 	}
-	result, err := prompt.Run()
+	clusterName, err := prompt.Run()
 	if err != nil {
 		return
 	}
-	input.SetName(result)
+	creationConf := config.GetConfig().Clouds.AWS.GetCreationConfig(clusterName)
+	if creationConf == nil {
+		creationConf = &config.ClusterCreationConfig{
+			Region: a.region,
+		}
+	}
 
 	// VPC
 	ec2Svc := ec2.New(sess)
@@ -61,6 +58,7 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	fmt.Println("---------------------------------------")
 	fmt.Println()
 	fmt.Println("Konstellation uses Terraform to manage IAM roles and VPC resources")
+	fmt.Println("It'll create or update the VPC and other shared resources that it needs for the EKS cluster.")
 	fmt.Println("If Konstellation managed resources cannot be found, it'll attempt to create them.")
 	fmt.Println("These resources will be tagged Konstellation=1")
 	fmt.Println("\nThe following resources will be created or updated")
@@ -92,12 +90,12 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	}
 
 	// run terraform
-	tf, err := NewNetworkingTFAction(a.region, creationConf.VpcCidr, zones, creationConf.PrivateSubnets, terraform.OptionDisplayOutput)
+	tf, err := NewNetworkingTFAction(a.region, creationConf.VpcCidr, zones, creationConf.PrivateSubnets)
 	if err != nil {
 		return
 	}
 
-	if err = tf.Run(); err != nil {
+	if err = tf.Apply(); err != nil {
 		return
 	}
 
@@ -107,18 +105,10 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 		return
 	}
 
-	tfOut, err := ParseTerraformOutput(out)
+	tfOut, err := ParseNetworkingTFOutput(out)
 	if err != nil {
 		return
 	}
-
-	roleRes, err := iamSvc.IAM.GetRole(&iam.GetRoleInput{
-		RoleName: aws.String(kaws.EKSServiceRole),
-	})
-	if err != nil {
-		return
-	}
-	input.RoleArn = roleRes.Role.Arn
 
 	// fetch VPC subnets
 	subnetIds := []*string{}
@@ -147,28 +137,48 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	if err != nil {
 		return
 	}
+	sgGroups := []string{groups[idx]}
 
-	resConf := &eks.VpcConfigRequest{
-		SubnetIds:        subnetIds,
-		SecurityGroupIds: []*string{&groups[idx]},
-	}
-	resConf.SetEndpointPrivateAccess(true)
-	resConf.SetEndpointPublicAccess(true)
-	// create Vpc config request
-	input.SetResourcesVpcConfig(resConf)
-	input.Tags = map[string]*string{
-		kaws.TagKonstellation: aws.String("1"),
-	}
+	// explicit confirmation about confirmation, or look at terraform file
+	fmt.Println("---------------------------------------")
+	fmt.Println(" NOTE: PLEASE READ BEFORE CONTINUING")
+	fmt.Println("---------------------------------------")
+	fmt.Println()
+	fmt.Printf("Konstellation will now create the EKS cluster %s and other required resources\n", clusterName)
+	fmt.Println("These resources will be tagged Konstellation=1")
+	fmt.Println("\nThe following resources will be created or updated")
+	fmt.Printf("* EKS Cluster %s\n", clusterName)
+	fmt.Printf("* an IAM OIDC provider for this cluster\n")
+	fmt.Printf("* an IAM role that allows this cluster to manage Application Load Balancers\n")
 
-	// create EKS Cluster
-	eksResult, err := eksSvc.EKS.CreateCluster(&input)
+	res, err = confirmPrompt.Run()
+	if err != nil {
+		return
+	}
+	if strings.ToLower(res) != "yes" {
+		err = fmt.Errorf("User aborted")
+		return
+	}
+	clusterTf, err := NewEKSClusterTFAction(a.region, tfOut.VpcId, clusterName, sgGroups, terraform.OptionDisplayOutput)
 	if err != nil {
 		return
 	}
 
-	name = *eksResult.Cluster.Name
+	if err = clusterTf.Apply(); err != nil {
+		return
+	}
+	out, err = clusterTf.GetOutput()
+	if err != nil {
+		return
+	}
+
+	clusterTfOut, err := ParseClusterTFOutput(out)
+	if err != nil {
+		return
+	}
+	name = clusterTfOut.ClusterName
 	conf := config.GetConfig()
-	conf.Clouds.AWS.SetCreationConfig(name, &creationConf)
+	conf.Clouds.AWS.SetCreationConfig(name, creationConf)
 	err = conf.Persist()
 	return
 }
@@ -182,13 +192,13 @@ func (a *AWSManager) promptAZs(ec2Svc *ec2.EC2) (zones []string, err error) {
 	zonePrompt := promptui.SelectWithAdd{
 		Label:    "How many availability zones for this cluster?",
 		Items:    []string{fmt.Sprintf("All %d zones", len(zoneRes.AvailabilityZones))},
-		AddLabel: "Custom",
+		AddLabel: "Custom (at least two)",
 		Validate: func(s string) error {
 			num, err := strconv.Atoi(s)
 			if err != nil {
 				return err
 			}
-			if num < 1 || num > len(zoneRes.AvailabilityZones) {
+			if num < 2 || num > len(zoneRes.AvailabilityZones) {
 				return fmt.Errorf("invalid number")
 			}
 			return nil

@@ -8,6 +8,23 @@ import (
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 )
 
+var (
+	vpcFiles = []string{
+		"aws/vpc/iam.tf",
+		"aws/vpc/main.tf",
+		"aws/vpc/tags.tf",
+		"aws/vpc/vars.tf",
+		"aws/vpc/vpc.tf",
+	}
+	clusterFiles = []string{
+		"aws/cluster/cluster.tf",
+		"aws/cluster/data.tf",
+		"aws/cluster/main.tf",
+		"aws/cluster/tags.tf",
+		"aws/cluster/vars.tf",
+	}
+)
+
 type ObjContainer struct {
 	Type  string
 	Value interface{}
@@ -35,23 +52,17 @@ type TFSubnet struct {
 	VpcId                      string `json:"vpc_id"`
 }
 
-var (
-	networkingFiles = []string{
-		"aws/config.tf",
-		"aws/networking.tf",
-		"aws/networking_vars.tf",
-		"aws/roles.tf",
-		"aws/security.tf",
-		"aws/tags.tf",
-	}
-)
+type TFClusterOutput struct {
+	ClusterName       string `json:"cluster_name"`
+	AlbIngressRoleArn string `json:"cluster_alb_role_arn"`
+}
 
 func NewNetworkingTFAction(region string, vpcCidr string, zones []string, usePrivateSubnet bool, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
-	targetDir := path.Join(config.GetConfig().TFDir(), "aws", "networking")
-	tfFiles := make([]string, 0, len(networkingFiles))
-	tfFiles = append(tfFiles, networkingFiles...)
+	targetDir := path.Join(config.GetConfig().TFDir(), "aws", "vpc")
+	tfFiles := make([]string, 0, len(vpcFiles))
+	tfFiles = append(tfFiles, vpcFiles...)
 	if usePrivateSubnet {
-		tfFiles = append(tfFiles, "aws/private_subnet.tf")
+		tfFiles = append(tfFiles, "aws/vpc/vpc_private_subnet.tf")
 	}
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, tfFiles...)
 	if err != nil {
@@ -75,7 +86,26 @@ func NewNetworkingTFAction(region string, vpcCidr string, zones []string, usePri
 	return
 }
 
-func ParseTerraformOutput(data []byte) (tf *TFVPCOutput, err error) {
+func NewEKSClusterTFAction(region string, vpcId string, name string, securityGroupIds []string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+	targetDir := path.Join(config.GetConfig().TFDir(), "aws", "cluster", name)
+	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, clusterFiles...)
+	if err != nil {
+		return
+	}
+
+	a = terraform.NewTerraformAction(targetDir, terraform.TerraformVars{
+		"region":             region,
+		"vpc_id":             vpcId,
+		"cluster":            name,
+		"security_group_ids": securityGroupIds,
+	})
+	for _, o := range opts {
+		a.Option(o)
+	}
+	return
+}
+
+func ParseNetworkingTFOutput(data []byte) (tf *TFVPCOutput, err error) {
 	oc, err := terraform.ParseOutput(data)
 	if err != nil {
 		return
@@ -90,5 +120,18 @@ func ParseTerraformOutput(data []byte) (tf *TFVPCOutput, err error) {
 	oc.ParseField("public_subnets", &tf.PublicSubnets)
 	oc.ParseField("private_subnets", &tf.PrivateSubnets)
 
+	return
+}
+
+func ParseClusterTFOutput(data []byte) (tf *TFClusterOutput, err error) {
+	oc, err := terraform.ParseOutput(data)
+	if err != nil {
+		return
+	}
+
+	tf = &TFClusterOutput{
+		ClusterName:       oc.GetString("cluster_name"),
+		AlbIngressRoleArn: oc.GetString("cluster_alb_role_arn"),
+	}
 	return
 }

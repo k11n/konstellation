@@ -9,7 +9,7 @@ import (
 )
 
 func TestGetAWSOutput(t *testing.T) {
-	tf, err := aws.ParseTerraformOutput([]byte(exampleOutput))
+	tf, err := aws.ParseNetworkingTFOutput([]byte(exampleOutput))
 
 	assert.NoError(t, err)
 	assert.Equal(t, "rtb-0e855a2598de968f8", tf.MainRouteTable)
