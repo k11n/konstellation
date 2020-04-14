@@ -16,13 +16,13 @@ type NodepoolSpec struct {
 }
 
 type NodePoolAWS struct {
-	RoleARN             string `json:"roleArn" desc:"Node role"`
-	VpcID               string `json:"vpcId" desc:"VPC ID"`
-	AMIType             string `json:"amiType" desc:"AMI Type"`
-	SSHKeypair          string `json:"sshKeypair" desc:"SSH keypair"`
-	ConnectFromAnywhere bool   `json:"connectFromAnywhere" desc:"Allow connection from internet"`
-	SecurityGroupId     string `json:"securityGroupId,omitempty"`
-	SecurityGroupName   string `json:"securityGroupName,omitempty" desc:"Security group (for connection)"`
+	RoleARN             string   `json:"roleArn" desc:"Node role"`
+	AMIType             string   `json:"amiType" desc:"AMI Type"`
+	SSHKeypair          string   `json:"sshKeypair" desc:"SSH keypair"`
+	ConnectFromAnywhere bool     `json:"connectFromAnywhere" desc:"Allow connection from internet"`
+	SecurityGroupId     string   `json:"securityGroupId,omitempty"`
+	SecurityGroupName   string   `json:"securityGroupName,omitempty" desc:"Security group (for connection)"`
+	SubnetIds           []string `json:"subnetIds"`
 }
 
 // NodepoolStatus defines the observed state of Nodepool

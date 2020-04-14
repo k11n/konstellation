@@ -63,9 +63,11 @@ var ClusterCommands = []*cli.Command{
 				Action: clusterList,
 			},
 			{
-				Name:   "select",
-				Usage:  "select an active cluster to work with",
-				Action: clusterSelect,
+				Name:  "select",
+				Usage: "select an active cluster to work with",
+				Action: func(c *cli.Context) error {
+					return clusterSelect(c.String("cluster"))
+				},
 				Flags: []cli.Flag{
 					clusterNameFlag,
 				},
@@ -152,7 +154,7 @@ func clusterCreate(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Successfully created cluster %s. Waiting for cluster to become ready\n", name)
+	fmt.Printf("Successfully created cluster %s.\n", name)
 	err = utils.WaitUntilComplete(utils.LongTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
 		cluster, err := cm.KubernetesProvider().GetCluster(context.Background(), name)
 		if err != nil {
@@ -173,16 +175,13 @@ func clusterCreate(c *cli.Context) error {
 		return err
 	}
 
-	c.Set("cluster", name)
-
-	return clusterSelect(c)
+	return clusterSelect(name)
 }
 
-func clusterSelect(c *cli.Context) error {
+func clusterSelect(clusterName string) error {
 	if err := updateClusterLocations(); err != nil {
 		return err
 	}
-	clusterName := c.String("cluster")
 
 	cm, err := ClusterManagerForCluster(clusterName)
 	if err != nil {
@@ -404,8 +403,14 @@ func (c *activeCluster) loadResourcesIntoKube() error {
 func (c *activeCluster) configureNodepool() error {
 	kclient := c.kubernetesClient()
 
+	// cluster config must be present now, load it and pass it into nodegroups
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return err
+	}
+
 	// set configuration for the first time
-	np, err := c.Manager.ConfigureNodepool(c.Cluster)
+	np, err := c.Manager.ConfigureNodepool(cc)
 	if err != nil {
 		return err
 	}

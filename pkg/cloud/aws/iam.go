@@ -76,64 +76,6 @@ func (s *IAMService) hasRequiredPolicies(roleName string, policies ...string) (b
 	return hasRequired, nil
 }
 
-func (s *IAMService) CreateEKSServiceRole(name string) (role *iam.Role, err error) {
-	return s.createRoleWithManagedPolicies(
-		name,
-		EKSTrustJSON,
-		EKSServicePolicyARN, EKSClusterPolicyARN,
-	)
-}
-
-func (s *IAMService) ListEKSNodeRoles() (roles []*iam.Role, err error) {
-	stdRoles, err := s.ListStandardRoles()
-	if err != nil {
-		return
-	}
-	for _, r := range stdRoles {
-		hasPolicies, err := s.hasRequiredPolicies(*r.RoleName,
-			EKSWorkerNodePolicy, EKSCNIPolicy, EC2ContainerRegistryROPolicy)
-		if err != nil {
-			return nil, err
-		}
-		if hasPolicies {
-			roles = append(roles, r)
-		}
-	}
-	return
-}
-
-func (s *IAMService) CreateEKSNodeRole(name string) (role *iam.Role, err error) {
-	return s.createRoleWithManagedPolicies(
-		name,
-		EC2TrustJSON,
-		EKSWorkerNodePolicy, EKSCNIPolicy, EC2ContainerRegistryROPolicy,
-	)
-}
-
-func (s *IAMService) AttachAutoscalerPolicy(roleName string) error {
-	// the iam role needs to append these policies if it doesn't already exist
-	// give the policy a constant name
-	// {
-	//     "Version": "2012-10-17",
-	//     "Statement": [
-	//         {
-	//             "Action": [
-	//                 "autoscaling:DescribeAutoScalingGroups",
-	//                 "autoscaling:DescribeAutoScalingInstances",
-	//                 "autoscaling:DescribeLaunchConfigurations",
-	//                 "autoscaling:DescribeTags",
-	//                 "autoscaling:SetDesiredCapacity",
-	//                 "autoscaling:TerminateInstanceInAutoScalingGroup",
-	//                 "ec2:DescribeLaunchTemplateVersions"
-	//             ],
-	//             "Resource": "*",
-	//             "Effect": "Allow"
-	//         }
-	//     ]
-	// }
-	return nil
-}
-
 func (s *IAMService) createRoleWithManagedPolicies(roleName string, trustJSON string, policies ...string) (role *iam.Role, err error) {
 	createRes, err := s.IAM.CreateRole(&iam.CreateRoleInput{
 		RoleName:                 &roleName,

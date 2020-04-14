@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/sts"
 
@@ -136,15 +136,7 @@ func (s *EKSService) IsNodepoolReady(ctx context.Context, clusterName string, no
 
 func (s *EKSService) CreateNodepool(ctx context.Context, clusterName string, np *v1alpha1.Nodepool, purpose string) error {
 	createInput := nodepoolSpecToCreateInput(clusterName, np)
-	subnets, err := ListSubnets(ec2.New(s.session), np.Spec.AWS.VpcID)
-	if err != nil {
-		return err
-	}
-	for _, subnet := range subnets {
-		createInput.Subnets = append(createInput.Subnets, subnet.SubnetId)
-	}
-
-	_, err = s.EKS.CreateNodegroup(createInput)
+	_, err := s.EKS.CreateNodegroup(createInput)
 	return err
 }
 
@@ -169,11 +161,14 @@ func nodepoolSpecToCreateInput(cluster string, np *v1alpha1.Nodepool) *eks.Creat
 		MaxSize:     &nps.MaxSize,
 		DesiredSize: &nps.MinSize,
 	})
+	for _, subnetId := range nps.AWS.SubnetIds {
+		cni.Subnets = append(cni.Subnets, &subnetId)
+	}
 
 	tags := make(map[string]*string)
 	if nps.Autoscale {
-		tags[AutoscalerClusterNameTag(cluster)] = &TagValueOwned
-		tags[TagAutoscalerEnabled] = &TagValueTrue
+		tags[AutoscalerClusterNameTag(cluster)] = aws.String(TagValueOwned)
+		tags[TagAutoscalerEnabled] = aws.String(TagValueTrue)
 	}
 	cni.SetTags(tags)
 

@@ -17,7 +17,7 @@ type ClusterManager interface {
 
 	CreateCluster() (name string, err error)
 	UpdateClusterSettings(*v1alpha1.ClusterConfig) error
-	ConfigureNodepool(name string) (np *v1alpha1.Nodepool, err error)
+	ConfigureNodepool(cc *v1alpha1.ClusterConfig) (np *v1alpha1.Nodepool, err error)
 
 	// utils
 	KubernetesProvider() cloud.KubernetesProvider

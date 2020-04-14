@@ -22,10 +22,22 @@ func TestGetClusterOutput(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, "tf2", tf.ClusterName)
-	assert.Equal(t, "somearn", tf.AlbIngressRoleArn)
+	assert.Equal(t, "arn:aws:iam::203125320322:role/kon-alb-role-tf2", tf.AlbIngressRoleArn)
 }
 
 const exampleClusterOutput = `
+{
+  "cluster_alb_role_arn": {
+    "sensitive": false,
+    "type": "string",
+    "value": "arn:aws:iam::203125320322:role/kon-alb-role-tf2"
+  },
+  "cluster_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "tf2"
+  }
+}
 `
 
 const exampleNetworkingOutput = `

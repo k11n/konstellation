@@ -5,12 +5,11 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"sort"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/pricing"
 	"github.com/manifoldco/promptui"
@@ -23,24 +22,41 @@ import (
 	"github.com/davidzhao/konstellation/pkg/resources"
 )
 
-func (a *AWSManager) ConfigureNodepool(name string) (np *v1alpha1.Nodepool, err error) {
+func (a *AWSManager) ConfigureNodepool(cc *v1alpha1.ClusterConfig) (np *v1alpha1.Nodepool, err error) {
 	sess, err := a.awsSession()
 	if err != nil {
 		return
 	}
 
+	awsConf := cc.Spec.AWSConfig
+	if awsConf == nil {
+		err = fmt.Errorf("Invalid condition, couldn't find AWS config")
+		return
+	}
 	nps := v1alpha1.NodepoolSpec{
 		AWS: &v1alpha1.NodePoolAWS{},
 	}
-	eksSvc := kaws.NewEKSService(sess)
 	iamSvc := kaws.NewIAMService(sess)
 	ec2Svc := ec2.New(sess)
 
-	role, err := a.promptSelectOrCreateNodeRole(iamSvc)
+	roleRes, err := iamSvc.IAM.GetRole(&iam.GetRoleInput{
+		RoleName: aws.String(kaws.EKSNodeRole),
+	})
 	if err != nil {
 		return
 	}
-	nps.AWS.RoleARN = *role.Arn
+	nps.AWS.RoleARN = *roleRes.Role.Arn
+
+	// subnet ids, with public/private networks, allocate into private
+	var targetSubnets []*v1alpha1.AWSSubnet
+	if len(awsConf.PrivateSubnets) > 0 {
+		targetSubnets = awsConf.PrivateSubnets
+	} else {
+		targetSubnets = awsConf.PublicSubnets
+	}
+	for _, subnet := range targetSubnets {
+		nps.AWS.SubnetIds = append(nps.AWS.SubnetIds, subnet.SubnetId)
+	}
 
 	// keypair setup
 	kpRes, err := ec2Svc.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{})
@@ -72,18 +88,9 @@ func (a *AWSManager) ConfigureNodepool(name string) (np *v1alpha1.Nodepool, err 
 		nps.AWS.SSHKeypair = *keypairs[idx].KeyName
 	}
 
-	// load cluster details
-	descOut, err := eksSvc.EKS.DescribeCluster(&eks.DescribeClusterInput{
-		Name: &name,
-	})
-	if err != nil {
-		return
-	}
-	nps.AWS.VpcID = *descOut.Cluster.ResourcesVpcConfig.VpcId
-
 	// configure node connection
 	connectionPrompt := promptui.Select{
-		Label: "Allow connection to nodes from anywhere?",
+		Label: "Allow remote access to nodes from the internet?",
 		Items: []string{"allow", "disallow"},
 	}
 	idx, _, err = connectionPrompt.Run()
@@ -95,7 +102,7 @@ func (a *AWSManager) ConfigureNodepool(name string) (np *v1alpha1.Nodepool, err 
 	} else {
 		// list security groups
 		var securityGroups []*ec2.SecurityGroup
-		securityGroups, err = kaws.ListSecurityGroups(ec2Svc, nps.AWS.VpcID)
+		securityGroups, err = kaws.ListSecurityGroups(ec2Svc, awsConf.Vpc)
 		if err != nil {
 			return
 		}
@@ -201,49 +208,6 @@ func (a *AWSManager) ConfigureNodepool(name string) (np *v1alpha1.Nodepool, err 
 	return
 }
 
-func (a *AWSManager) promptSelectOrCreateNodeRole(iamSvc *kaws.IAMService) (role *iam.Role, err error) {
-	// list all the IAM roles
-	roles, err := iamSvc.ListEKSNodeRoles()
-	if err != nil {
-		return
-	}
-
-	if len(roles) == 0 {
-		// Create service role
-		namePrompt := promptui.Prompt{
-			Label:   "Create a new EKS node role",
-			Default: "eks-node-role",
-		}
-		var roleName string
-		roleName, err = namePrompt.Run()
-		if err != nil {
-			return
-		}
-
-		role, err = iamSvc.CreateEKSNodeRole(roleName)
-		return
-	}
-
-	// choose an existing role
-	roleNames := make([]string, 0, len(roles))
-	for _, role := range roles {
-		roleNames = append(roleNames, *role.RoleName)
-	}
-	sort.Strings(roleNames)
-	roleSelect := promptui.Select{
-		Label:    "EKS node role name",
-		Items:    roleNames,
-		Searcher: utils.SearchFuncFor(roleNames, false),
-	}
-	idx, _, err := roleSelect.Run()
-	if err != nil {
-		return
-	}
-	role = roles[idx]
-
-	return
-}
-
 func (a *AWSManager) promptCreateKeypair(ec2Svc *ec2.EC2, name string) (keyName string, err error) {
 	res, err := ec2Svc.CreateKeyPair(&ec2.CreateKeyPairInput{
 		KeyName: &name,
@@ -307,6 +271,9 @@ func (a *AWSManager) promptInstanceType(session *session.Session, gpu bool) (ins
 
 	instanceLabels := make([]string, 0, len(filteredInstances))
 	for _, inst := range filteredInstances {
+		if strings.Contains(inst.InstanceType, "nano") || strings.Contains(inst.InstanceType, "micro") {
+			continue
+		}
 		var label string
 		if gpu {
 			// instance type, VCPUs, GPUs, memory, network, price
@@ -340,14 +307,17 @@ func (a *AWSManager) promptInstanceType(session *session.Session, gpu bool) (ins
 func (a *AWSManager) promptInstanceSizing() (minNodes int64, maxNodes int64, err error) {
 	sizePrompt := promptui.Prompt{
 		Label:    "Minimum/initial number of nodes (recommend 3 minimum for a production setup)",
-		Validate: utils.ValidateInt,
+		Validate: utils.ValidateIntWithLimits(2, -1),
 	}
 	sizeStr, err := sizePrompt.Run()
 	if err != nil {
 		return
 	}
 	minNodes = cast.ToInt64(sizeStr)
-	sizePrompt.Label = "Maximum number of nodes with autoscale"
+	sizePrompt = promptui.Prompt{
+		Label:    "Maximum number of nodes with autoscale",
+		Validate: utils.ValidateIntWithLimits(int(minNodes), -1),
+	}
 	sizeStr, err = sizePrompt.Run()
 	if err != nil {
 		return
