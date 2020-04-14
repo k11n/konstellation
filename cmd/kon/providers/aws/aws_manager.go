@@ -2,6 +2,7 @@ package aws
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -91,16 +92,25 @@ func (a *AWSManager) UpdateClusterSettings(cc *v1alpha1.ClusterConfig) error {
 
 func (a *AWSManager) getAlbRole(cluster string) (*iam.Role, error) {
 	sess := session.Must(a.awsSession())
-	iamSvc := iam.New(sess)
-	res, err := iamSvc.ListRoles(&iam.ListRolesInput{})
+	iamSvc := kaws.NewIAMService(sess)
+	roles, err := iamSvc.ListRoles()
 	if err != nil {
 		return nil, err
 	}
 
-	for _, role := range res.Roles {
-		for _, tag := range role.Tags {
-			if *tag.Key == "k11n.dev/clusterName" && *tag.Value == cluster {
-				return role, nil
+	for _, role := range roles {
+		if strings.HasPrefix(*role.RoleName, "kon-alb-role-") {
+			// get role to include tags
+			roleOut, err := iamSvc.IAM.GetRole(&iam.GetRoleInput{RoleName: role.RoleName})
+			if err != nil {
+				return nil, err
+			}
+			role = roleOut.Role
+			for _, tag := range role.Tags {
+				fmt.Printf("tag: %s: %s\n", *tag.Key, *tag.Value)
+				if *tag.Key == kaws.TagClusterName && *tag.Value == cluster {
+					return role, nil
+				}
 			}
 		}
 	}

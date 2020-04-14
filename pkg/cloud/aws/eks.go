@@ -162,7 +162,7 @@ func nodepoolSpecToCreateInput(cluster string, np *v1alpha1.Nodepool) *eks.Creat
 		DesiredSize: &nps.MinSize,
 	})
 	for _, subnetId := range nps.AWS.SubnetIds {
-		cni.Subnets = append(cni.Subnets, &subnetId)
+		cni.Subnets = append(cni.Subnets, aws.String(subnetId))
 	}
 
 	tags := make(map[string]*string)

@@ -3,6 +3,7 @@ package aws
 import (
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 )
@@ -15,6 +16,27 @@ func NewIAMService(s *session.Session) *IAMService {
 	return &IAMService{
 		IAM: iam.New(s),
 	}
+}
+
+func (s *IAMService) ListRoles() (roles []*iam.Role, err error) {
+	input := &iam.ListRolesInput{
+		MaxItems: aws.Int64(DefaultPageSize),
+	}
+	var out *iam.ListRolesOutput
+	for input != nil {
+		out, err = s.IAM.ListRoles(input)
+		if err != nil {
+			return
+		}
+		for _, r := range out.Roles {
+			roles = append(roles, r)
+		}
+		if !*out.IsTruncated {
+			break
+		}
+		input.Marker = out.Marker
+	}
+	return
 }
 
 /**

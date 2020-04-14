@@ -63,14 +63,16 @@ spec:
                   type: string
                 sshKeypair:
                   type: string
-                vpcId:
-                  type: string
+                subnetIds:
+                  items:
+                    type: string
+                  type: array
               required:
               - amiType
               - connectFromAnywhere
               - roleArn
               - sshKeypair
-              - vpcId
+              - subnetIds
               type: object
             diskSizeGiB:
               type: integer

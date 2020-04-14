@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -271,9 +270,6 @@ func (a *AWSManager) promptInstanceType(session *session.Session, gpu bool) (ins
 
 	instanceLabels := make([]string, 0, len(filteredInstances))
 	for _, inst := range filteredInstances {
-		if strings.Contains(inst.InstanceType, "nano") || strings.Contains(inst.InstanceType, "micro") {
-			continue
-		}
 		var label string
 		if gpu {
 			// instance type, VCPUs, GPUs, memory, network, price
