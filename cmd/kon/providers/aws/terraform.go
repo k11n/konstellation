@@ -31,12 +31,12 @@ type ObjContainer struct {
 }
 
 type TFVPCOutput struct {
-	VpcId             string      `json:"vpc_id"`
-	MainRouteTable    string      `json:"main_route_table"`
-	PublicSubnets     []*TFSubnet `json:"public_subnets"`
-	PublicGateway     string      `json:"public_gateway"`
-	PrivateSubnets    []*TFSubnet `json:"private_subnets"`
-	PrivateRouteTable string      `json:"private_route_table"`
+	VpcId              string      `json:"vpc_id"`
+	MainRouteTable     string      `json:"main_route_table"`
+	PublicSubnets      []*TFSubnet `json:"public_subnets"`
+	PublicGateway      string      `json:"public_gateway"`
+	PrivateSubnets     []*TFSubnet `json:"private_subnets"`
+	PrivateRouteTables []string    `json:"private_route_tables"`
 }
 
 type TFSubnet struct {
@@ -112,13 +112,13 @@ func ParseNetworkingTFOutput(data []byte) (tf *TFVPCOutput, err error) {
 	}
 
 	tf = &TFVPCOutput{
-		VpcId:             oc.GetString("vpc_id"),
-		MainRouteTable:    oc.GetString("main_route_table"),
-		PublicGateway:     oc.GetString("public_gateway"),
-		PrivateRouteTable: oc.GetString("private_route_table"),
+		VpcId:          oc.GetString("vpc_id"),
+		MainRouteTable: oc.GetString("main_route_table"),
+		PublicGateway:  oc.GetString("public_gateway"),
 	}
 	oc.ParseField("public_subnets", &tf.PublicSubnets)
 	oc.ParseField("private_subnets", &tf.PrivateSubnets)
+	oc.ParseField("private_route_tables", &tf.PrivateRouteTables)
 
 	return
 }
