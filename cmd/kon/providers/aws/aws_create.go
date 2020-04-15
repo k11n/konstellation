@@ -216,7 +216,7 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	}
 	name = clusterTfOut.ClusterName
 
-	if !newVPC {
+	if newVPC {
 		conf.Clouds.AWS.SetCreationConfig(name, creationConf)
 		err = conf.Persist()
 	}
