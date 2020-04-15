@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cast"
 )
 
-var namePattern = regexp.MustCompile(`^[a-z0-9\-\.]+$`)
+var namePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*[a-z0-9]$`)
 
 func ValidateInt(val string) error {
 	_, err := cast.ToIntE(val)
@@ -34,11 +34,11 @@ func ValidateIntWithLimits(min, max int) func(val string) error {
 	}
 }
 
-func ValidateName(val string) error {
+func ValidateKubeName(val string) error {
 	if namePattern.MatchString(val) {
 		return nil
 	} else {
-		return fmt.Errorf("alphanumeric, -, and . only")
+		return fmt.Errorf("lowercase alphanumeric and - only")
 	}
 }
 

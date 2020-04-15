@@ -150,6 +150,11 @@ func clusterCreate(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// update existing cluster names to ensure there's no conflict
+	if err := updateClusterLocations(); err != nil {
+		return err
+	}
 	name, err := cm.CreateCluster()
 	if err != nil {
 		return err
@@ -175,6 +180,8 @@ func clusterCreate(c *cli.Context) error {
 		return err
 	}
 
+	fmt.Printf("Cluster %s has been created successfully. Running `kon cluster select --cluster %s` to configure it\n",
+		name, name)
 	return clusterSelect(name)
 }
 
@@ -345,8 +352,15 @@ func (c *activeCluster) createClusterConfig() error {
 	}
 
 	err = utils.WaitUntilComplete(utils.ShortTimeoutSec, utils.MediumCheckInterval, func() (bool, error) {
+		// use a new kclient to avoid caching
+		contextName := resources.ContextNameForCluster(c.Manager.Cloud(), c.Cluster)
+		kclient, err = KubernetesClientWithContext(contextName)
+		if err != nil {
+			return false, err
+		}
 		_, err := resources.GetClusterConfig(kclient)
 		if err != resources.ErrNotFound {
+			log.Printf("Error checking for resources: %v", err)
 			return false, nil
 		} else {
 			return true, nil

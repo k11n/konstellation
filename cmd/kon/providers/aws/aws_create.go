@@ -14,6 +14,7 @@ import (
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/davidzhao/konstellation/cmd/kon/terraform"
+	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
 )
 
@@ -24,13 +25,20 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	}
 
 	prompt := promptui.Prompt{
-		Label: "Cluster name",
+		Label:    "Cluster name",
+		Validate: utils.ValidateKubeName,
 	}
 	clusterName, err := prompt.Run()
 	if err != nil {
 		return
 	}
-	creationConf := config.GetConfig().Clouds.AWS.GetCreationConfig(clusterName)
+
+	conf := config.GetConfig()
+	if conf.Clusters[name] != nil {
+		err = fmt.Errorf("Cluster name already in use")
+		return
+	}
+	creationConf := conf.Clouds.AWS.GetCreationConfig(clusterName)
 	if creationConf == nil {
 		creationConf = &config.ClusterCreationConfig{
 			Region: a.region,
@@ -40,6 +48,7 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 	// VPC
 	ec2Svc := ec2.New(sess)
 	var vpcId string
+	newVPC := false
 	vpcId, creationConf.VpcCidr, err = a.promptChooseVPC(ec2Svc)
 	if err != nil {
 		return
@@ -54,8 +63,8 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 			return
 		}
 		creationConf.NumZones = len(zones)
-
 		creationConf.PrivateSubnets, err = a.promptUsePrivateSubnet()
+		newVPC = true
 
 		// explicit confirmation about confirmation, or look at terraform file
 		fmt.Println("---------------------------------------")
@@ -104,6 +113,9 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 			return
 		}
 	} else {
+		// TODO: set these vars to reflect current config
+		//creationConf.NumZones = len(zones)
+		//creationConf.PrivateSubnets, err = a.promptUsePrivateSubnet()
 		// not going to run create here.
 		tfVpc, err = NewNetworkingTFAction(a.region, creationConf.VpcCidr, []string{}, creationConf.PrivateSubnets)
 		if err != nil {
@@ -198,9 +210,12 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 		return
 	}
 	name = clusterTfOut.ClusterName
-	conf := config.GetConfig()
-	conf.Clouds.AWS.SetCreationConfig(name, creationConf)
-	err = conf.Persist()
+
+	if !newVPC {
+		conf.Clouds.AWS.SetCreationConfig(name, creationConf)
+		err = conf.Persist()
+	}
+
 	return
 }
 

@@ -107,7 +107,6 @@ func (a *AWSManager) getAlbRole(cluster string) (*iam.Role, error) {
 			}
 			role = roleOut.Role
 			for _, tag := range role.Tags {
-				fmt.Printf("tag: %s: %s\n", *tag.Key, *tag.Value)
 				if *tag.Key == kaws.TagClusterName && *tag.Value == cluster {
 					return role, nil
 				}

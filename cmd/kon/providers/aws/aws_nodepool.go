@@ -71,7 +71,7 @@ func (a *AWSManager) ConfigureNodepool(cc *v1alpha1.ClusterConfig) (np *v1alpha1
 		Label:    "Keypair (for SSH access into nodes)",
 		AddLabel: "Create new keypair",
 		Items:    keypairNames,
-		Validate: utils.ValidateName,
+		Validate: utils.ValidateKubeName,
 	}
 	idx, keypairName, err := keypairPrompt.Run()
 	if err != nil {

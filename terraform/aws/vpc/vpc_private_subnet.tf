@@ -30,38 +30,30 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_eip" "nat" {
-  for_each = aws_subnet.private
+  // one for each public nat gateway, which is one for each subnet
+  for_each = aws_subnet.public
   vpc = true
   tags = merge(
     local.common_tags,
     {
       "k11n.dev/purpose" = "nat_gateway",
-      "k11n.dev/subnet" = each.value.id,
+      "k11n.dev/publicSubnet" = each.value.id,
     }
   )
 
-  depends_on = [aws_subnet.private]
-}
-
-data "aws_subnet_ids" "private" {
-  vpc_id = aws_vpc.main.id
-  tags = merge(
-    local.common_tags,
-    { "k11n.dev/subnetScope" = "private" }
-  )
-
-  depends_on = [aws_subnet.private]
+  depends_on = [aws_subnet.public]
 }
 
 resource "aws_nat_gateway" "private_gw" {
   for_each = aws_eip.nat
   allocation_id = each.value.id
-  subnet_id = each.value.tags["k11n.dev/subnet"]
+  subnet_id = each.value.tags["k11n.dev/publicSubnet"]
 
   tags = merge(
     local.common_tags,
     {
-      "k11n.dev/subnet" = each.value.tags["k11n.dev/subnet"]
+      "k11n.dev/publicSubnet" = each.value.tags["k11n.dev/publicSubnet"],
+      "k11n.dev/privateSubnet" = aws_subnet.public[each.key].id
     }
   )
   depends_on = [aws_eip.nat, aws_subnet.private]
@@ -74,7 +66,7 @@ resource "aws_route_table" "private" {
   tags = merge(
     local.common_tags,
     {
-      "k11n.dev/subnet" = each.value.tags["k11n.dev/subnet"]
+      "k11n.dev/subnet" = each.value.tags["k11n.dev/privateSubnet"]
       "k11n.dev/natGateway" = each.value.id
     }
   )

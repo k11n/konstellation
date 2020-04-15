@@ -2,10 +2,12 @@ package commands
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/manifoldco/promptui"
 	"github.com/thoas/go-funk"
 
+	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
 )
@@ -49,8 +51,17 @@ func (c *activeCluster) configureCluster() error {
 
 func (c *activeCluster) addTargetPrompt(cc *v1alpha1.ClusterConfig) error {
 	prompt := promptui.Prompt{
-		Label: "Target name",
-		// TODO: validate
+		Label: "Target name (enter multiple targets separated by comma)",
+		Validate: func(val string) error {
+			parts := strings.Split(val, ",")
+			for _, p := range parts {
+				p = strings.TrimSpace(p)
+				if err := utils.ValidateKubeName(p); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
 	}
 
 	val, err := prompt.Run()
@@ -58,15 +69,20 @@ func (c *activeCluster) addTargetPrompt(cc *v1alpha1.ClusterConfig) error {
 		return err
 	}
 
-	if funk.Contains(cc.Spec.Targets, val) {
-		return fmt.Errorf("Target %s already exists on cluster %s", val, c.Cluster)
+	parts := strings.Split(val, ",")
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if funk.Contains(cc.Spec.Targets, p) {
+			continue
+		}
+		cc.Spec.Targets = append(cc.Spec.Targets, p)
 	}
-	cc.Spec.Targets = append(cc.Spec.Targets, val)
+
 	err = resources.UpdateClusterConfig(c.kubernetesClient(), cc)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Added target %s to cluster :)\n", val)
+	fmt.Printf("Added target(s) %s to cluster :)\n", val)
 	return nil
 }
 
