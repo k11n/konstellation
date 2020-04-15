@@ -439,6 +439,7 @@ func (c *activeCluster) configureNodepool() error {
 		},
 	}
 	_, err = controllerutil.CreateOrUpdate(context.TODO(), kclient, existing, func() error {
+		existing.Labels = np.Labels
 		objects.MergeObject(&existing.Spec, &np.Spec)
 		return nil
 	})

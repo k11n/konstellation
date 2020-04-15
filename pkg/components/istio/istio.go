@@ -1,7 +1,6 @@
 package istio
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -81,15 +80,11 @@ func (i *IstioInstaller) InstallCLI() error {
 
 // installs the component onto the kube cluster
 func (i *IstioInstaller) InstallComponent(client.Client) error {
-	output, err := cli.RunBufferedCommand(i.cliPath(), "manifest", "generate",
+	return cli.RunCommandWithStd(i.cliPath(), "manifest", "apply",
+		"--skip-confirmation",
 		"--set", "components.sidecarInjector.enabled=true",
 		"--set", "addonComponents.kiali.enabled=true",
 		"--set", "addonComponents.grafana.enabled=true")
-	if err != nil {
-		return err
-	}
-
-	return cli.KubeApplyReader(bytes.NewBuffer(output))
 }
 
 func (i *IstioInstaller) cliPath() string {

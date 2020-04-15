@@ -88,17 +88,20 @@ func (a *AWSManager) ConfigureNodepool(cc *v1alpha1.ClusterConfig) (np *v1alpha1
 	}
 
 	// configure node connection
-	connectionPrompt := promptui.Select{
-		Label: "Allow remote access to nodes from the internet?",
-		Items: []string{"allow", "disallow"},
+	if len(cc.Spec.AWSConfig.PrivateSubnets) == 0 {
+		// remote access is only possible when VPC is public-only
+		connectionPrompt := promptui.Select{
+			Label: "Allow remote access to nodes from the internet?",
+			Items: []string{"allow", "disallow"},
+		}
+		idx, _, err = connectionPrompt.Run()
+		if err != nil {
+			return
+		}
+		nps.AWS.ConnectFromAnywhere = idx == 0
 	}
-	idx, _, err = connectionPrompt.Run()
-	if err != nil {
-		return
-	}
-	if idx == 0 {
-		nps.AWS.ConnectFromAnywhere = true
-	} else {
+
+	if !nps.AWS.ConnectFromAnywhere {
 		// list security groups
 		var securityGroups []*ec2.SecurityGroup
 		securityGroups, err = kaws.ListSecurityGroups(ec2Svc, awsConf.Vpc)
