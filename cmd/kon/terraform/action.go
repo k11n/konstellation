@@ -119,6 +119,10 @@ func (a *TerraformAction) Apply() error {
 	if !a.requireApproval {
 		args = append(args, "-auto-approve")
 	}
+	for key, val := range a.vars {
+		args = append(args, "-var")
+		args = append(args, fmt.Sprintf("%s=%s", key, val))
+	}
 	return a.runAction(args...)
 }
 
@@ -145,11 +149,6 @@ func (a *TerraformAction) runAction(args ...string) error {
 	}
 	if a.requireApproval {
 		connectStdIn = true
-	}
-
-	for key, val := range a.vars {
-		args = append(args, "-var")
-		args = append(args, fmt.Sprintf("%s=%s", key, val))
 	}
 
 	fmt.Printf("Generated terraform plan: %s\n", a.WorkingDir)

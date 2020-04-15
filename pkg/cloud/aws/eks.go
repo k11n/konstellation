@@ -134,9 +134,35 @@ func (s *EKSService) IsNodepoolReady(ctx context.Context, clusterName string, no
 	return
 }
 
+func (s *EKSService) IsNodepoolDeleted(ctx context.Context, clusterName string, nodepoolName string) (deleted bool, err error) {
+	res, err := s.EKS.ListNodegroupsWithContext(ctx, &eks.ListNodegroupsInput{
+		ClusterName: &clusterName,
+		MaxResults:  aws.Int64(DefaultPageSize),
+	})
+	if err != nil {
+		return
+	}
+
+	for _, item := range res.Nodegroups {
+		if *item == nodepoolName {
+			return false, nil
+		}
+	}
+
+	return true, nil
+}
+
 func (s *EKSService) CreateNodepool(ctx context.Context, clusterName string, np *v1alpha1.Nodepool, purpose string) error {
 	createInput := nodepoolSpecToCreateInput(clusterName, np)
 	_, err := s.EKS.CreateNodegroup(createInput)
+	return err
+}
+
+func (s *EKSService) DeleteNodepool(ctx context.Context, clusterName string, nodePool string) error {
+	_, err := s.EKS.DeleteNodegroupWithContext(ctx, &eks.DeleteNodegroupInput{
+		ClusterName:   &clusterName,
+		NodegroupName: &nodePool,
+	})
 	return err
 }
 

@@ -15,7 +15,6 @@ var EKSAllowedInstanceSeries = map[string]bool{
 }
 
 var EKSAllowedInstanceSizes = map[string]bool{
-	"small":    true,
 	"medium":   true,
 	"large":    true,
 	"xlarge":   true,

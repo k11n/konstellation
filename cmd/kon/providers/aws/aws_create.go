@@ -192,7 +192,7 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 		err = fmt.Errorf("User aborted")
 		return
 	}
-	clusterTf, err := NewEKSClusterTFAction(a.region, tfOut.VpcId, clusterName, sgGroups, terraform.OptionDisplayOutput)
+	clusterTf, err := NewCreateEKSClusterTFAction(a.region, tfOut.VpcId, clusterName, sgGroups, terraform.OptionDisplayOutput)
 	if err != nil {
 		return
 	}

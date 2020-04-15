@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
+	"github.com/davidzhao/konstellation/cmd/kon/terraform"
+	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud"
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
@@ -90,6 +93,47 @@ func (a *AWSManager) UpdateClusterSettings(cc *v1alpha1.ClusterConfig) error {
 	return nil
 }
 
+func (a *AWSManager) DeleteCluster(cluster string) error {
+	// list all nodepools, and delete them
+	sess := session.Must(a.awsSession())
+	eksSvc := kaws.NewEKSService(sess)
+
+	listRes, err := eksSvc.EKS.ListNodegroups(&eks.ListNodegroupsInput{
+		ClusterName: &cluster,
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, item := range listRes.Nodegroups {
+		// TODO: this might involve deleting the remote access groups
+		if err = eksSvc.DeleteNodepool(context.TODO(), cluster, *item); err != nil {
+			return err
+		}
+	}
+
+	// wait for nodegroups to disappear
+	fmt.Printf("Waiting for nodepools to be deleted, this may take a few minutes\n")
+	err = utils.WaitUntilComplete(utils.LongTimeoutSec, utils.LongCheckInterval, func() (finished bool, err error) {
+		listRes, err := eksSvc.EKS.ListNodegroups(&eks.ListNodegroupsInput{
+			ClusterName: &cluster,
+		})
+		if err != nil {
+			return
+		}
+		finished = len(listRes.Nodegroups) == 0
+		return
+	})
+	if err != nil {
+		return err
+	}
+
+	// done, load cluster config and delete cluster
+	tf, err := NewDestroyEKSClusterTFAction(a.region, cluster, terraform.OptionDisplayOutput)
+
+	return tf.Destroy()
+}
+
 func (a *AWSManager) getAlbRole(cluster string) (*iam.Role, error) {
 	sess := session.Must(a.awsSession())
 	iamSvc := kaws.NewIAMService(sess)
@@ -115,59 +159,6 @@ func (a *AWSManager) getAlbRole(cluster string) (*iam.Role, error) {
 	}
 	return nil, fmt.Errorf("Could not find ALB role for cluster")
 }
-
-//
-//func (a *AWSManager) createALBRServiceRole(clusterName string, oidcIssuer string) (role string, err error) {
-//	// TODO: move to cloud/aws
-//	iamSvc := iam.New(session.Must(a.awsSession()))
-//
-//	oidcArn, err := a.enableOIDCProvider(iamSvc, oidcIssuer)
-//	if err != nil {
-//		return
-//	}
-//	fmt.Println("oidcArn", oidcArn)
-//	return
-//}
-//
-//func (a *AWSManager) enableOIDCProvider(iamSvc *iam.IAM, oidcIssuer string) (oidcArn string, err error) {
-//	// TODO: move to cloud/aws
-//	// find existing oidc provider
-//	listRes, err := iamSvc.ListOpenIDConnectProviders(&iam.ListOpenIDConnectProvidersInput{})
-//	for _, provider := range listRes.OpenIDConnectProviderList {
-//		oidcRes, err := iamSvc.GetOpenIDConnectProvider(&iam.GetOpenIDConnectProviderInput{
-//			OpenIDConnectProviderArn: provider.Arn,
-//		})
-//		if err != nil {
-//			return "", err
-//		}
-//		if oidcIssuer == *oidcRes.Url {
-//			oidcArn = *provider.Arn
-//			return oidcArn, nil
-//		}
-//	}
-//
-//	// create new
-//	thumbprint, err := tlsutil.GetIssuerCAThumbprint(oidcIssuer)
-//	if err != nil {
-//		err = errors.Wrapf(err, "Could not get issuer thumbprint for %s", oidcIssuer)
-//		return
-//	}
-//	oidcRes, err := iamSvc.CreateOpenIDConnectProvider(&iam.CreateOpenIDConnectProviderInput{
-//		Url: &oidcIssuer,
-//		ClientIDList: []*string{
-//			aws.String("sts.amazonaws.com"),
-//		},
-//		ThumbprintList: []*string{
-//			&thumbprint,
-//		},
-//	})
-//	if err != nil {
-//		err = errors.Wrap(err, "Could not create OIDC provider")
-//		return
-//	}
-//	oidcArn = *oidcRes.OpenIDConnectProviderArn
-//	return
-//}
 
 func (a *AWSManager) Region() string {
 	return a.region

@@ -17,6 +17,7 @@ var (
 	defaultConfigDir = os.ExpandEnv("$HOME/.konstellation")
 	config           *ClientConfig
 	Components       = []components.ComponentInstaller{
+		//&certmanager.CertManagerInstaller{},
 		&istio.IstioInstaller{},
 		&kubedash.KubeDash{},
 	}

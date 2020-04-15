@@ -86,22 +86,35 @@ func NewNetworkingTFAction(region string, vpcCidr string, zones []string, usePri
 	return
 }
 
-func NewEKSClusterTFAction(region string, vpcId string, name string, securityGroupIds []string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+func NewCreateEKSClusterTFAction(region string, vpcId string, name string, securityGroupIds []string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
 	targetDir := path.Join(config.GetConfig().TFDir(), "aws", "cluster", name)
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, clusterFiles...)
 	if err != nil {
 		return
 	}
 
-	a = terraform.NewTerraformAction(targetDir, terraform.TerraformVars{
+	opts = append(opts, terraform.TerraformVars{
 		"region":             region,
 		"vpc_id":             vpcId,
 		"cluster":            name,
 		"security_group_ids": securityGroupIds,
 	})
-	for _, o := range opts {
-		a.Option(o)
+	a = terraform.NewTerraformAction(targetDir, opts...)
+	return
+}
+
+func NewDestroyEKSClusterTFAction(region string, cluster string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+	targetDir := path.Join(config.GetConfig().TFDir(), "aws", "cluster", cluster)
+	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, "aws/cluster/main.tf")
+	if err != nil {
+		return
 	}
+
+	opts = append(opts, terraform.TerraformVars{
+		"region":  region,
+		"cluster": cluster,
+	})
+	a = terraform.NewTerraformAction(targetDir, opts...)
 	return
 }
 

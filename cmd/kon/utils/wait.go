@@ -8,7 +8,7 @@ import (
 const (
 	MediumCheckInterval = 1000 // 1s
 	LongCheckInterval   = 5000 // 5s
-	LongTimeoutSec      = 600  // 10 mins
+	LongTimeoutSec      = 1200 // 10 mins
 	ShortTimeoutSec     = 180  // 3 mins
 )
 

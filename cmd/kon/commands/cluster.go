@@ -83,6 +83,14 @@ var ClusterCommands = []*cli.Command{
 				Action: clusterCreate,
 			},
 			{
+				Name:   "destroy",
+				Usage:  "destroys a cluster",
+				Action: clusterDestroy,
+				Flags: []cli.Flag{
+					clusterNameFlag,
+				},
+			},
+			{
 				Name:   "reset",
 				Usage:  "resets current active cluster",
 				Action: clusterReset,
@@ -183,6 +191,33 @@ func clusterCreate(c *cli.Context) error {
 	fmt.Printf("Cluster %s has been created successfully. Running `kon cluster select --cluster %s` to configure it\n",
 		name, name)
 	return clusterSelect(name)
+}
+
+func clusterDestroy(c *cli.Context) error {
+	clusterName := c.String("cluster")
+	// update clusters
+	if err := updateClusterLocations(); err != nil {
+		return err
+	}
+	cm, err := ClusterManagerForCluster(clusterName)
+
+	fmt.Printf("This will destroy the cluster %s, removing all of the nodepools.\n", clusterName)
+
+	prompt := promptui.Prompt{
+		Label: fmt.Sprintf("Sure you want to proceed? (type in %s to proceed)", clusterName),
+		Validate: func(v string) error {
+			if v != clusterName {
+				return fmt.Errorf("Confirmation didn't match %s", clusterName)
+			}
+			return nil
+		},
+	}
+	_, err = prompt.Run()
+	if err != nil {
+		return err
+	}
+
+	return cm.DeleteCluster(clusterName)
 }
 
 func clusterSelect(clusterName string) error {
