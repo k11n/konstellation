@@ -14,6 +14,9 @@ var EKSAllowedInstanceSeries = map[string]bool{
 	"p3dn": true,
 }
 
+// Istio requires 2G of memory for itself, need a bit more breathing room
+// realistically the xlarge+ are better instance types
+
 var EKSAllowedInstanceSizes = map[string]bool{
 	"medium":   true,
 	"large":    true,

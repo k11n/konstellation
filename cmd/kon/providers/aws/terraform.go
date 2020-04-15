@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"fmt"
 	"path"
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
@@ -104,7 +105,7 @@ func NewCreateEKSClusterTFAction(region string, vpcId string, name string, secur
 }
 
 func NewDestroyEKSClusterTFAction(region string, cluster string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
-	targetDir := path.Join(config.GetConfig().TFDir(), "aws", "cluster", cluster)
+	targetDir := path.Join(config.GetConfig().TFDir(), "aws", "cluster", fmt.Sprintf("%s_destroy", cluster))
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, "aws/cluster/main.tf")
 	if err != nil {
 		return

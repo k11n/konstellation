@@ -150,6 +150,7 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 		return
 	}
 	groups := []string{}
+	groupsDisplay := []string{}
 	for _, sg := range securityGroups {
 		for _, tag := range sg.Tags {
 			if strings.HasPrefix(*tag.Key, "kubernetes.io/cluster") {
@@ -157,11 +158,15 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 				continue
 			}
 		}
+		if strings.HasPrefix(*sg.GroupName, "k8s-elb") {
+			continue
+		}
 		groups = append(groups, *sg.GroupId)
+		groupsDisplay = append(groupsDisplay, fmt.Sprintf("%s (%s)", *sg.GroupId, *sg.GroupName))
 	}
 	sgSelect := promptui.Select{
 		Label: "Primary security group",
-		Items: groups,
+		Items: groupsDisplay,
 	}
 	idx, _, err := sgSelect.Run()
 	if err != nil {

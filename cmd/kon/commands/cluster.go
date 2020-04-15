@@ -405,6 +405,9 @@ func (c *activeCluster) createClusterConfig() error {
 		return errors.Wrap(err, "Failed to load required resources into Kube")
 	}
 
+	// reset client, to avoid caches not updating
+	c.kclient = nil
+
 	// create initial config
 	cc := v1alpha1.ClusterConfig{
 		ObjectMeta: metav1.ObjectMeta{

@@ -88,7 +88,6 @@ func (a *AWSManager) UpdateClusterSettings(cc *v1alpha1.ClusterConfig) error {
 		return err
 	}
 	awsConfig.AlbRoleArn = *albRole.Arn
-	fmt.Printf("AWS config %+v", awsConfig)
 	cc.Spec.AWSConfig = &awsConfig
 	return nil
 }
