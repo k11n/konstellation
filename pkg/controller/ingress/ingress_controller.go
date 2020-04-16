@@ -161,7 +161,10 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 	}
 
 	// create ingress, one for all hosts
-	ingressTemplate := ingressForRequests(requestList.Items)
+	ingressTemplate, err := r.ingressForRequests(requestList.Items)
+	if err != nil {
+		return res, err
+	}
 	ingress := netv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: ingressTemplate.GetName(),
