@@ -33,7 +33,7 @@ func NewAWSManager(region string) *AWSManager {
 // Perform cluster cloud specific setup, including tagging subnets, etc
 func (a *AWSManager) UpdateClusterSettings(cc *v1alpha1.ClusterConfig) error {
 	fmt.Println("updating cluster settings")
-	awsConfig := v1alpha1.AWSCloudConfig{
+	awsConfig := v1alpha1.AWSClusterSpec{
 		Region: a.region,
 	}
 	// ensure it's initialized
@@ -88,7 +88,7 @@ func (a *AWSManager) UpdateClusterSettings(cc *v1alpha1.ClusterConfig) error {
 		return err
 	}
 	awsConfig.AlbRoleArn = *albRole.Arn
-	cc.Spec.AWSConfig = &awsConfig
+	cc.Spec.AWS = &awsConfig
 	return nil
 }
 

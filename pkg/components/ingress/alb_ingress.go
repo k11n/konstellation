@@ -69,7 +69,7 @@ func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, requests []
 	//	return
 	//}
 	//
-	//aws := cc.Spec.AWSConfig
+	//aws := cc.Spec.AWS
 	//subnetIds := make([]string, 0, len(aws.PublicSubnets))
 	//for _, subnet := range aws.PublicSubnets {
 	//	subnetIds = append(subnetIds, subnet.SubnetId)

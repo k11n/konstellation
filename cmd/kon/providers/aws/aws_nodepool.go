@@ -27,7 +27,7 @@ func (a *AWSManager) ConfigureNodepool(cc *v1alpha1.ClusterConfig) (np *v1alpha1
 		return
 	}
 
-	awsConf := cc.Spec.AWSConfig
+	awsConf := cc.Spec.AWS
 	if awsConf == nil {
 		err = fmt.Errorf("Invalid condition, couldn't find AWS config")
 		return
@@ -88,7 +88,7 @@ func (a *AWSManager) ConfigureNodepool(cc *v1alpha1.ClusterConfig) (np *v1alpha1
 	}
 
 	// configure node connection
-	if len(cc.Spec.AWSConfig.PrivateSubnets) == 0 {
+	if len(cc.Spec.AWS.PrivateSubnets) == 0 {
 		// remote access is only possible when VPC is public-only
 		connectionPrompt := utils.NewPromptSelect(
 			"Allow remote access to nodes from the internet?",

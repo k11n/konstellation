@@ -22,7 +22,7 @@ type ClusterConfigSpec struct {
 	Cloud   string `json:"cloud"`
 	// +kubebuilder:validation:Optional
 	// +nullable
-	AWSConfig *AWSCloudConfig `json:"awsConfig"`
+	AWS *AWSClusterSpec `json:"aws"`
 	// +kubebuilder:validation:Optional
 	// +nullable
 	Targets    []string           `json:"targets"`
@@ -56,8 +56,14 @@ type ClusterConfigList struct {
 	Items           []ClusterConfig `json:"items"`
 }
 
-type AWSCloudConfig struct {
-	Region         string       `json:"region"`
+type AWSClusterSpec struct {
+	// input values
+	Region            string      `json:"region"`
+	VpcCidr           string      `json:"vpcCidr"`
+	AvailabilityZones []string    `json:"availabilityZone"`
+	Topology          AWSTopology `json:"topology"`
+
+	// below are optional, if not using an existing VPC
 	Vpc            string       `json:"vpc"`
 	SecurityGroups []string     `json:"securityGroups"`
 	PrivateSubnets []*AWSSubnet `json:"privateSubnets"`
@@ -71,6 +77,13 @@ type AWSSubnet struct {
 	Ipv4Cidr         string `json:"ipv4Cidr"`
 	AvailabilityZone string `json:"availabilityZone"`
 }
+
+type AWSTopology string
+
+const (
+	AWSTopologyPublic        AWSTopology = "public"
+	AWSTopologyPublicPrivate AWSTopology = "public_private"
+)
 
 func init() {
 	SchemeBuilder.Register(&ClusterConfig{}, &ClusterConfigList{})
