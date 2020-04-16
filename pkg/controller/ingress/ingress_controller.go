@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/davidzhao/konstellation/pkg/components/ingress"
 	"github.com/davidzhao/konstellation/pkg/resources"
 	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
@@ -209,14 +210,19 @@ func gatewayForRequests(requests []v1alpha1.IngressRequest) *istio.Gateway {
 	return gw
 }
 
-func ingressForRequests(requests []v1alpha1.IngressRequest) *netv1beta1.Ingress {
+func (r *ReconcileIngressRequest) ingressForRequests(requests []v1alpha1.IngressRequest) (*netv1beta1.Ingress, error) {
+	cc, err := resources.GetClusterConfig(r.client)
+	if err != nil {
+		return nil, err
+	}
+	ingressComponent := ingress.NewIngressForCluster(cc.Name, cc.Spec.Cloud)
+	annotations, err := ingressComponent.GetIngressAnnotations(r.client, requests)
 	ingress := netv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "istio-system",
 			Name:      "kon-ingress",
-			// TODO: set ALB annotations
 			// https://medium.com/@cy.chiang/how-to-integrate-aws-alb-with-istio-v1-0-b17e07cae156
-			Annotations: map[string]string{},
+			Annotations: annotations,
 		},
 		Spec: netv1beta1.IngressSpec{
 			Rules: []netv1beta1.IngressRule{},
@@ -249,5 +255,5 @@ func ingressForRequests(requests []v1alpha1.IngressRequest) *netv1beta1.Ingress 
 			hostsUsed[host] = true
 		}
 	}
-	return &ingress
+	return &ingress, nil
 }

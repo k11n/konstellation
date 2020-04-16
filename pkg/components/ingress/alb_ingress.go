@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/utils/cli"
 )
 
@@ -58,6 +59,26 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 		return nil
 	})
 	return err
+}
+
+func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, requests []v1alpha1.IngressRequest) (annotations map[string]string, err error) {
+	// https://kubernetes-sigs.github.io/aws-alb-ingress-controller/guide/ingress/annotation/
+	// ingress could perform autodiscovery
+	//cc, err := resources.GetClusterConfig(kclient)
+	//if err != nil {
+	//	return
+	//}
+	//
+	//aws := cc.Spec.AWSConfig
+	//subnetIds := make([]string, 0, len(aws.PublicSubnets))
+	//for _, subnet := range aws.PublicSubnets {
+	//	subnetIds = append(subnetIds, subnet.SubnetId)
+	//}
+	annotations = map[string]string{
+		"kubernetes.io/ingress.class":      "alb",
+		"alb.ingress.kubernetes.io/scheme": "internet-facing",
+	}
+	return
 }
 
 func (i *AWSALBIngress) deploymentForIngress() *appsv1.Deployment {
