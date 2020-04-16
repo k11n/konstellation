@@ -90,10 +90,10 @@ func (a *AWSManager) ConfigureNodepool(cc *v1alpha1.ClusterConfig) (np *v1alpha1
 	// configure node connection
 	if len(cc.Spec.AWSConfig.PrivateSubnets) == 0 {
 		// remote access is only possible when VPC is public-only
-		connectionPrompt := promptui.Select{
-			Label: "Allow remote access to nodes from the internet?",
-			Items: []string{"allow", "disallow"},
-		}
+		connectionPrompt := utils.NewPromptSelect(
+			"Allow remote access to nodes from the internet?",
+			[]string{"allow", "disallow"},
+		)
 		idx, _, err = connectionPrompt.Run()
 		if err != nil {
 			return
@@ -112,10 +112,10 @@ func (a *AWSManager) ConfigureNodepool(cc *v1alpha1.ClusterConfig) (np *v1alpha1
 		for _, sg := range securityGroups {
 			sgNames = append(sgNames, *sg.GroupName)
 		}
-		sgPrompt := promptui.Select{
-			Label: "Security group for connection",
-			Items: sgNames,
-		}
+		sgPrompt := utils.NewPromptSelect(
+			"Security group for connection",
+			sgNames,
+		)
 		idx, _, err = sgPrompt.Run()
 		if err != nil {
 			return
@@ -127,10 +127,10 @@ func (a *AWSManager) ConfigureNodepool(cc *v1alpha1.ClusterConfig) (np *v1alpha1
 	instanceConfirmed := false
 	for !instanceConfirmed {
 		// node instance config
-		gpuPrompt := promptui.Select{
-			Label: "Requires GPU instances",
-			Items: []string{"no", "require GPU"},
-		}
+		gpuPrompt := utils.NewPromptSelect(
+			"Requires GPU instances",
+			[]string{"no", "require GPU"},
+		)
 		idx, _, err = gpuPrompt.Run()
 		if err != nil {
 			return
@@ -288,12 +288,13 @@ func (a *AWSManager) promptInstanceType(session *session.Session, gpu bool) (ins
 		instanceLabels = append(instanceLabels, label)
 	}
 
-	instancePrompt := promptui.Select{
-		Label:    "Instance type to use for nodes",
-		Items:    instanceLabels,
-		Size:     15,
-		Searcher: utils.SearchFuncFor(instanceLabels, true),
-	}
+	instancePrompt := utils.NewPromptSelect(
+		"Instance type to use for nodes",
+		instanceLabels,
+	)
+	instancePrompt.Size = 15
+	instancePrompt.Searcher = utils.SearchFuncFor(instanceLabels, true)
+
 	idx, _, err := instancePrompt.Run()
 	if err != nil {
 		return

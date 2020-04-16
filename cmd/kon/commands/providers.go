@@ -6,8 +6,7 @@ import (
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/davidzhao/konstellation/cmd/kon/providers"
 	"github.com/davidzhao/konstellation/cmd/kon/providers/aws"
-
-	"github.com/manifoldco/promptui"
+	"github.com/davidzhao/konstellation/cmd/kon/utils"
 )
 
 var (
@@ -42,10 +41,7 @@ func ChooseCloudPrompt(label string) (providers.CloudProvider, error) {
 		fmt.Printf("%s %v\n", label, clouds[0])
 		return clouds[0], nil
 	}
-	prompt := promptui.Select{
-		Label: label,
-		Items: clouds,
-	}
+	prompt := utils.NewPromptSelect(label, clouds)
 
 	idx, _, err := prompt.Run()
 	if err != nil {
@@ -64,10 +60,7 @@ func ChooseClusterManagerPrompt(label string) (providers.ClusterManager, error) 
 		fmt.Println(managers[0])
 		return managers[0], nil
 	}
-	prompt := promptui.Select{
-		Label: label,
-		Items: managers,
-	}
+	prompt := utils.NewPromptSelect(label, managers)
 
 	idx, _, err := prompt.Run()
 	if err != nil {

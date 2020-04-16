@@ -30,10 +30,7 @@ func (c *activeCluster) configureCluster() error {
 			"Remove target",
 		}
 
-		s := promptui.Select{
-			Label: "Configure action",
-			Items: actions,
-		}
+		s := utils.NewPromptSelect("Configure action", actions)
 		idx, _, err := s.Run()
 		if err != nil {
 			return err
@@ -90,10 +87,8 @@ func (c *activeCluster) removeTargetPrompt(cc *v1alpha1.ClusterConfig) error {
 	if len(cc.Spec.Targets) == 0 {
 		return fmt.Errorf("The cluster doesn't have any targets")
 	}
-	s := promptui.Select{
-		Label: "Select target to remove",
-		Items: cc.Spec.Targets,
-	}
+	s := utils.NewPromptSelect("Select target to remove", cc.Spec.Targets)
+
 	idx, val, err := s.Run()
 	if err != nil {
 		return err

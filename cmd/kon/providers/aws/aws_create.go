@@ -164,10 +164,7 @@ func (a *AWSManager) CreateCluster() (name string, err error) {
 		groups = append(groups, *sg.GroupId)
 		groupsDisplay = append(groupsDisplay, fmt.Sprintf("%s (%s)", *sg.GroupId, *sg.GroupName))
 	}
-	sgSelect := promptui.Select{
-		Label: "Primary security group",
-		Items: groupsDisplay,
-	}
+	sgSelect := utils.NewPromptSelect("Primary security group", groupsDisplay)
 	idx, _, err := sgSelect.Run()
 	if err != nil {
 		return
@@ -318,13 +315,13 @@ func (a *AWSManager) promptChooseVPC(ec2Svc *ec2.EC2) (vpcId string, cidrBlock s
 
 func (a *AWSManager) promptUsePrivateSubnet() (bool, error) {
 	fmt.Println(subnetMessage)
-	prompt := promptui.Select{
-		Label: "How should the network be set up?",
-		Items: []string{
+	prompt := utils.NewPromptSelect(
+		"How should the network be set up?",
+		[]string{
 			"Public subnets",
 			"Public + Private subnets",
 		},
-	}
+	)
 
 	idx, _, err := prompt.Run()
 	if err != nil {
