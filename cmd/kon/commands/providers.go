@@ -16,19 +16,13 @@ var (
 	}
 )
 
-func ClusterManagerForCluster(cluster string) (cm providers.ClusterManager, err error) {
-	// read config and return the correct manager
-	conf := config.GetConfig()
-	cl, err := conf.GetClusterLocation(cluster)
-	if err != nil {
-		return
+func GetCloud(name string) providers.CloudProvider {
+	for _, cloud := range AvailableClouds {
+		if cloud.ID() == name {
+			return cloud
+		}
 	}
-
-	cm = NewClusterManager(cl.Cloud, cl.Region)
-	if cm == nil {
-		err = fmt.Errorf("Could not find manager for cloud %s", cl.Cloud)
-	}
-	return
+	return nil
 }
 
 func ChooseCloudPrompt(label string) (providers.CloudProvider, error) {
@@ -48,6 +42,21 @@ func ChooseCloudPrompt(label string) (providers.CloudProvider, error) {
 		return nil, err
 	}
 	return clouds[idx], nil
+}
+
+func ClusterManagerForCluster(cluster string) (cm providers.ClusterManager, err error) {
+	// read config and return the correct manager
+	conf := config.GetConfig()
+	cl, err := conf.GetClusterLocation(cluster)
+	if err != nil {
+		return
+	}
+
+	cm = NewClusterManager(cl.Cloud, cl.Region)
+	if cm == nil {
+		err = fmt.Errorf("Could not find manager for cloud %s", cl.Cloud)
+	}
+	return
 }
 
 func ChooseClusterManagerPrompt(label string) (providers.ClusterManager, error) {
@@ -84,4 +93,19 @@ func NewClusterManager(cloud string, region string) providers.ClusterManager {
 		return aws.NewAWSManager(region)
 	}
 	return nil
+}
+
+func PromptClusterGenerator(cloud providers.CloudProvider, region string) (providers.ClusterConfigGenerator, error) {
+	if !cloud.IsSetup() {
+		return nil, fmt.Errorf("Provider: %s has not been set up yet", cloud.ID())
+	}
+	if cloud.ID() == "aws" {
+		creds, err := config.GetConfig().Clouds.AWS.GetDefaultCredentials()
+		if err != nil {
+			return nil, err
+		}
+
+		return aws.NewPromptConfigGenerator(region, creds)
+	}
+	return nil, fmt.Errorf("Unsupported cloud %s", cloud.ID())
 }

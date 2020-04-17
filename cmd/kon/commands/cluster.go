@@ -153,6 +153,9 @@ func clusterList(c *cli.Context) error {
 }
 
 func clusterCreate(c *cli.Context) error {
+	if !config.GetConfig().IsSetup() {
+		return fmt.Errorf("Konstellation has not been setup yet. Run `kon setup`")
+	}
 	fmt.Println(CLUSTER_CREATE_HELP)
 	cm, err := ChooseClusterManagerPrompt("Where would you like to create the cluster?")
 	if err != nil {
@@ -162,6 +165,23 @@ func clusterCreate(c *cli.Context) error {
 	// update existing cluster names to ensure there's no conflict
 	if err := updateClusterLocations(); err != nil {
 		return err
+	}
+
+	// configurator
+	cloud := GetCloud(cm.Cloud())
+	generator, err := PromptClusterGenerator(cloud, cm.Region())
+	if err != nil {
+		return err
+	}
+
+	cc, err := generator.CreateClusterConfig()
+	if err != nil {
+		return err
+	}
+	utils.PrintJSON(cc)
+
+	if true {
+		return nil
 	}
 	name, err := cm.CreateCluster()
 	if err != nil {
@@ -212,6 +232,7 @@ func clusterDestroy(c *cli.Context) error {
 			return nil
 		},
 	}
+	utils.FixPromptBell(&prompt)
 	_, err = prompt.Run()
 	if err != nil {
 		return err
@@ -613,6 +634,7 @@ func (c *activeCluster) generateKubeConfig() error {
 			Label:     fmt.Sprintf("%s already exists, overwrite", target),
 			IsConfirm: true,
 		}
+		utils.FixPromptBell(&prompt)
 		_, err = prompt.Run()
 		if err != nil {
 			// prompt aborted

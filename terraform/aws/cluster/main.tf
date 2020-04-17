@@ -8,6 +8,5 @@ terraform {
   backend "s3" {
     bucket = "konstellation"
     key    = "terraform/aws/$${region}/$${cluster}/cluster.tfstate"
-    region = "us-west-2"
   }
 }

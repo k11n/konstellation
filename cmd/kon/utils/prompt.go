@@ -66,6 +66,17 @@ func NewPromptSelect(label interface{}, items interface{}) promptui.Select {
 	}
 }
 
+func NewPrompt(label interface{}) promptui.Prompt {
+	return promptui.Prompt{
+		Label:  label,
+		Stdout: BellSkipper,
+	}
+}
+
+func FixPromptBell(prompt *promptui.Prompt) {
+	prompt.Stdout = BellSkipper
+}
+
 // bellSkipper implements an io.WriteCloser that skips the terminal bell
 // character (ASCII code 7), and writes the rest to os.Stderr. It is used to
 // replace readline.Stdout, that is the package used by promptui to display the

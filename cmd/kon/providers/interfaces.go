@@ -11,6 +11,11 @@ type CloudProvider interface {
 	Setup() error
 }
 
+type ClusterConfigGenerator interface {
+	CreateClusterConfig() (cc *v1alpha1.ClusterConfig, err error)
+	CreateNodepoolConfig(cc *v1alpha1.ClusterConfig) (np *v1alpha1.Nodepool, err error)
+}
+
 type ClusterManager interface {
 	Cloud() string
 	Region() string

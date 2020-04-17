@@ -15,6 +15,7 @@ const (
 
 type AWSConfig struct {
 	Regions        []string
+	StateS3Bucket  string
 	CreationConfig map[string]*ClusterCreationConfig
 }
 
@@ -31,6 +32,9 @@ type ClusterCreationConfig struct {
 }
 
 func (c *AWSConfig) IsSetup() bool {
+	if c.StateS3Bucket == "" {
+		return false
+	}
 	creds, err := c.GetDefaultCredentials()
 	if err != nil {
 		return false

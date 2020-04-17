@@ -193,10 +193,6 @@ func (a *AWSManager) CertificateProvider() cloud.CertificateProvider {
 
 func sessionForRegion(region string) (*session.Session, error) {
 	conf := config.GetConfig().Clouds.AWS
-	if !conf.IsSetup() {
-		return nil, fmt.Errorf("AWS has not been setup, run `%s setup`", config.ExecutableName)
-	}
-
 	creds, err := conf.GetDefaultCredentials()
 	if err != nil {
 		return nil, err

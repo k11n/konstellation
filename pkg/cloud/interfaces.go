@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"context"
+	"io"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
@@ -18,4 +19,9 @@ type KubernetesProvider interface {
 type CertificateProvider interface {
 	ListCertificates(context.Context) ([]*types.Certificate, error)
 	ImportCertificate(ctx context.Context, cert []byte, pkey []byte, chain []byte, existingID string) (*types.Certificate, error)
+}
+
+type StorageProvider interface {
+	GetObject(ctx context.Context, key string) (io.ReadCloser, error)
+	PutObject(ctx context.Context, key string, obj io.ReadCloser) error
 }

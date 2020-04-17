@@ -314,7 +314,7 @@ func (a *AWSManager) promptChooseVPC(ec2Svc *ec2.EC2) (vpcId string, cidrBlock s
 }
 
 func (a *AWSManager) promptUsePrivateSubnet() (bool, error) {
-	fmt.Println(subnetMessage)
+	fmt.Println(topologyMessage)
 	prompt := utils.NewPromptSelect(
 		"How should the network be set up?",
 		[]string{

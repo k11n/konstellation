@@ -62,9 +62,10 @@ type AWSClusterSpec struct {
 	VpcCidr           string      `json:"vpcCidr"`
 	AvailabilityZones []string    `json:"availabilityZone"`
 	Topology          AWSTopology `json:"topology"`
+	// optional, only if it's using an existing VPC
+	Vpc string `json:"vpc"`
 
-	// below are optional, if not using an existing VPC
-	Vpc            string       `json:"vpc"`
+	// set after cluster is created
 	SecurityGroups []string     `json:"securityGroups"`
 	PrivateSubnets []*AWSSubnet `json:"privateSubnets"`
 	PublicSubnets  []*AWSSubnet `json:"publicSubnets"`
@@ -84,6 +85,10 @@ const (
 	AWSTopologyPublic        AWSTopology = "public"
 	AWSTopologyPublicPrivate AWSTopology = "public_private"
 )
+
+func (cs *AWSClusterSpec) NumZones() int {
+	return len(cs.AvailabilityZones)
+}
 
 func init() {
 	SchemeBuilder.Register(&ClusterConfig{}, &ClusterConfigList{})
