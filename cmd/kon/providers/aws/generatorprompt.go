@@ -18,6 +18,8 @@ import (
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
+	"github.com/davidzhao/konstellation/pkg/components/ingress"
+	"github.com/davidzhao/konstellation/version"
 )
 
 // generates AWS cluster & nodepool based on prompts to the user
@@ -41,9 +43,22 @@ func NewPromptConfigGenerator(region string, credentials *config.AWSCredentials)
 }
 
 func (g *PromptConfigGenerator) CreateClusterConfig() (cc *v1alpha1.ClusterConfig, err error) {
-	as := &v1alpha1.AWSClusterSpec{}
+	as := &v1alpha1.AWSClusterSpec{
+		Region: g.region,
+	}
 	cc = &v1alpha1.ClusterConfig{}
 	cc.Spec.AWS = as
+	cc.Spec.Cloud = "aws"
+	cc.Spec.Version = version.Version
+	comps := append(config.Components, &ingress.AWSALBIngress{})
+	for _, comp := range comps {
+		cc.Spec.Components = append(cc.Spec.Components, v1alpha1.ClusterComponent{
+			ComponentSpec: v1alpha1.ComponentSpec{
+				Name:    comp.Name(),
+				Version: comp.Version(),
+			},
+		})
+	}
 
 	// cluster name
 	prompt := promptui.Prompt{
