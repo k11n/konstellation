@@ -1,6 +1,7 @@
 package istio
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -8,11 +9,18 @@ import (
 	"path"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/components"
 	"github.com/davidzhao/konstellation/pkg/utils/cli"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
+)
+
+const (
+	istioNamespace      = "istio-system"
+	istioIngressService = "istio-ingressgateway"
 )
 
 func init() {
@@ -84,13 +92,40 @@ func (i *IstioInstaller) InstallCLI() error {
 }
 
 // installs the component onto the kube cluster
-func (i *IstioInstaller) InstallComponent(client.Client) error {
-	return cli.RunCommandWithStd(i.cliPath(), "manifest", "apply",
+func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
+	err := cli.RunCommandWithStd(i.cliPath(), "manifest", "apply",
 		"--skip-confirmation",
 		"--set", "components.citadel.enabled=true", // citadel is required by the sidecar injector
 		"--set", "components.sidecarInjector.enabled=true",
 		"--set", "addonComponents.kiali.enabled=true",
 		"--set", "addonComponents.grafana.enabled=true")
+	if err != nil {
+		return err
+	}
+
+	// Delete the default LB service it opens
+	ingressKey := client.ObjectKey{
+		Namespace: istioNamespace,
+		Name:      istioIngressService,
+	}
+	ingressSvc := &corev1.Service{}
+	err = utils.WaitUntilComplete(utils.ShortTimeoutSec, utils.MediumCheckInterval, func() (bool, error) {
+		err := kclient.Get(context.TODO(), ingressKey, ingressSvc)
+		if err == nil {
+			return true, nil
+		}
+		err = client.IgnoreNotFound(err)
+		if err != nil {
+			return false, err
+		} else {
+			return false, nil
+		}
+	})
+	if err != nil {
+		return err
+	}
+
+	return kclient.Delete(context.TODO(), ingressSvc)
 }
 
 func (i *IstioInstaller) cliPath() string {

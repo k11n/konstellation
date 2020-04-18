@@ -313,7 +313,7 @@ func clusterSelect(clusterName string) error {
 	}
 	// TODO: in release versions don't reload resources
 	// still load the resources
-	err = ac.loadResourcesIntoKube()
+	//err = ac.loadResourcesIntoKube()
 	if err != nil {
 		return err
 	}
