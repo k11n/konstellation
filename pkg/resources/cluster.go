@@ -34,9 +34,9 @@ func SaveClusterConfig(kclient client.Client, cc *v1alpha1.ClusterConfig) error 
 		},
 	}
 
-	controllerutil.CreateOrUpdate(context.TODO(), kclient, tmpl, func() error {
+	_, err := controllerutil.CreateOrUpdate(context.TODO(), kclient, tmpl, func() error {
 		objects.MergeObject(&tmpl.Spec, &cc.Spec)
 		return nil
 	})
-	return nil
+	return err
 }

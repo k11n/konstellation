@@ -226,6 +226,12 @@ func clusterCreate(c *cli.Context) error {
 		Cluster: cc.Name,
 	}
 
+	// generate config to use with Kube
+	updateClusterLocations()
+	if err = ac.generateKubeConfig(); err != nil {
+		return err
+	}
+
 	if err = ac.loadResourcesIntoKube(); err != nil {
 		return err
 	}
@@ -239,10 +245,6 @@ func clusterCreate(c *cli.Context) error {
 	// delete state files to clear up half completed state
 	os.Remove(clusterConfigFile)
 	os.Remove(nodepoolConfigFile)
-
-	// generate config to use with Kube
-	updateClusterLocations()
-	ac.generateKubeConfig()
 
 	fmt.Println()
 	fmt.Printf("Cluster %s has been successfully created. Run `kon select cluster --cluster %s` to use it\n", cc.Name, cc.Name)
@@ -466,8 +468,7 @@ func (c *activeCluster) configureNodepool() error {
 	}
 
 	// save spec to Kube
-	err = resources.SaveNodepool(kclient, np)
-	if err != nil {
+	if err = resources.SaveNodepool(kclient, np); err != nil {
 		return err
 	}
 
