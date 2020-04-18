@@ -59,7 +59,7 @@ type TFClusterOutput struct {
 }
 
 func NewNetworkingTFAction(region string, vpcCidr string, zones []string, usePrivateSubnet bool, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
-	targetDir := path.Join(config.GetConfig().TFDir(), "aws", "vpc")
+	targetDir := path.Join(config.TerraformDir(), "aws", "vpc")
 	tfFiles := make([]string, 0, len(vpcFiles))
 	tfFiles = append(tfFiles, vpcFiles...)
 	if usePrivateSubnet {
@@ -88,7 +88,7 @@ func NewNetworkingTFAction(region string, vpcCidr string, zones []string, usePri
 }
 
 func NewCreateEKSClusterTFAction(region string, vpcId string, name string, securityGroupIds []string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
-	targetDir := path.Join(config.GetConfig().TFDir(), "aws", "cluster", name)
+	targetDir := path.Join(config.TerraformDir(), "aws", "cluster", name)
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, clusterFiles...)
 	if err != nil {
 		return
@@ -105,7 +105,7 @@ func NewCreateEKSClusterTFAction(region string, vpcId string, name string, secur
 }
 
 func NewDestroyEKSClusterTFAction(region string, cluster string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
-	targetDir := path.Join(config.GetConfig().TFDir(), "aws", "cluster", fmt.Sprintf("%s_destroy", cluster))
+	targetDir := path.Join(config.TerraformDir(), "aws", "cluster", fmt.Sprintf("%s_destroy", cluster))
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, "aws/cluster/main.tf")
 	if err != nil {
 		return

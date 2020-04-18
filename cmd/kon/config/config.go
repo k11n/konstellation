@@ -122,8 +122,17 @@ func (c *ClientConfig) Persist() error {
 	return err
 }
 
-func (c *ClientConfig) TFDir() string {
+func TerraformDir() string {
 	d := path.Join(defaultConfigDir, "terraform")
+	if _, err := os.Stat(d); err != nil {
+		// create it
+		os.MkdirAll(d, files.DefaultDirectoryMode)
+	}
+	return d
+}
+
+func StateDir() string {
+	d := path.Join(defaultConfigDir, "state")
 	if _, err := os.Stat(d); err != nil {
 		// create it
 		os.MkdirAll(d, files.DefaultDirectoryMode)

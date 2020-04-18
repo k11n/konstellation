@@ -17,17 +17,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	k8sJson "k8s.io/apimachinery/pkg/runtime/serializer/json"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	kconf "sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/davidzhao/konstellation/cmd/kon/providers"
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
-	"github.com/davidzhao/konstellation/pkg/apis"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
 	"github.com/davidzhao/konstellation/pkg/components"
@@ -173,12 +169,26 @@ func clusterCreate(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
 	cc, err := generator.CreateClusterConfig()
 	if err != nil {
 		return err
 	}
-	utils.PrintJSON(cc)
+
+	clusterConfigFile := path.Join(config.StateDir(), "clusterconfig.yaml")
+	err = utils.SaveKubeObject(GetKubeEncoder(), cc, clusterConfigFile)
+	if err != nil {
+		return err
+	}
+
+	nodepool, err := generator.CreateNodepoolConfig(cc)
+	if err != nil {
+		return err
+	}
+	nodepoolConfigFile := path.Join(config.StateDir(), "nodepoolconfig.yaml")
+	err = utils.SaveKubeObject(GetKubeEncoder(), nodepool, nodepoolConfigFile)
+	if err != nil {
+		return err
+	}
 
 	if true {
 		return nil
@@ -758,27 +768,6 @@ func checksumPath(configPath string) string {
 	configDir := path.Dir(configPath)
 	configName := path.Base(configPath)
 	return path.Join(configDir, fmt.Sprintf(".%s.konsha", configName))
-}
-
-func KubernetesClientWithContext(contextName string) (client.Client, error) {
-	// construct a client from local config
-	scheme := runtime.NewScheme()
-	// register both our scheme and konstellation scheme
-	clientgoscheme.AddToScheme(scheme)
-	apis.AddToScheme(scheme)
-	conf, err := kconf.GetConfigWithContext(contextName)
-	if err != nil {
-		return nil, err
-	}
-	return client.New(conf, client.Options{Scheme: scheme})
-}
-
-func kubeConfigPath() (string, error) {
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return path.Join(homedir, ".kube", "config"), nil
 }
 
 func updateClusterLocations() error {
