@@ -56,11 +56,15 @@ func (s *EKSService) ListClusters(ctx context.Context) (clusters []*types.Cluste
 	}
 	// describe each cluster
 	for _, clusterName := range output.Clusters {
-		cluster, err := s.GetCluster(ctx, *clusterName)
+		descOut, err := s.EKS.DescribeClusterWithContext(ctx, &eks.DescribeClusterInput{
+			Name: clusterName,
+		})
 		if err != nil {
 			return nil, err
 		}
-		clusters = append(clusters, cluster)
+		if descOut.Cluster.Tags[TagKonstellation] != nil && *descOut.Cluster.Tags[TagKonstellation] == TagValue1 {
+			clusters = append(clusters, clusterFromEksCluster(descOut.Cluster))
+		}
 	}
 	return
 }
@@ -72,26 +76,7 @@ func (s *EKSService) GetCluster(ctx context.Context, name string) (cluster *type
 	if err != nil {
 		return
 	}
-	ec := descOut.Cluster
-	cluster = &types.Cluster{
-		ID:              *ec.Arn,
-		CloudProvider:   "aws",
-		Name:            *ec.Name,
-		PlatformVersion: *ec.PlatformVersion,
-		Status:          statusMapping[*ec.Status],
-		Version:         *ec.Version,
-	}
-	if ec.Endpoint != nil {
-		cluster.Endpoint = *ec.Endpoint
-	}
-	if ec.CertificateAuthority != nil && ec.CertificateAuthority.Data != nil {
-		var decoded []byte
-		decoded, err = base64.StdEncoding.DecodeString(*ec.CertificateAuthority.Data)
-		if err != nil {
-			return
-		}
-		cluster.CertificateAuthorityData = decoded
-	}
+	cluster = clusterFromEksCluster(descOut.Cluster)
 	return
 }
 
@@ -199,4 +184,26 @@ func nodepoolSpecToCreateInput(cluster string, np *v1alpha1.Nodepool) *eks.Creat
 	cni.SetTags(tags)
 
 	return &cni
+}
+
+func clusterFromEksCluster(ec *eks.Cluster) *types.Cluster {
+	cluster := &types.Cluster{
+		ID:              *ec.Arn,
+		CloudProvider:   "aws",
+		Name:            *ec.Name,
+		PlatformVersion: *ec.PlatformVersion,
+		Status:          statusMapping[*ec.Status],
+		Version:         *ec.Version,
+	}
+	if ec.Endpoint != nil {
+		cluster.Endpoint = *ec.Endpoint
+	}
+	if ec.CertificateAuthority != nil && ec.CertificateAuthority.Data != nil {
+		var decoded []byte
+		decoded, err := base64.StdEncoding.DecodeString(*ec.CertificateAuthority.Data)
+		if err == nil {
+			cluster.CertificateAuthorityData = decoded
+		}
+	}
+	return cluster
 }

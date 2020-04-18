@@ -50,12 +50,11 @@ func NewPromptConfigGenerator(region string, credentials *config.AWSCredentials)
 }
 
 func (g *PromptConfigGenerator) CreateClusterConfig() (cc *v1alpha1.ClusterConfig, err error) {
-	as := &v1alpha1.AWSClusterSpec{
-		Region: g.region,
-	}
+	as := &v1alpha1.AWSClusterSpec{}
 	cc = &v1alpha1.ClusterConfig{}
 	cc.Spec.AWS = as
 	cc.Spec.Cloud = "aws"
+	cc.Spec.Region = g.region
 	cc.Spec.Version = version.Version
 	comps := append(config.Components, &ingress.AWSALBIngress{})
 	for _, comp := range comps {

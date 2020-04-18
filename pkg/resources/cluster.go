@@ -27,7 +27,7 @@ func GetClusterConfig(kclient client.Client) (cc *v1alpha1.ClusterConfig, err er
 	return
 }
 
-func UpdateClusterConfig(kclient client.Client, cc *v1alpha1.ClusterConfig) error {
+func SaveClusterConfig(kclient client.Client, cc *v1alpha1.ClusterConfig) error {
 	tmpl := &v1alpha1.ClusterConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: cc.Name,

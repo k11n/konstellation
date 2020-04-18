@@ -11,12 +11,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/davidzhao/konstellation/pkg/components"
 	"github.com/davidzhao/konstellation/pkg/utils/cli"
 )
 
 const (
 	albIngressName = "alb-ingress-controller"
 )
+
+func init() {
+	components.RegisterComponent(&AWSALBIngress{})
+}
 
 type AWSALBIngress struct {
 	Cluster string

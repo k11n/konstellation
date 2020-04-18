@@ -58,7 +58,7 @@ type TFClusterOutput struct {
 	AlbIngressRoleArn string `json:"cluster_alb_role_arn"`
 }
 
-func NewNetworkingTFAction(region string, vpcCidr string, zones []string, usePrivateSubnet bool, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+func NewNetworkingTFAction(bucket, region, vpcCidr string, zones []string, usePrivateSubnet bool, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
 	targetDir := path.Join(config.TerraformDir(), "aws", "vpc")
 	tfFiles := make([]string, 0, len(vpcFiles))
 	tfFiles = append(tfFiles, vpcFiles...)
@@ -76,45 +76,55 @@ func NewNetworkingTFAction(region string, vpcCidr string, zones []string, usePri
 		zoneSuffixes = append(zoneSuffixes, zone[regionLen:])
 	}
 
-	a = terraform.NewTerraformAction(targetDir, terraform.TerraformVars{
-		"region":      region,
-		"vpc_cidr":    vpcCidr,
-		"az_suffixes": zoneSuffixes,
-	})
-	for _, o := range opts {
-		a.Option(o)
-	}
+	opts = append(opts,
+		terraform.TerraformVars{
+			"region":      region,
+			"vpc_cidr":    vpcCidr,
+			"az_suffixes": zoneSuffixes,
+		},
+		terraform.TerraformTemplateVars{
+			"state_bucket": bucket,
+		})
+	a = terraform.NewTerraformAction(targetDir, opts...)
 	return
 }
 
-func NewCreateEKSClusterTFAction(region string, vpcId string, name string, securityGroupIds []string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+func NewCreateEKSClusterTFAction(bucket, region, vpcId string, name string, securityGroupIds []string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
 	targetDir := path.Join(config.TerraformDir(), "aws", "cluster", name)
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, clusterFiles...)
 	if err != nil {
 		return
 	}
 
-	opts = append(opts, terraform.TerraformVars{
-		"region":             region,
-		"vpc_id":             vpcId,
-		"cluster":            name,
-		"security_group_ids": securityGroupIds,
-	})
+	opts = append(opts,
+		terraform.TerraformVars{
+			"region":             region,
+			"vpc_id":             vpcId,
+			"cluster":            name,
+			"security_group_ids": securityGroupIds,
+		},
+		terraform.TerraformTemplateVars{
+			"state_bucket": bucket,
+		})
 	a = terraform.NewTerraformAction(targetDir, opts...)
 	return
 }
 
-func NewDestroyEKSClusterTFAction(region string, cluster string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+func NewDestroyEKSClusterTFAction(bucket, region string, cluster string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
 	targetDir := path.Join(config.TerraformDir(), "aws", "cluster", fmt.Sprintf("%s_destroy", cluster))
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, "aws/cluster/main.tf")
 	if err != nil {
 		return
 	}
 
-	opts = append(opts, terraform.TerraformVars{
-		"region":  region,
-		"cluster": cluster,
-	})
+	opts = append(opts,
+		terraform.TerraformVars{
+			"region":  region,
+			"cluster": cluster,
+		},
+		terraform.TerraformTemplateVars{
+			"state_bucket": bucket,
+		})
 	a = terraform.NewTerraformAction(targetDir, opts...)
 	return
 }

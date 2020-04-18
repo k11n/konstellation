@@ -20,6 +20,7 @@ type ComponentSpec struct {
 type ClusterConfigSpec struct {
 	Version string `json:"version"`
 	Cloud   string `json:"cloud"`
+	Region  string `json:"region"`
 	// +kubebuilder:validation:Optional
 	// +nullable
 	AWS *AWSClusterSpec `json:"aws"`
@@ -58,7 +59,6 @@ type ClusterConfigList struct {
 
 type AWSClusterSpec struct {
 	// input values
-	Region            string      `json:"region"`
 	VpcCidr           string      `json:"vpcCidr"`
 	AvailabilityZones []string    `json:"availabilityZone"`
 	Topology          AWSTopology `json:"topology"`

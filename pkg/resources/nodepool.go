@@ -7,9 +7,12 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
 func NodepoolName() string {
@@ -61,4 +64,18 @@ func UpdateStatus(kclient client.Client, np *v1alpha1.Nodepool) error {
 	np.Status.NumReady = numReady
 	np.Status.Nodes = nodes
 	return kclient.Status().Update(context.Background(), np)
+}
+
+func SaveNodepool(kclient client.Client, nodepool *v1alpha1.Nodepool) error {
+	existing := &v1alpha1.Nodepool{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: nodepool.Name,
+		},
+	}
+	_, err := controllerutil.CreateOrUpdate(context.TODO(), kclient, existing, func() error {
+		existing.Labels = nodepool.Labels
+		objects.MergeObject(&existing.Spec, &nodepool.Spec)
+		return nil
+	})
+	return err
 }

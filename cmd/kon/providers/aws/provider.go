@@ -19,11 +19,6 @@ import (
 	"github.com/davidzhao/konstellation/pkg/utils/cli"
 )
 
-const (
-	terraformRegion = "us-west-2"
-	terraformBucket = "konstellation"
-)
-
 type AWSProvider struct {
 	id string
 }

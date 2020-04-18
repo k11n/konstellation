@@ -5,12 +5,17 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/davidzhao/konstellation/pkg/components"
 	"github.com/davidzhao/konstellation/pkg/utils/cli"
 )
 
 const (
 	PROXY_PATH = "/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/"
 )
+
+func init() {
+	components.RegisterComponent(&KubeDash{})
+}
 
 type KubeDash struct {
 }

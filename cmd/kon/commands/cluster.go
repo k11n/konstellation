@@ -16,10 +16,8 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sJson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/davidzhao/konstellation/cmd/kon/providers"
@@ -30,7 +28,6 @@ import (
 	"github.com/davidzhao/konstellation/pkg/components/ingress"
 	"github.com/davidzhao/konstellation/pkg/resources"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
-	"github.com/davidzhao/konstellation/pkg/utils/objects"
 	"github.com/davidzhao/konstellation/version"
 )
 
@@ -153,74 +150,100 @@ func clusterCreate(c *cli.Context) error {
 		return fmt.Errorf("Konstellation has not been setup yet. Run `kon setup`")
 	}
 	fmt.Println(CLUSTER_CREATE_HELP)
-	cm, err := ChooseClusterManagerPrompt("Where would you like to create the cluster?")
-	if err != nil {
-		return err
-	}
 
 	// update existing cluster names to ensure there's no conflict
 	if err := updateClusterLocations(); err != nil {
 		return err
 	}
 
-	// configurator
-	cloud := GetCloud(cm.Cloud())
-	generator, err := PromptClusterGenerator(cloud, cm.Region())
-	if err != nil {
-		return err
-	}
-	cc, err := generator.CreateClusterConfig()
-	if err != nil {
-		return err
-	}
-
 	clusterConfigFile := path.Join(config.StateDir(), "clusterconfig.yaml")
-	err = utils.SaveKubeObject(GetKubeEncoder(), cc, clusterConfigFile)
-	if err != nil {
-		return err
-	}
-
-	nodepool, err := generator.CreateNodepoolConfig(cc)
-	if err != nil {
-		return err
-	}
 	nodepoolConfigFile := path.Join(config.StateDir(), "nodepoolconfig.yaml")
-	err = utils.SaveKubeObject(GetKubeEncoder(), nodepool, nodepoolConfigFile)
-	if err != nil {
-		return err
+
+	// load persisted state on disk in case it wasn't completed
+	cc, nodepool, err := loadExistingConfigs(clusterConfigFile, nodepoolConfigFile)
+
+	var cm providers.ClusterManager
+	useExistingConfig := false
+	if err == nil {
+		// found existing config, ask if user wants to use it
+		prompt := promptui.Prompt{
+			Label:     fmt.Sprintf("Found interrupted cluster creation for %s, resume?", cc.Name),
+			IsConfirm: true,
+			Default:   "y",
+		}
+		utils.FixPromptBell(&prompt)
+		if _, err := prompt.Run(); err == nil {
+			useExistingConfig = true
+			cm = NewClusterManager(cc.Spec.Cloud, cc.Spec.Region)
+		} else if err != promptui.ErrAbort {
+			return err
+		}
 	}
 
-	if true {
-		return nil
-	}
-	name, err := cm.CreateCluster()
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Successfully created cluster %s.\n", name)
-	err = utils.WaitUntilComplete(utils.LongTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
-		cluster, err := cm.KubernetesProvider().GetCluster(context.Background(), name)
+	// configurator
+	if !useExistingConfig {
+		cm, err = ChooseClusterManagerPrompt("Where would you like to create the cluster?")
 		if err != nil {
-			return false, err
+			return err
 		}
-		if cluster.Status == types.StatusCreating {
-			return false, nil
-		} else if cluster.Status == types.StatusActive {
-			return true, nil
-		} else {
-			return false, fmt.Errorf("Unexpected cluster status during creation: %s", cluster.Status)
+		cloud := GetCloud(cm.Cloud())
+		generator, err := PromptClusterGenerator(cloud, cm.Region())
+		if err != nil {
+			return err
 		}
-	})
+		cc, err = generator.CreateClusterConfig()
+		if err != nil {
+			return err
+		}
+		err = utils.SaveKubeObject(GetKubeEncoder(), cc, clusterConfigFile)
+		if err != nil {
+			return err
+		}
 
-	if err == context.DeadlineExceeded {
-		// couldn't verify after waiting
-	} else if err != nil {
+		nodepool, err = generator.CreateNodepoolConfig(cc)
+		if err == nil {
+			return err
+		}
+		err = utils.SaveKubeObject(GetKubeEncoder(), nodepool, nodepoolConfigFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	// create cluster and nodepool
+	err = cm.CreateCluster(cc)
+	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Cluster %s has been created successfully. Running `kon cluster select --cluster %s` to configure it\n",
-		name, name)
-	return clusterSelect(name)
+	err = cm.CreateNodepool(cc, nodepool)
+	if err != nil {
+		return err
+	}
+
+	// load CRD types into cluster and set it up
+	ac := activeCluster{
+		Manager: cm,
+		Cluster: cc.Name,
+	}
+
+	if err = ac.loadResourcesIntoKube(); err != nil {
+		return err
+	}
+	if err = resources.SaveClusterConfig(ac.kubernetesClient(), cc); err != nil {
+		return err
+	}
+	if err = resources.SaveNodepool(ac.kubernetesClient(), nodepool); err != nil {
+		return err
+	}
+
+	// delete state files to clear up half completed state
+	os.Remove(clusterConfigFile)
+	os.Remove(nodepoolConfigFile)
+
+	fmt.Println()
+	fmt.Printf("Cluster %s has been successfully created. Run `kon select cluster --cluster %s` to use it\n", cc.Name, cc.Name)
+	return nil
 }
 
 func clusterDestroy(c *cli.Context) error {
@@ -310,16 +333,15 @@ func clusterSelect(clusterName string) error {
 	_, err = resources.GetClusterConfig(kclient)
 	if err != nil {
 		// have not been configured, do it
-		err = ac.createClusterConfig()
-		if err != nil {
-			return err
-		}
-		err = ac.configureCluster()
-
+		//err = ac.createClusterConfig()
+		//if err != nil {
+		//	return err
+		//}
+		//err = ac.configureCluster()
 	} else {
 		// TODO: in release versions don't reload resources
 		// still load the resources
-		//err = ac.loadResourcesIntoKube()
+		err = ac.loadResourcesIntoKube()
 	}
 	if err != nil {
 		return err
@@ -330,7 +352,10 @@ func clusterSelect(clusterName string) error {
 	if err != nil {
 		fmt.Println()
 		fmt.Println("Your cluster requires a nodepool to function, let's create that now")
-		err = ac.configureNodepool()
+		err := ac.configureNodepool()
+		if err != nil {
+			return err
+		}
 	}
 	if err != nil {
 		return err
@@ -408,23 +433,24 @@ type activeCluster struct {
 	kclient client.Client
 }
 
-func (c *activeCluster) createClusterConfig() error {
-	kclient := c.kubernetesClient()
-
+func (c *activeCluster) loadResourcesIntoKube() error {
 	// load new resources into kube
-	err := c.loadResourcesIntoKube()
-	if err != nil {
-		return err
+	fmt.Println("Loading custom resource definitions into Kubernetes...")
+	for _, file := range KUBE_RESOURCES {
+		err := utils.KubeApplyFile(file)
+		if err != nil {
+			return errors.Wrapf(err, "Unable to apply config %s", file)
+		}
 	}
 
-	err = utils.WaitUntilComplete(utils.ShortTimeoutSec, utils.MediumCheckInterval, func() (bool, error) {
+	err := utils.WaitUntilComplete(utils.ShortTimeoutSec, utils.MediumCheckInterval, func() (bool, error) {
 		// use a new kclient to avoid caching
 		contextName := resources.ContextNameForCluster(c.Manager.Cloud(), c.Cluster)
-		kclient, err = KubernetesClientWithContext(contextName)
+		kclient, err := KubernetesClientWithContext(contextName)
 		if err != nil {
 			return false, err
 		}
-		_, err := resources.GetClusterConfig(kclient)
+		_, err = resources.GetClusterConfig(kclient)
 		if err != resources.ErrNotFound {
 			log.Printf("Error checking for resources: %v", err)
 			return false, nil
@@ -435,50 +461,9 @@ func (c *activeCluster) createClusterConfig() error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to load required resources into Kube")
 	}
-
-	// reset client, to avoid caches not updating
+	// need to reset after resources are just loaded to avoid caching
 	c.kclient = nil
 
-	// create initial config
-	cc := v1alpha1.ClusterConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: c.Cluster,
-		},
-		Spec: v1alpha1.ClusterConfigSpec{
-			Version: version.Version,
-		},
-	}
-	for _, comp := range config.Components {
-		cc.Spec.Components = append(cc.Spec.Components, v1alpha1.ClusterComponent{
-			ComponentSpec: v1alpha1.ComponentSpec{
-				Name:    comp.Name(),
-				Version: comp.Version(),
-			},
-		})
-	}
-	if err = c.Manager.UpdateClusterSettings(&cc); err != nil {
-		return err
-	}
-	existing := v1alpha1.ClusterConfig{
-		ObjectMeta: cc.ObjectMeta,
-	}
-	_, err = controllerutil.CreateOrUpdate(context.TODO(), kclient, &existing, func() error {
-		objects.MergeObject(&existing.Spec, &cc.Spec)
-		return nil
-	})
-	return err
-}
-
-func (c *activeCluster) loadResourcesIntoKube() error {
-	// load new resources into kube
-	fmt.Println("Loading custom resource definitions into Kubernetes...")
-	for _, file := range KUBE_RESOURCES {
-
-		err := utils.KubeApplyFile(file)
-		if err != nil {
-			return errors.Wrapf(err, "Unable to apply config %s", file)
-		}
-	}
 	return nil
 }
 
@@ -492,60 +477,27 @@ func (c *activeCluster) configureNodepool() error {
 		return err
 	}
 
-	// set configuration for the first time
-	np, err := c.Manager.ConfigureNodepool(cc)
+	cloud := GetCloud(cc.Spec.Cloud)
+	generator, err := PromptClusterGenerator(cloud, cc.Spec.Region)
 	if err != nil {
 		return err
 	}
-	np.SetLabels(map[string]string{
-		resources.NODEPOOL_LABEL: resources.NODEPOOL_PRIMARY,
-	})
+
+	// prompt for nodepool config
+	np, err := generator.CreateNodepoolConfig(cc)
+	if err != nil {
+		return err
+	}
+
+	cm := NewClusterManager(cc.Spec.Cloud, cc.Spec.Region)
+
+	err = cm.CreateNodepool(cc, np)
+	if err != nil {
+		return err
+	}
 
 	// save spec to Kube
-	existing := &v1alpha1.Nodepool{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: np.Name,
-		},
-	}
-	_, err = controllerutil.CreateOrUpdate(context.TODO(), kclient, existing, func() error {
-		existing.Labels = np.Labels
-		objects.MergeObject(&existing.Spec, &np.Spec)
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
-	// if kube status is already reconciled, we can skip
-	if existing.Status.NumReady > 0 {
-		return nil
-	}
-
-	fmt.Println("Creating nodepool...")
-
-	// check aws nodepool status. if it doesn't exist, then create it
-	kubeProvider := c.Manager.KubernetesProvider()
-	ready, err := kubeProvider.IsNodepoolReady(context.Background(), c.Cluster, np.Name)
-	if err != nil {
-		// nodepool doesn't exist, create it
-		err = kubeProvider.CreateNodepool(context.Background(), c.Cluster, np, resources.NODEPOOL_PRIMARY)
-		if err != nil {
-			return err
-		}
-	}
-
-	// wait for completion
-	if !ready {
-		fmt.Printf("Waiting for nodepool become ready, this may take a few minutes\n")
-		err = utils.WaitUntilComplete(utils.LongTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
-			return kubeProvider.IsNodepoolReady(context.Background(), c.Cluster, existing.Name)
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	err = resources.UpdateStatus(kclient, existing)
+	err = resources.SaveNodepool(kclient, np)
 	if err != nil {
 		return err
 	}
@@ -739,6 +691,31 @@ func printClusterSection(section providers.ClusterManager, clusters []*clusterIn
 	}
 	utils.FormatTable(table)
 	table.Render()
+}
+
+func loadExistingConfigs(ccPath, npPath string) (cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool, err error) {
+	cc = &v1alpha1.ClusterConfig{}
+	np = &v1alpha1.Nodepool{}
+	ccObj, err := utils.LoadKubeObject(GetKubeDecoder(), cc, ccPath)
+	if err != nil {
+		return
+	}
+	cc, ok := ccObj.(*v1alpha1.ClusterConfig)
+	if !ok {
+		err = fmt.Errorf("type mismatch")
+		return
+	}
+
+	npObj, err := utils.LoadKubeObject(GetKubeDecoder(), np, npPath)
+	if err != nil {
+		return
+	}
+	np, ok = npObj.(*v1alpha1.Nodepool)
+	if !ok {
+		err = fmt.Errorf("type mismatch")
+		return
+	}
+	return
 }
 
 func isExternalKubeConfig(configPath string) bool {

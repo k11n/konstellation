@@ -6,7 +6,7 @@ provider "aws" {
 
 terraform {
   backend "s3" {
-    bucket = "konstellation"
+    bucket = "$${state_bucket}"
     key    = "terraform/aws/$${region}/$${cluster}/cluster.tfstate"
   }
 }

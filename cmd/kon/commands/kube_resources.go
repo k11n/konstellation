@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	CLUSTER_CREATE_HELP = `Creates a new Kubernetes cluster including the roles and networking resources required by Konstellation.`
+	CLUSTER_CREATE_HELP = `Creates a new Konstellation Kubernetes cluster.`
 )
 
 var (

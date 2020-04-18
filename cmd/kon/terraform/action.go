@@ -25,6 +25,7 @@ const (
 type TerraformAction struct {
 	WorkingDir      string
 	vars            map[string]string
+	templateVars    map[string]string
 	displayOutput   bool
 	requireApproval bool
 
@@ -57,6 +58,23 @@ func (v TerraformVars) Apply(a *TerraformAction) {
 		} else {
 			data, _ := json.Marshal(val)
 			a.vars[key] = string(data)
+		}
+	}
+}
+
+type TerraformTemplateVars map[string]interface{}
+
+func (v TerraformTemplateVars) Apply(a *TerraformAction) {
+	if a.templateVars == nil {
+		a.templateVars = make(map[string]string)
+	}
+	for key, val := range v {
+		// if not a string, encode to json
+		if strVal, ok := val.(string); ok {
+			a.templateVars[key] = strVal
+		} else {
+			data, _ := json.Marshal(val)
+			a.templateVars[key] = string(data)
 		}
 	}
 }
@@ -99,6 +117,13 @@ func (a *TerraformAction) replaceTemplate(filePath string) error {
 	s := string(content)
 	hasReplacements := false
 	for key, val := range a.vars {
+		search := fmt.Sprintf("$${%s}", key)
+		if strings.Contains(s, search) {
+			hasReplacements = true
+			s = strings.ReplaceAll(s, search, val)
+		}
+	}
+	for key, val := range a.templateVars {
 		search := fmt.Sprintf("$${%s}", key)
 		if strings.Contains(s, search) {
 			hasReplacements = true
@@ -171,7 +196,7 @@ func (a *TerraformAction) initIfNeeded() error {
 		return nil
 	}
 
-	fmt.Println("Initializing terraform...")
+	fmt.Println("Preparing terraform...")
 	if err := a.replaceTemplates(); err != nil {
 		return err
 	}

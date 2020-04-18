@@ -10,9 +10,14 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/davidzhao/konstellation/pkg/components"
 	"github.com/davidzhao/konstellation/pkg/utils/cli"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
 )
+
+func init() {
+	components.RegisterComponent(&IstioInstaller{})
+}
 
 type IstioInstaller struct {
 }
