@@ -29,14 +29,6 @@ func (d *KubeDash) Version() string {
 	return "v2.0.0-beta8"
 }
 
-func (d *KubeDash) NeedsCLI() bool {
-	return false
-}
-
-func (d *KubeDash) InstallCLI() error {
-	return nil
-}
-
 func (d *KubeDash) InstallComponent(kclient client.Client) error {
 	url := fmt.Sprintf("https://raw.githubusercontent.com/kubernetes/dashboard/%s/aio/deploy/recommended.yaml",
 		d.Version())

@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
+	"github.com/davidzhao/konstellation/pkg/components"
 )
 
 var ConfigCommands = []*cli.Command{
@@ -58,7 +59,10 @@ func setupStart(c *cli.Context) error {
 	var err error
 	for _, comp := range config.Components {
 		// always recheck CLI status
-		if comp.NeedsCLI() {
+		if cliComp, ok := comp.(components.CLIComponent); ok {
+			if !cliComp.NeedsCLI() {
+				continue
+			}
 			if !installConfirmed {
 				prompt := promptui.Prompt{
 					Label:     "Konstellation requires third-party tools to be installed to ~/.konstellation, ok to proceed",
@@ -74,7 +78,7 @@ func setupStart(c *cli.Context) error {
 				installConfirmed = true
 			}
 			fmt.Printf("Installing CLI for %s\n", comp.Name())
-			err = comp.InstallCLI()
+			err = cliComp.InstallCLI()
 			if err != nil {
 				return err
 			}

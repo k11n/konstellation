@@ -38,14 +38,6 @@ func (i *AWSALBIngress) Version() string {
 	return "1.1.6"
 }
 
-func (i *AWSALBIngress) NeedsCLI() bool {
-	return false
-}
-
-func (i *AWSALBIngress) InstallCLI() error {
-	return nil
-}
-
 func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 
 	// deploy roles xml
