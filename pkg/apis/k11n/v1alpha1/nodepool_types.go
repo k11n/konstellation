@@ -22,9 +22,8 @@ type NodePoolAWS struct {
 	ConnectFromAnywhere bool   `json:"connectFromAnywhere" desc:"Allow connection from internet"`
 
 	// set only after cluster is created
-	SecurityGroupId   string   `json:"securityGroupId,omitempty"`
-	SecurityGroupName string   `json:"securityGroupName,omitempty" desc:"Security group (for connection)"`
-	SubnetIds         []string `json:"subnetIds"`
+	SecurityGroupId string   `json:"securityGroupId,omitempty"`
+	SubnetIds       []string `json:"subnetIds"`
 }
 
 // NodepoolStatus defines the observed state of Nodepool

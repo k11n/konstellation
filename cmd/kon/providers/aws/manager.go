@@ -135,9 +135,35 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) error {
 	fmt.Println("Creating nodepool...")
 
+	// set nodepool config from VPC
+	nps := &np.Spec
+	awsConf := cc.Spec.AWS
+	if len(awsConf.SecurityGroups) == 0 {
+		return fmt.Errorf("Could not find security groups")
+	}
+	nps.AWS.SecurityGroupId = awsConf.SecurityGroups[0]
+	var subnetSrc []*v1alpha1.AWSSubnet
+	if awsConf.Topology == v1alpha1.AWSTopologyPublicPrivate {
+		subnetSrc = awsConf.PrivateSubnets
+	} else {
+		subnetSrc = awsConf.PublicSubnets
+	}
+	for _, subnet := range subnetSrc {
+		nps.AWS.SubnetIds = append(nps.AWS.SubnetIds, subnet.SubnetId)
+	}
+
 	// check aws nodepool status. if it doesn't exist, then create it
 	kubeProvider := a.KubernetesProvider()
-	ready, _ := kubeProvider.IsNodepoolReady(context.Background(), cc.Name, np.Name)
+	ready, err := kubeProvider.IsNodepoolReady(context.Background(), cc.Name, np.Name)
+
+	if err != nil {
+		// create it
+		err = kubeProvider.CreateNodepool(context.TODO(), cc.Name, np)
+		if err != nil {
+			return err
+		}
+	}
+
 	// wait for completion
 	if !ready {
 		fmt.Printf("Waiting for nodepool become ready, this may take a few minutes\n")

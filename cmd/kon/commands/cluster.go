@@ -25,7 +25,6 @@ import (
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud/types"
 	"github.com/davidzhao/konstellation/pkg/components"
-	"github.com/davidzhao/konstellation/pkg/components/ingress"
 	"github.com/davidzhao/konstellation/pkg/resources"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
 	"github.com/davidzhao/konstellation/version"
@@ -167,7 +166,7 @@ func clusterCreate(c *cli.Context) error {
 	if err == nil {
 		// found existing config, ask if user wants to use it
 		prompt := promptui.Prompt{
-			Label:     fmt.Sprintf("Found interrupted cluster creation for %s, resume?", cc.Name),
+			Label:     fmt.Sprintf("Found interrupted cluster creation for %s, resume", cc.Name),
 			IsConfirm: true,
 			Default:   "y",
 		}
@@ -292,34 +291,6 @@ func clusterSelect(clusterName string) error {
 		Cluster: clusterName,
 	}
 
-	kubeProvider := cm.KubernetesProvider()
-	cluster, err := kubeProvider.GetCluster(context.Background(), clusterName)
-	if err != nil {
-		return err
-	}
-
-	if cluster.Status == types.StatusCreating {
-		fmt.Println("Waiting for cluster to become ready")
-		err = utils.WaitUntilComplete(utils.LongTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
-			cluster, err := kubeProvider.GetCluster(context.Background(), clusterName)
-			if err != nil {
-				return false, err
-			}
-			if cluster.Status == types.StatusCreating {
-				return false, nil
-			} else if cluster.Status == types.StatusActive {
-				return true, nil
-			} else {
-				return false, fmt.Errorf("Unexpected cluster status: %s", cluster.Status)
-			}
-		})
-		if err != nil {
-			return err
-		}
-	} else if cluster.Status != types.StatusActive {
-		return fmt.Errorf("Cannot select cluster, status: %s", cluster.Status.String())
-	}
-
 	err = ac.generateKubeConfig()
 	if err != nil {
 		return err
@@ -336,17 +307,11 @@ func clusterSelect(clusterName string) error {
 	// see if we have to configure cluster
 	_, err = resources.GetClusterConfig(kclient)
 	if err != nil {
-		// have not been configured, do it
-		//err = ac.createClusterConfig()
-		//if err != nil {
-		//	return err
-		//}
-		//err = ac.configureCluster()
-	} else {
-		// TODO: in release versions don't reload resources
-		// still load the resources
-		err = ac.loadResourcesIntoKube()
+		return err
 	}
+	// TODO: in release versions don't reload resources
+	// still load the resources
+	err = ac.loadResourcesIntoKube()
 	if err != nil {
 		return err
 	}
@@ -526,25 +491,32 @@ func (c *activeCluster) installComponents() error {
 		if installed[comp.Name] != "" {
 			continue
 		}
-		for _, compInstaller := range config.Components {
-			if compInstaller.Name() != comp.Name {
-				continue
-			}
-			fmt.Printf("Installing Kubernetes components for %s\n", compInstaller.Name())
-			err = compInstaller.InstallComponent(kclient)
-			if err != nil {
-				return err
-			}
+		compInstaller := components.GetComponentByName(comp.Name)
+		if compInstaller == nil {
+			return fmt.Errorf("Cluster requires %s, which is no longer available")
+		}
 
-			// mark it as installed
-			cc.Status.InstalledComponents = append(cc.Status.InstalledComponents, v1alpha1.ComponentSpec{
-				Name:    compInstaller.Name(),
-				Version: compInstaller.Version(),
-			})
-			err = kclient.Status().Update(context.Background(), cc)
-			if err != nil {
-				return err
-			}
+		fmt.Printf("Installing Kubernetes components for %s\n", compInstaller.Name())
+
+		// TODO: better handle versions
+		if compInstaller.Version() != comp.Version {
+			return fmt.Errorf("Version mismatch for %s: specified: %s, current: %s",
+				compInstaller.Name(), comp.Version, compInstaller.Version())
+		}
+
+		err = compInstaller.InstallComponent(kclient)
+		if err != nil {
+			return err
+		}
+
+		// mark it as installed
+		cc.Status.InstalledComponents = append(cc.Status.InstalledComponents, v1alpha1.ComponentSpec{
+			Name:    compInstaller.Name(),
+			Version: compInstaller.Version(),
+		})
+		err = kclient.Status().Update(context.Background(), cc)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -656,12 +628,6 @@ func (c *activeCluster) initClient() error {
 	}
 	c.kclient = kclient
 	return nil
-}
-
-func (c *activeCluster) getSupportedComponents() []components.ComponentInstaller {
-	comps := config.Components
-	comps = append(comps, ingress.NewIngressForCluster(c.Manager.Cloud(), c.Cluster))
-	return comps
 }
 
 func printClusterSection(section providers.ClusterManager, clusters []*clusterInfo) {

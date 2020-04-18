@@ -58,8 +58,7 @@ spec:
                 roleArn:
                   type: string
                 securityGroupId:
-                  type: string
-                securityGroupName:
+                  description: set only after cluster is created
                   type: string
                 sshKeypair:
                   type: string

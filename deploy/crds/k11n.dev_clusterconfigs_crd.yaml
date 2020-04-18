@@ -76,26 +76,24 @@ spec:
                     - subnetId
                     type: object
                   type: array
-                region:
-                  description: input values
-                  type: string
                 securityGroups:
+                  description: set after cluster is created
                   items:
                     type: string
                   type: array
                 topology:
                   type: string
                 vpc:
-                  description: below are optional, if not using an existing VPC
+                  description: optional, only if it's using an existing VPC
                   type: string
                 vpcCidr:
+                  description: input values
                   type: string
               required:
               - albRoleArn
               - availabilityZone
               - privateSubnets
               - publicSubnets
-              - region
               - securityGroups
               - topology
               - vpc
@@ -120,6 +118,8 @@ spec:
                 - version
                 type: object
               type: array
+            region:
+              type: string
             targets:
               items:
                 type: string
@@ -130,6 +130,7 @@ spec:
           required:
           - cloud
           - components
+          - region
           - version
           type: object
         status:

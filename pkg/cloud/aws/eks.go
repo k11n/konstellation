@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/sts"
 
@@ -137,9 +138,44 @@ func (s *EKSService) IsNodepoolDeleted(ctx context.Context, clusterName string, 
 	return true, nil
 }
 
-func (s *EKSService) CreateNodepool(ctx context.Context, clusterName string, np *v1alpha1.Nodepool, purpose string) error {
+func (s *EKSService) CreateNodepool(ctx context.Context, clusterName string, np *v1alpha1.Nodepool) error {
+	// tag VPC subnets if needed
+	ec2Svc := ec2.New(s.session)
+	subnetIds := []*string{}
+	for _, sId := range np.Spec.AWS.SubnetIds {
+		subnetIds = append(subnetIds, aws.String(sId))
+	}
+	subnetRes, err := ec2Svc.DescribeSubnets(&ec2.DescribeSubnetsInput{SubnetIds: subnetIds})
+	if err != nil {
+		return err
+	}
+
+	clusterTag := "kubernetes.io/cluster/" + clusterName
+	resourcesToTag := []*string{}
+	for _, subnet := range subnetRes.Subnets {
+		tag := GetEC2Tag(subnet.Tags, clusterTag)
+		if tag == nil {
+			resourcesToTag = append(resourcesToTag, subnet.SubnetId)
+		}
+	}
+
+	if len(resourcesToTag) > 0 {
+		_, err = ec2Svc.CreateTags(&ec2.CreateTagsInput{
+			Resources: resourcesToTag,
+			Tags: []*ec2.Tag{
+				{
+					Key:   &clusterTag,
+					Value: aws.String("shared"),
+				},
+			},
+		})
+		if err != nil {
+			return err
+		}
+	}
+
 	createInput := nodepoolSpecToCreateInput(clusterName, np)
-	_, err := s.EKS.CreateNodegroup(createInput)
+	_, err = s.EKS.CreateNodegroupWithContext(ctx, createInput)
 	return err
 }
 
@@ -206,4 +242,13 @@ func clusterFromEksCluster(ec *eks.Cluster) *types.Cluster {
 		}
 	}
 	return cluster
+}
+
+func GetEC2Tag(tags []*ec2.Tag, name string) *ec2.Tag {
+	for _, tag := range tags {
+		if *tag.Key == name {
+			return tag
+		}
+	}
+	return nil
 }
