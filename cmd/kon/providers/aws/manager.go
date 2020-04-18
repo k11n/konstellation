@@ -35,66 +35,6 @@ func NewAWSManager(region string) *AWSManager {
 	}
 }
 
-// Perform cluster cloud specific setup, including tagging subnets, etc
-func (a *AWSManager) UpdateClusterSettings(cc *v1alpha1.ClusterConfig) error {
-	fmt.Println("updating cluster settings")
-	awsConfig := v1alpha1.AWSClusterSpec{}
-	// ensure it's initialized
-	sess := session.Must(a.awsSession())
-	eksSvc := eks.New(sess)
-	ec2Svc := ec2.New(sess)
-
-	res, err := eksSvc.DescribeCluster(&eks.DescribeClusterInput{
-		Name: aws.String(cc.Name),
-	})
-	if err != nil {
-		return err
-	}
-	//oidcIssuer := *res.Cluster.Identity.Oidc.Issuer
-	vpcConf := res.Cluster.ResourcesVpcConfig
-	awsConfig.Vpc = *vpcConf.VpcId
-	for _, sg := range vpcConf.SecurityGroupIds {
-		awsConfig.SecurityGroups = append(awsConfig.SecurityGroups, *sg)
-	}
-
-	// get subnet info
-	subnetRes, err := ec2Svc.DescribeSubnets(&ec2.DescribeSubnetsInput{
-		SubnetIds: vpcConf.SubnetIds,
-	})
-	if err != nil {
-		return err
-	}
-
-	for _, sub := range subnetRes.Subnets {
-		isPublic := false
-		for _, tag := range sub.Tags {
-			if *tag.Key == kaws.TagSubnetScope {
-				isPublic = *tag.Value == kaws.TagValuePublic
-				break
-			}
-		}
-		subConf := v1alpha1.AWSSubnet{
-			SubnetId:         *sub.SubnetId,
-			Ipv4Cidr:         *sub.CidrBlock,
-			IsPublic:         isPublic,
-			AvailabilityZone: *sub.AvailabilityZone,
-		}
-		if isPublic {
-			awsConfig.PublicSubnets = append(awsConfig.PublicSubnets, &subConf)
-		} else {
-			awsConfig.PrivateSubnets = append(awsConfig.PrivateSubnets, &subConf)
-		}
-	}
-
-	albRole, err := a.getAlbRole(cc.Name)
-	if err != nil {
-		return err
-	}
-	awsConfig.AlbRoleArn = *albRole.Arn
-	cc.Spec.AWS = &awsConfig
-	return nil
-}
-
 func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	awsConf := cc.Spec.AWS
 
@@ -215,6 +155,14 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 	// list all nodepools, and delete them
 	sess := session.Must(a.awsSession())
 	eksSvc := kaws.NewEKSService(sess)
+
+	// remove from selected
+	conf := config.GetConfig()
+	conf.SelectedCluster = ""
+	err := conf.Persist()
+	if err != nil {
+		return err
+	}
 
 	listRes, err := eksSvc.EKS.ListNodegroups(&eks.ListNodegroupsInput{
 		ClusterName: &cluster,

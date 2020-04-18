@@ -201,7 +201,7 @@ func clusterCreate(c *cli.Context) error {
 		}
 
 		nodepool, err = generator.CreateNodepoolConfig(cc)
-		if err == nil {
+		if err != nil {
 			return err
 		}
 		err = utils.SaveKubeObject(GetKubeEncoder(), nodepool, nodepoolConfigFile)
@@ -240,6 +240,10 @@ func clusterCreate(c *cli.Context) error {
 	// delete state files to clear up half completed state
 	os.Remove(clusterConfigFile)
 	os.Remove(nodepoolConfigFile)
+
+	// generate config to use with Kube
+	updateClusterLocations()
+	ac.generateKubeConfig()
 
 	fmt.Println()
 	fmt.Printf("Cluster %s has been successfully created. Run `kon select cluster --cluster %s` to use it\n", cc.Name, cc.Name)

@@ -23,7 +23,6 @@ type ClusterManager interface {
 	CreateCluster(cc *v1alpha1.ClusterConfig) error
 	CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) error
 	DeleteCluster(name string) error
-	UpdateClusterSettings(*v1alpha1.ClusterConfig) error
 
 	// utils
 	KubernetesProvider() cloud.KubernetesProvider
