@@ -28,7 +28,6 @@ func init() {
 }
 
 type AWSALBIngress struct {
-	Cluster string
 }
 
 func (i *AWSALBIngress) Name() string {
@@ -48,13 +47,20 @@ func (i *AWSALBIngress) InstallCLI() error {
 }
 
 func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
+
 	// deploy roles xml
 	url := fmt.Sprintf("https://raw.githubusercontent.com/kubernetes-sigs/aws-alb-ingress-controller/v%s/docs/examples/rbac-role.yaml", i.Version())
 	err := cli.KubeApply(url)
 	if err != nil {
 		return nil
 	}
-	dep := i.deploymentForIngress()
+
+	// get cluster config and alb service account to annotate
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return err
+	}
+	dep := i.deploymentForIngress(cc)
 	existing := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      albIngressName,
@@ -68,11 +74,6 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 		return nil
 	})
 
-	// get cluster config and alb service account to annotate
-	cc, err := resources.GetClusterConfig(kclient)
-	if err != nil {
-		return err
-	}
 	svcAccount := &corev1.ServiceAccount{}
 	err = kclient.Get(context.TODO(), types.NamespacedName{
 		Name:      albIngressName,
@@ -106,7 +107,7 @@ func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, requests []
 	return
 }
 
-func (i *AWSALBIngress) deploymentForIngress() *appsv1.Deployment {
+func (i *AWSALBIngress) deploymentForIngress(cc *v1alpha1.ClusterConfig) *appsv1.Deployment {
 	labels := map[string]string{
 		"app.kubernetes.io/name": albIngressName,
 	}
@@ -131,7 +132,7 @@ func (i *AWSALBIngress) deploymentForIngress() *appsv1.Deployment {
 							Name: albIngressName,
 							Args: []string{
 								"--ingress-class=alb",
-								fmt.Sprintf("--cluster-name=%s", i.Cluster),
+								fmt.Sprintf("--cluster-name=%s", cc.Name),
 							},
 							//Env: []corev1.EnvVar{
 							//	{

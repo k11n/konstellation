@@ -15,7 +15,7 @@ type IngressComponent interface {
 
 func NewIngressForCluster(cloud, cluster string) IngressComponent {
 	if cloud == "aws" {
-		return &AWSALBIngress{Cluster: cluster}
+		return &AWSALBIngress{}
 	}
 	log.Fatalf("Unsupported cloud: %s", cloud)
 	return nil
