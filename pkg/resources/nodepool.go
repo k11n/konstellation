@@ -35,6 +35,19 @@ func GetNodepoolOfType(kclient client.Client, kind string) (np *v1alpha1.Nodepoo
 	return
 }
 
+func GetNodepools(kclient client.Client) (pools []*v1alpha1.Nodepool, err error) {
+	npList := v1alpha1.NodepoolList{}
+	err = kclient.List(context.Background(), &npList)
+	if err != nil {
+		return
+	}
+
+	for _, item := range npList.Items {
+		pools = append(pools, &item)
+	}
+	return
+}
+
 func UpdateStatus(kclient client.Client, np *v1alpha1.Nodepool) error {
 	// get nodelist
 	nodeList := corev1.NodeList{}

@@ -319,8 +319,8 @@ func clusterSelect(clusterName string) error {
 	}
 
 	// see if we have a nodepool
-	_, err = resources.GetNodepoolOfType(kclient, resources.NODEPOOL_PRIMARY)
-	if err != nil {
+	pools, err := resources.GetNodepools(kclient)
+	if len(pools) == 0 {
 		fmt.Println()
 		fmt.Println("Your cluster requires a nodepool to function, let's create that now")
 		err := ac.configureNodepool()
@@ -422,12 +422,14 @@ func (c *activeCluster) loadResourcesIntoKube() error {
 			return false, err
 		}
 		_, err = resources.GetClusterConfig(kclient)
-		if err != resources.ErrNotFound {
-			log.Printf("Error checking for resources: %v", err)
-			return false, nil
-		} else {
+		if err == nil || err == resources.ErrNotFound {
+			// object already there or type created
 			return true, nil
 		}
+
+		// likely it hasn't loaded the type yet
+		log.Printf("Custom resources still not created. %v", err)
+		return false, nil
 	})
 	if err != nil {
 		return errors.Wrap(err, "Failed to load required resources into Kube")

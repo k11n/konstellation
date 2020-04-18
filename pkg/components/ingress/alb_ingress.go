@@ -7,16 +7,20 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/components"
+	"github.com/davidzhao/konstellation/pkg/resources"
 	"github.com/davidzhao/konstellation/pkg/utils/cli"
 )
 
 const (
-	albIngressName = "alb-ingress-controller"
+	albIngressName      = "alb-ingress-controller"
+	albRoleAnnotation   = "eks.amazonaws.com/role-arn"
+	kubeSystemNamespace = "kube-system"
 )
 
 func init() {
@@ -54,7 +58,7 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 	existing := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      albIngressName,
-			Namespace: "kube-system",
+			Namespace: kubeSystemNamespace,
 		},
 	}
 	_, err = controllerutil.CreateOrUpdate(context.TODO(), kclient, existing, func() error {
@@ -63,7 +67,23 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 		}
 		return nil
 	})
-	return err
+
+	// get cluster config and alb service account to annotate
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return err
+	}
+	svcAccount := &corev1.ServiceAccount{}
+	err = kclient.Get(context.TODO(), types.NamespacedName{
+		Name:      albIngressName,
+		Namespace: kubeSystemNamespace,
+	}, svcAccount)
+	if err != nil {
+		return err
+	}
+
+	svcAccount.Annotations[albRoleAnnotation] = cc.Spec.AWS.AlbRoleArn
+	return kclient.Update(context.TODO(), svcAccount)
 }
 
 func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, requests []v1alpha1.IngressRequest) (annotations map[string]string, err error) {
