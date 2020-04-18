@@ -14,6 +14,7 @@ const (
 	TagValuePrivate = "private"
 	TagValuePublic  = "public"
 	TagValueOwned   = "owned"
+	TagValueShared  = "shared"
 	TagValueTrue    = "true"
 )
 

@@ -57,6 +57,7 @@ spec:
                     - isPublic
                     - subnetId
                     type: object
+                  nullable: true
                   type: array
                 publicSubnets:
                   items:
@@ -92,7 +93,6 @@ spec:
               required:
               - albRoleArn
               - availabilityZone
-              - privateSubnets
               - publicSubnets
               - securityGroups
               - topology

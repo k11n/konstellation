@@ -67,8 +67,10 @@ type AWSClusterSpec struct {
 
 	// set after cluster is created
 	SecurityGroups []string     `json:"securityGroups"`
-	PrivateSubnets []*AWSSubnet `json:"privateSubnets"`
 	PublicSubnets  []*AWSSubnet `json:"publicSubnets"`
+	// +kubebuilder:validation:Optional
+	// +nullable
+	PrivateSubnets []*AWSSubnet `json:"privateSubnets"`
 	AlbRoleArn     string       `json:"albRoleArn"`
 }
 

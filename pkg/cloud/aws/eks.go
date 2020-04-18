@@ -165,7 +165,7 @@ func (s *EKSService) CreateNodepool(ctx context.Context, clusterName string, np 
 			Tags: []*ec2.Tag{
 				{
 					Key:   &clusterTag,
-					Value: aws.String("shared"),
+					Value: aws.String(TagValueShared),
 				},
 			},
 		})

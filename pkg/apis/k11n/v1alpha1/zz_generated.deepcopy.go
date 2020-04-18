@@ -22,8 +22,8 @@ func (in *AWSClusterSpec) DeepCopyInto(out *AWSClusterSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.PrivateSubnets != nil {
-		in, out := &in.PrivateSubnets, &out.PrivateSubnets
+	if in.PublicSubnets != nil {
+		in, out := &in.PublicSubnets, &out.PublicSubnets
 		*out = make([]*AWSSubnet, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
@@ -33,8 +33,8 @@ func (in *AWSClusterSpec) DeepCopyInto(out *AWSClusterSpec) {
 			}
 		}
 	}
-	if in.PublicSubnets != nil {
-		in, out := &in.PublicSubnets, &out.PublicSubnets
+	if in.PrivateSubnets != nil {
+		in, out := &in.PrivateSubnets, &out.PrivateSubnets
 		*out = make([]*AWSSubnet, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {
