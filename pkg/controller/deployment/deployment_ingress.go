@@ -67,18 +67,3 @@ func newIngressRequestForAppTarget(at *v1alpha1.AppTarget) *v1alpha1.IngressRequ
 	}
 	return ir
 }
-
-//func newGateWayForAppTarget(at *v1alpha1.AppTarget) *istio.Gateway {
-//	return &istio.Gateway{
-//		ObjectMeta: v1.ObjectMeta{
-//			Namespace: at.TargetNamespace(),
-//			Name:      fmt.Sprintf("%s-ingress", at.Spec.App),
-//		},
-//		Spec: v1beta1.Gateway{
-//			Selector: map[string]string{
-//				"istio": "ingressgateway",
-//			},
-//			Servers: []*v1beta1.Server{},
-//		},
-//	}
-//}

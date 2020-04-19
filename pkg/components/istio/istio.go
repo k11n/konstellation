@@ -10,6 +10,8 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
@@ -19,8 +21,8 @@ import (
 )
 
 const (
-	istioNamespace      = "istio-system"
-	istioIngressService = "istio-ingressgateway"
+	istioNamespace   = "istio-system"
+	istioIngressName = "istio-ingressgateway"
 )
 
 func init() {
@@ -106,7 +108,7 @@ func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 	// Delete the default LB service it opens
 	ingressKey := client.ObjectKey{
 		Namespace: istioNamespace,
-		Name:      istioIngressService,
+		Name:      istioIngressName,
 	}
 	ingressSvc := &corev1.Service{}
 	err = utils.WaitUntilComplete(utils.ShortTimeoutSec, utils.MediumCheckInterval, func() (bool, error) {
@@ -124,8 +126,32 @@ func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 	if err != nil {
 		return err
 	}
+	// ignore delete errors
+	kclient.Delete(context.TODO(), ingressSvc)
 
-	return kclient.Delete(context.TODO(), ingressSvc)
+	// create a new service
+	ingressSvc = &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: istioNamespace,
+			Name:      istioIngressName,
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"app":   istioIngressName,
+				"istio": "ingressgateway",
+			},
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "http",
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(80),
+					Port:       80,
+				},
+			},
+		},
+	}
+
+	return kclient.Create(context.TODO(), ingressSvc)
 }
 
 func (i *IstioInstaller) cliPath() string {

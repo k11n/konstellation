@@ -84,10 +84,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		ToRequests: handler.ToRequestsFunc(func(configMapObject handler.MapObject) []reconcile.Request {
 			requests := []reconcile.Request{}
 			ingress := configMapObject.Object.(*netv1beta1.Ingress)
-
-			if configMapObject.Meta.GetDeletionTimestamp() == nil {
-				return requests
-			}
+			//
+			//if configMapObject.Meta.GetDeletionTimestamp() == nil {
+			//	return requests
+			//}
 
 			log.Info("Ingress deleted, requesting reconcile", "ingress", ingress.Name)
 			// only thing is if it gets deleted.. we'll need to reconcile
@@ -107,6 +107,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		}),
 	}, predicate.Funcs{
 		// only care about deletes
+		DeleteFunc:  func(e event.DeleteEvent) bool { return true },
 		CreateFunc:  func(e event.CreateEvent) bool { return false },
 		UpdateFunc:  func(e event.UpdateEvent) bool { return false },
 		GenericFunc: func(e event.GenericEvent) bool { return false },
@@ -155,6 +156,7 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, gw, func() error {
 		objects.MergeObject(&gw.Spec, &gwTemplate.Spec)
 		gw.Labels = gwTemplate.Labels
+		gw.Annotations = gwTemplate.Annotations
 		return nil
 	})
 	if err != nil {
@@ -175,6 +177,7 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 	log.Info("updating ingress", "name", ingress.Name)
 	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, &ingress, func() error {
 		objects.MergeObject(&ingress.Spec, &ingressTemplate.Spec)
+		ingress.Annotations = ingressTemplate.Annotations
 		ingress.Labels = ingressTemplate.Labels
 		return nil
 	})
