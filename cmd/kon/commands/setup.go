@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
+	"github.com/davidzhao/konstellation/cmd/kon/kube"
 	"github.com/davidzhao/konstellation/pkg/components"
 )
 
@@ -57,7 +58,7 @@ func setupStart(c *cli.Context) error {
 	// this only requires components that has a CLI
 	installConfirmed := false
 	var err error
-	for _, comp := range config.Components {
+	for _, comp := range kube.KubeComponents {
 		// always recheck CLI status
 		if cliComp, ok := comp.(components.CLIComponent); ok {
 			if !cliComp.NeedsCLI() {

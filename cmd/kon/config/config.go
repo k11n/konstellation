@@ -7,19 +7,12 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/davidzhao/konstellation/pkg/components"
-	"github.com/davidzhao/konstellation/pkg/components/istio"
-	"github.com/davidzhao/konstellation/pkg/components/kubedash"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
 )
 
 var (
 	defaultConfigDir = os.ExpandEnv("$HOME/.konstellation")
 	config           *ClientConfig
-	Components       = []components.ComponentInstaller{
-		&istio.IstioInstaller{},
-		&kubedash.KubeDash{},
-	}
 )
 
 const (
@@ -138,4 +131,12 @@ func StateDir() string {
 		os.MkdirAll(d, files.DefaultDirectoryMode)
 	}
 	return d
+}
+
+func KubeConfigDir() (string, error) {
+	homedir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return path.Join(homedir, ".kube", "config"), nil
 }

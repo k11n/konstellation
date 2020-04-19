@@ -1,9 +1,6 @@
-package commands
+package kube
 
 import (
-	"os"
-	"path"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -11,10 +8,10 @@ import (
 	kconf "sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/davidzhao/konstellation/pkg/apis"
-)
-
-const (
-	CLUSTER_CREATE_HELP = `Creates a new Konstellation Kubernetes cluster.`
+	"github.com/davidzhao/konstellation/pkg/components"
+	"github.com/davidzhao/konstellation/pkg/components/istio"
+	"github.com/davidzhao/konstellation/pkg/components/kubedash"
+	"github.com/davidzhao/konstellation/pkg/components/prometheus"
 )
 
 var (
@@ -30,6 +27,12 @@ var (
 		"crds/k11n.dev_ingressrequests_crd.yaml",
 		"crds/k11n.dev_nodepools_crd.yaml",
 		// "operator.yaml",
+	}
+
+	KubeComponents = []components.ComponentInstaller{
+		&istio.IstioInstaller{},
+		&kubedash.KubeDash{},
+		&prometheus.PrometheusOperator{},
 	}
 )
 
@@ -63,12 +66,4 @@ func GetKubeEncoder() runtime.Encoder {
 			Pretty: true,
 			Strict: false,
 		})
-}
-
-func kubeConfigPath() (string, error) {
-	homedir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return path.Join(homedir, ".kube", "config"), nil
 }

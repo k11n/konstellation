@@ -21,6 +21,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
+	"github.com/davidzhao/konstellation/cmd/kon/kube"
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
@@ -56,7 +57,7 @@ func (g *PromptConfigGenerator) CreateClusterConfig() (cc *v1alpha1.ClusterConfi
 	cc.Spec.Cloud = "aws"
 	cc.Spec.Region = g.region
 	cc.Spec.Version = version.Version
-	comps := append(config.Components, &ingress.AWSALBIngress{})
+	comps := append(kube.KubeComponents, &ingress.AWSALBIngress{})
 	for _, comp := range comps {
 		cc.Spec.Components = append(cc.Spec.Components, v1alpha1.ClusterComponent{
 			ComponentSpec: v1alpha1.ComponentSpec{

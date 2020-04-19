@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/davidzhao/konstellation/cmd/kon/config"
+	"github.com/davidzhao/konstellation/cmd/kon/kube"
 	"github.com/davidzhao/konstellation/cmd/kon/providers"
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
@@ -128,7 +129,7 @@ func clusterList(c *cli.Context) error {
 			infos = append(infos, info)
 
 			contextName := resources.ContextNameForCluster(cm.Cloud(), cluster.Name)
-			kclient, err := KubernetesClientWithContext(contextName)
+			kclient, err := kube.KubernetesClientWithContext(contextName)
 			if err != nil {
 				continue
 			}
@@ -144,11 +145,13 @@ func clusterList(c *cli.Context) error {
 	return nil
 }
 
+const clusterCreateHelp = `Creates a new Konstellation Kubernetes cluster.`
+
 func clusterCreate(c *cli.Context) error {
 	if !config.GetConfig().IsSetup() {
 		return fmt.Errorf("Konstellation has not been setup yet. Run `kon setup`")
 	}
-	fmt.Println(CLUSTER_CREATE_HELP)
+	fmt.Println(clusterCreateHelp)
 
 	// update existing cluster names to ensure there's no conflict
 	if err := updateClusterLocations(); err != nil {
@@ -194,7 +197,7 @@ func clusterCreate(c *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		err = utils.SaveKubeObject(GetKubeEncoder(), cc, clusterConfigFile)
+		err = utils.SaveKubeObject(kube.GetKubeEncoder(), cc, clusterConfigFile)
 		if err != nil {
 			return err
 		}
@@ -203,7 +206,7 @@ func clusterCreate(c *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		err = utils.SaveKubeObject(GetKubeEncoder(), nodepool, nodepoolConfigFile)
+		err = utils.SaveKubeObject(kube.GetKubeEncoder(), nodepool, nodepoolConfigFile)
 		if err != nil {
 			return err
 		}
@@ -407,7 +410,7 @@ type activeCluster struct {
 func (c *activeCluster) loadResourcesIntoKube() error {
 	// load new resources into kube
 	fmt.Println("Loading custom resource definitions into Kubernetes...")
-	for _, file := range KUBE_RESOURCES {
+	for _, file := range kube.KUBE_RESOURCES {
 		err := utils.KubeApplyFile(file)
 		if err != nil {
 			return errors.Wrapf(err, "Unable to apply config %s", file)
@@ -417,7 +420,7 @@ func (c *activeCluster) loadResourcesIntoKube() error {
 	err := utils.WaitUntilComplete(utils.ShortTimeoutSec, utils.MediumCheckInterval, func() (bool, error) {
 		// use a new kclient to avoid caching
 		contextName := resources.ContextNameForCluster(c.Manager.Cloud(), c.Cluster)
-		kclient, err := KubernetesClientWithContext(contextName)
+		kclient, err := kube.KubernetesClientWithContext(contextName)
 		if err != nil {
 			return false, err
 		}
@@ -492,7 +495,7 @@ func (c *activeCluster) installComponents() error {
 
 	for _, comp := range cc.Spec.Components {
 		if installed[comp.Name] != "" {
-			continue
+			//continue
 		}
 		compInstaller := components.GetComponentByName(comp.Name)
 		if compInstaller == nil {
@@ -512,15 +515,21 @@ func (c *activeCluster) installComponents() error {
 			return err
 		}
 
-		// mark it as installed
+		installed[compInstaller.Name()] = compInstaller.Version()
+	}
+
+	// mark it as installed
+	cc.Status.InstalledComponents = make([]v1alpha1.ComponentSpec, 0, len(installed))
+	for key, val := range installed {
 		cc.Status.InstalledComponents = append(cc.Status.InstalledComponents, v1alpha1.ComponentSpec{
-			Name:    compInstaller.Name(),
-			Version: compInstaller.Version(),
+			Name:    key,
+			Version: val,
 		})
-		err = kclient.Status().Update(context.Background(), cc)
-		if err != nil {
-			return err
-		}
+	}
+
+	err = kclient.Status().Update(context.Background(), cc)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -564,7 +573,7 @@ func (c *activeCluster) generateKubeConfig() error {
 	}
 
 	// write to kube config
-	target, err := kubeConfigPath()
+	target, err := config.KubeConfigDir()
 	if err != nil {
 		return err
 	}
@@ -625,7 +634,7 @@ func (c *activeCluster) kubernetesClient() client.Client {
 }
 
 func (c *activeCluster) initClient() error {
-	kclient, err := KubernetesClientWithContext(resources.ContextNameForCluster(c.Manager.Cloud(), c.Cluster))
+	kclient, err := kube.KubernetesClientWithContext(resources.ContextNameForCluster(c.Manager.Cloud(), c.Cluster))
 	if err != nil {
 		return errors.Wrap(err, "Unable to create Kubernetes Client")
 	}
@@ -669,7 +678,7 @@ func printClusterSection(section providers.ClusterManager, clusters []*clusterIn
 func loadExistingConfigs(ccPath, npPath string) (cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool, err error) {
 	cc = &v1alpha1.ClusterConfig{}
 	np = &v1alpha1.Nodepool{}
-	ccObj, err := utils.LoadKubeObject(GetKubeDecoder(), cc, ccPath)
+	ccObj, err := utils.LoadKubeObject(kube.GetKubeDecoder(), cc, ccPath)
 	if err != nil {
 		return
 	}
@@ -679,7 +688,7 @@ func loadExistingConfigs(ccPath, npPath string) (cc *v1alpha1.ClusterConfig, np 
 		return
 	}
 
-	npObj, err := utils.LoadKubeObject(GetKubeDecoder(), np, npPath)
+	npObj, err := utils.LoadKubeObject(kube.GetKubeDecoder(), np, npPath)
 	if err != nil {
 		return
 	}
