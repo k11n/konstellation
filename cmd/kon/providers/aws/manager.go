@@ -3,6 +3,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -19,6 +20,7 @@ import (
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/cloud"
 	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
+	"github.com/davidzhao/konstellation/pkg/utils/tls"
 )
 
 type AWSManager struct {
@@ -129,7 +131,9 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	}
 
 	awsConf.AlbRoleArn = clusterTfOut.AlbIngressRoleArn
-	return nil
+
+	// at last add thumbprint so the provider we created could work
+	return a.addCAThumbprintToProvider(cc.Name)
 }
 
 func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) error {
@@ -335,6 +339,68 @@ func (a *AWSManager) updateVPCInfo(awsConf *v1alpha1.AWSClusterSpec) error {
 		if *sg.GroupName == "default" {
 			awsConf.SecurityGroups = append(awsConf.SecurityGroups, *sg.GroupId)
 		}
+	}
+
+	return nil
+}
+
+func (a *AWSManager) addCAThumbprintToProvider(cluster string) error {
+	sess := session.Must(a.awsSession())
+	iamSvc := iam.New(sess)
+	eksSvc := eks.New(sess)
+	// get current cluster and its oidc url
+	clusterRes, err := eksSvc.DescribeCluster(&eks.DescribeClusterInput{
+		Name: &cluster,
+	})
+	if err != nil {
+		return err
+	}
+	oidcUrl := *clusterRes.Cluster.Identity.Oidc.Issuer
+
+	thumbprint, err := tls.GetIssuerCAThumbprint(oidcUrl)
+	if err != nil {
+		return err
+	}
+
+	var providerArn string
+	thumbprintExists := false
+	providersRes, err := iamSvc.ListOpenIDConnectProviders(&iam.ListOpenIDConnectProvidersInput{})
+	if err != nil {
+		return err
+	}
+
+	// strip protocol
+	u, _ := url.Parse(oidcUrl)
+	existingUrl := u.Host + u.Path
+	for _, provider := range providersRes.OpenIDConnectProviderList {
+		providerRes, err := iamSvc.GetOpenIDConnectProvider(&iam.GetOpenIDConnectProviderInput{
+			OpenIDConnectProviderArn: provider.Arn,
+		})
+		if err != nil {
+			return err
+		}
+		if *providerRes.Url == existingUrl {
+			providerArn = *provider.Arn
+			for _, thumb := range providerRes.ThumbprintList {
+				if *thumb == thumbprint {
+					thumbprintExists = true
+					continue
+				}
+			}
+			break
+		}
+	}
+
+	if providerArn == "" {
+		return fmt.Errorf("Could not find OIDC provider")
+	}
+
+	if !thumbprintExists {
+		_, err := iamSvc.UpdateOpenIDConnectProviderThumbprint(&iam.UpdateOpenIDConnectProviderThumbprintInput{
+			OpenIDConnectProviderArn: &providerArn,
+			ThumbprintList:           []*string{&thumbprint},
+		})
+		return err
 	}
 
 	return nil
