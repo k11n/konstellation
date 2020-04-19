@@ -3,7 +3,7 @@ package ingress
 import (
 	"context"
 
-	"istio.io/api/networking/v1alpha3"
+	istionetworking "istio.io/api/networking/v1alpha3"
 	istio "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -194,14 +194,14 @@ func gatewayForRequests(requests []v1alpha1.IngressRequest) *istio.Gateway {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "kon-gateway",
 		},
-		Spec: v1alpha3.Gateway{
+		Spec: istionetworking.Gateway{
 			Selector: map[string]string{
 				"istio": "ingressgateway",
 			},
-			Servers: []*v1alpha3.Server{
+			Servers: []*istionetworking.Server{
 				{
 					Hosts: hosts,
-					Port: &v1alpha3.Port{
+					Port: &istionetworking.Port{
 						Number:   80,
 						Protocol: "HTTP",
 						Name:     "http",

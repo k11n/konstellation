@@ -9,6 +9,9 @@ import (
 	"runtime"
 	"strings"
 
+	istiov1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	istiov1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -94,7 +97,7 @@ func main() {
 
 	// Set default manager options
 	options := manager.Options{
-		Namespace:          namespace,
+		Namespace:          "",
 		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
 	}
 
@@ -118,6 +121,14 @@ func main() {
 
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+	if err := istiov1beta1.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+	if err := istiov1alpha3.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}

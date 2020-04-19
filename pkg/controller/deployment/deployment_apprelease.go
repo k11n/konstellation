@@ -70,6 +70,8 @@ func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget) (rele
 				Namespace: ar.Namespace,
 			},
 		}
+
+		// see if we can find the existing item
 		_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, existing, func() error {
 			if existing.CreationTimestamp.IsZero() {
 				if err := controllerutil.SetControllerReference(at, existing, r.scheme); err != nil {
@@ -257,7 +259,7 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 
 	_, err = controllerutil.CreateOrUpdate(ctx, r.client, scaler, func() error {
 		if scaler.CreationTimestamp.IsZero() {
-			err := controllerutil.SetControllerReference(activeRelease, scaler, r.scheme)
+			err := controllerutil.SetControllerReference(at, scaler, r.scheme)
 			if err != nil {
 				return err
 			}
@@ -271,7 +273,9 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 	}
 
 	// update status
-	at.Status.LastScaledAt = scaler.Status.LastScaleTime
+	if scaler.Status.LastScaleTime != nil {
+		at.Status.LastScaledAt = *scaler.Status.LastScaleTime
+	}
 
 	return err
 }

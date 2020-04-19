@@ -3,8 +3,8 @@ package deployment
 import (
 	"context"
 
-	networkingv1alpha3 "istio.io/api/networking/v1alpha3"
-	istiov1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	istionetworking "istio.io/api/networking/v1alpha3"
+	istio "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +29,7 @@ func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *cor
 			Namespace: svcTemplate.Namespace,
 		},
 	}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: svc.GetName()}, svc)
+	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: svc.Name}, svc)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			if !serviceNeeded {
@@ -76,7 +76,7 @@ func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *cor
 func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) error {
 	drTemplate := newDestinationRule(at, releases)
 
-	dr := &istiov1alpha3.DestinationRule{
+	dr := &istio.DestinationRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      at.Spec.App,
 			Namespace: at.TargetNamespace(),
@@ -102,8 +102,8 @@ func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, se
 	vsTemplate := newVirtualService(at, releases)
 	namespace := at.TargetNamespace()
 
-	// find existing service obj
-	vs := &corev1.Service{
+	// find existing VS obj
+	vs := &istio.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      vsTemplate.Name,
 			Namespace: vsTemplate.Namespace,
@@ -170,12 +170,12 @@ func newServiceForAppTarget(at *v1alpha1.AppTarget) *corev1.Service {
 	return &svc
 }
 
-func newDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) *istiov1alpha3.DestinationRule {
-	subsets := make([]*networkingv1alpha3.Subset, 0, len(releases))
+func newDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) *istio.DestinationRule {
+	subsets := make([]*istionetworking.Subset, 0, len(releases))
 	name := at.Spec.App
 
 	for _, ar := range releases {
-		subsets = append(subsets, &networkingv1alpha3.Subset{
+		subsets = append(subsets, &istionetworking.Subset{
 			Name: ar.Name,
 			Labels: map[string]string{
 				resources.APP_RELEASE_LABEL: ar.Name,
@@ -183,19 +183,19 @@ func newDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease)
 		})
 	}
 
-	dr := &istiov1alpha3.DestinationRule{
+	dr := &istio.DestinationRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: at.TargetNamespace(),
 		},
-		Spec: networkingv1alpha3.DestinationRule{
+		Spec: istionetworking.DestinationRule{
 			Host:    name,
 			Subsets: subsets,
 			// TODO: allow other types of connections
-			TrafficPolicy: &networkingv1alpha3.TrafficPolicy{
-				LoadBalancer: &networkingv1alpha3.LoadBalancerSettings{
-					LbPolicy: &networkingv1alpha3.LoadBalancerSettings_Simple{
-						Simple: networkingv1alpha3.LoadBalancerSettings_ROUND_ROBIN,
+			TrafficPolicy: &istionetworking.TrafficPolicy{
+				LoadBalancer: &istionetworking.LoadBalancerSettings{
+					LbPolicy: &istionetworking.LoadBalancerSettings_Simple{
+						Simple: istionetworking.LoadBalancerSettings_ROUND_ROBIN,
 					},
 				},
 			},
@@ -204,7 +204,7 @@ func newDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease)
 	return dr
 }
 
-func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) *istiov1alpha3.VirtualService {
+func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) *istio.VirtualService {
 	namespace := at.TargetNamespace()
 	ls := labelsForAppTarget(at)
 	name := at.Spec.App
@@ -212,10 +212,10 @@ func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) 
 	if at.Spec.Ingress != nil {
 		hosts = append(hosts, at.Spec.Ingress.Hosts...)
 	}
-	routeDestinations := make([]*networkingv1alpha3.HTTPRouteDestination, 0, len(releases))
+	routeDestinations := make([]*istionetworking.HTTPRouteDestination, 0, len(releases))
 	for _, ar := range releases {
-		routeDestinations = append(routeDestinations, &networkingv1alpha3.HTTPRouteDestination{
-			Destination: &networkingv1alpha3.Destination{
+		routeDestinations = append(routeDestinations, &istionetworking.HTTPRouteDestination{
+			Destination: &istionetworking.Destination{
 				Host:   name,
 				Subset: ar.Name,
 			},
@@ -223,15 +223,15 @@ func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) 
 		})
 	}
 
-	vs := &istiov1alpha3.VirtualService{
+	vs := &istio.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
 			Labels:    ls,
 		},
-		Spec: networkingv1alpha3.VirtualService{
+		Spec: istionetworking.VirtualService{
 			Hosts: hosts,
-			Http: []*networkingv1alpha3.HTTPRoute{
+			Http: []*istionetworking.HTTPRoute{
 				{
 					Route: routeDestinations,
 				},

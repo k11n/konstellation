@@ -36,13 +36,13 @@ type AppTargetSpec struct {
 
 // AppTargetStatus defines the observed state of AppTarget
 type AppTargetStatus struct {
-	TargetRelease   string       `json:"targetRelease"`
-	ActiveRelease   string       `json:"activeRelease"`
-	DeployUpdatedAt metav1.Time  `json:"deployUpdatedAt"`
-	LastScaledAt    *metav1.Time `json:"lastScaledAt"`
-	NumDesired      int32        `json:"numDesired"`
-	NumReady        int32        `json:"numReady"`
-	NumAvailable    int32        `json:"numAvailable"`
+	TargetRelease   string      `json:"targetRelease"`
+	ActiveRelease   string      `json:"activeRelease"`
+	DeployUpdatedAt metav1.Time `json:"deployUpdatedAt"`
+	LastScaledAt    metav1.Time `json:"lastScaledAt"`
+	NumDesired      int32       `json:"numDesired"`
+	NumReady        int32       `json:"numReady"`
+	NumAvailable    int32       `json:"numAvailable"`
 	// +optional
 	Hostname string `json:"hostname,omitempty"`
 	// +optional

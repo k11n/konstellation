@@ -53,7 +53,6 @@ func appList(c *cli.Context) error {
 	}
 
 	requiredTarget := c.String("target")
-
 	fmt.Printf("Listing apps on %s\n", ac.Cluster)
 	apps, err := resources.ListApps(ac.kubernetesClient())
 	if err != nil {

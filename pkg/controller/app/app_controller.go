@@ -89,10 +89,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 				needsReconcile := false
 				for _, target := range app.Spec.Targets {
 					if newTargets[target.Name] {
-						if funk.Contains(app.Status.ActiveTargets, target.Name) {
+						if !funk.Contains(app.Status.ActiveTargets, target.Name) {
 							needsReconcile = true
 							break
 						}
+					} else {
+						// this target has been removed, reconcile also
+						needsReconcile = true
 					}
 				}
 				if needsReconcile {
@@ -157,24 +160,22 @@ func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Resul
 		return
 	}
 
-	appTargets := map[string]bool{}
-	for _, t := range app.Spec.Targets {
-		appTargets[t.Name] = true
-	}
 	clusterTargets := map[string]bool{}
 	for _, target := range cc.Spec.Targets {
 		clusterTargets[target] = true
 	}
 
 	hasUpdates := false
+	var invalidTargets []string
 	// deploy the intersection of app and cluster targets
-	for target := range appTargets {
+	for _, target := range app.Spec.Targets {
 		var targetUpdated bool
-		if !clusterTargets[target] {
+		if !clusterTargets[target.Name] {
 			// skip reconcile, since cluster doesn't support it
+			invalidTargets = append(invalidTargets, target.Name)
 			continue
 		}
-		targetUpdated, err = r.reconcileAppTarget(app, target, build)
+		targetUpdated, err = r.reconcileAppTarget(app, target.Name, build)
 		if err != nil {
 			return
 		}
@@ -184,9 +185,19 @@ func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Resul
 	}
 
 	// TODO: remove old targets that aren't valid
+	for _, target := range invalidTargets {
+		at, err := resources.GetAppTarget(r.client, target)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				log.Error(err, "Could not get AppTarget", "target", target, "app", app.Name)
+			}
+			continue
+		}
+		err = r.client.Delete(context.TODO(), at)
+	}
 
 	if hasUpdates {
-		res.Requeue = true
+		//res.Requeue = true
 	}
 
 	return

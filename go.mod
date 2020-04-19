@@ -49,7 +49,8 @@ require (
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
-	k8s.io/api => k8s.io/api v0.17.4 // lock to the same version
+	k8s.io/api => k8s.io/api v0.17.4
 	k8s.io/apimachinery => k8s.io/apimachinery v0.17.4
 	k8s.io/client-go => k8s.io/client-go v0.17.4 // Required by prometheus-operator
+	k8s.io/utils => k8s.io/utils v0.0.0-20191114200735-6ca3b61696b6
 )

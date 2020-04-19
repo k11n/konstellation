@@ -431,10 +431,7 @@ func (in *AppTargetSpec) DeepCopy() *AppTargetSpec {
 func (in *AppTargetStatus) DeepCopyInto(out *AppTargetStatus) {
 	*out = *in
 	in.DeployUpdatedAt.DeepCopyInto(&out.DeployUpdatedAt)
-	if in.LastScaledAt != nil {
-		in, out := &in.LastScaledAt, &out.LastScaledAt
-		*out = (*in).DeepCopy()
-	}
+	in.LastScaledAt.DeepCopyInto(&out.LastScaledAt)
 	if in.Messages != nil {
 		in, out := &in.Messages, &out.Messages
 		*out = make([]string, len(*in))

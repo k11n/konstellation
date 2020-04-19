@@ -13,9 +13,10 @@ var (
 
 // fill in non-empty fields from src to dest
 func MergeObject(dest, src interface{}) {
-	err := mergo.MergeWithOverwrite(dest, src, mergo.WithTransformers(transformers))
+	err := mergo.Merge(dest, src, mergo.WithTransformers(transformers), mergo.WithOverride)
 	if err != nil {
-		fmt.Printf("error merging: %v\n", err)
+		fmt.Printf("error merging: %v and %v, %v\n",
+			dest, src, err)
 	}
 }
 

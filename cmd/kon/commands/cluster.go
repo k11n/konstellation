@@ -310,13 +310,14 @@ func clusterSelect(clusterName string) error {
 
 	kclient := ac.kubernetesClient()
 	// see if we have to configure cluster
-	_, err = resources.GetClusterConfig(kclient)
+	cc, err := resources.GetClusterConfig(kclient)
 	if err != nil {
 		return err
 	}
+
 	// TODO: in release versions don't reload resources
 	// still load the resources
-	//err = ac.loadResourcesIntoKube()
+	err = ac.loadResourcesIntoKube()
 	if err != nil {
 		return err
 	}
@@ -333,6 +334,13 @@ func clusterSelect(clusterName string) error {
 	}
 	if err != nil {
 		return err
+	}
+
+	// see if targets are set
+	if len(cc.Spec.Targets) == 0 {
+		if err := ac.configureCluster(); err != nil {
+			return err
+		}
 	}
 
 	return ac.installComponents()
