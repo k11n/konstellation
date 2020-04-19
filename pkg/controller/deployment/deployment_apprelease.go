@@ -273,9 +273,7 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 	}
 
 	// update status
-	if scaler.Status.LastScaleTime != nil {
-		at.Status.LastScaledAt = *scaler.Status.LastScaleTime
-	}
+	at.Status.LastScaledAt = scaler.Status.LastScaleTime
 
 	return err
 }

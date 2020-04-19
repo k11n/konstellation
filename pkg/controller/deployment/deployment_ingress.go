@@ -56,8 +56,9 @@ func newIngressRequestForAppTarget(at *v1alpha1.AppTarget) *v1alpha1.IngressRequ
 	// always created in default namespace
 	ir := &v1alpha1.IngressRequest{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   at.ScopedName(),
-			Labels: labels,
+			Name:      at.ScopedName(),
+			Namespace: "istio-system",
+			Labels:    labels,
 		},
 	}
 	if at.Spec.Ingress != nil {

@@ -547,6 +547,7 @@ spec:
               type: string
             lastScaledAt:
               format: date-time
+              nullable: true
               type: string
             messages:
               items:
@@ -566,7 +567,6 @@ spec:
           required:
           - activeRelease
           - deployUpdatedAt
-          - lastScaledAt
           - numAvailable
           - numDesired
           - numReady

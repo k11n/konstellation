@@ -151,6 +151,7 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 			Namespace: gwTemplate.Namespace,
 		},
 	}
+	log.Info("updating gateway", "name", gw.Name)
 	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, gw, func() error {
 		objects.MergeObject(&gw.Spec, &gwTemplate.Spec)
 		gw.Labels = gwTemplate.Labels
@@ -167,9 +168,11 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 	}
 	ingress := netv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: ingressTemplate.GetName(),
+			Name:      ingressTemplate.Name,
+			Namespace: ingressTemplate.Namespace,
 		},
 	}
+	log.Info("updating ingress", "name", ingress.Name)
 	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, &ingress, func() error {
 		objects.MergeObject(&ingress.Spec, &ingressTemplate.Spec)
 		ingress.Labels = ingressTemplate.Labels
@@ -192,7 +195,8 @@ func gatewayForRequests(requests []v1alpha1.IngressRequest) *istio.Gateway {
 	}
 	gw := &istio.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "kon-gateway",
+			Name:      "kon-gateway",
+			Namespace: "default",
 		},
 		Spec: istionetworking.Gateway{
 			Selector: map[string]string{
@@ -218,7 +222,7 @@ func (r *ReconcileIngressRequest) ingressForRequests(requests []v1alpha1.Ingress
 	if err != nil {
 		return nil, err
 	}
-	ingressComponent := ingress.NewIngressForCluster(cc.Name, cc.Spec.Cloud)
+	ingressComponent := ingress.NewIngressForCluster(cc.Spec.Cloud, cc.Name)
 	annotations, err := ingressComponent.GetIngressAnnotations(r.client, requests)
 	ingress := netv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
