@@ -20,6 +20,7 @@ var (
 		"role.yaml",
 		"role_binding.yaml",
 		"crds/k11n.dev_apps_crd.yaml",
+		"crds/k11n.dev_appreleases_crd.yaml",
 		"crds/k11n.dev_apptargets_crd.yaml",
 		"crds/k11n.dev_builds_crd.yaml",
 		"crds/k11n.dev_certificaterefs_crd.yaml",

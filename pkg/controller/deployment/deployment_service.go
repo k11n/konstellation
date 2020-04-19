@@ -3,8 +3,8 @@ package deployment
 import (
 	"context"
 
-	networkingv1beta1 "istio.io/api/networking/v1beta1"
-	istio "istio.io/client-go/pkg/apis/networking/v1beta1"
+	networkingv1alpha3 "istio.io/api/networking/v1alpha3"
+	istiov1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,7 +76,7 @@ func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *cor
 func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) error {
 	drTemplate := newDestinationRule(at, releases)
 
-	dr := &istio.DestinationRule{
+	dr := &istiov1alpha3.DestinationRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      at.Spec.App,
 			Namespace: at.TargetNamespace(),
@@ -170,12 +170,12 @@ func newServiceForAppTarget(at *v1alpha1.AppTarget) *corev1.Service {
 	return &svc
 }
 
-func newDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) *istio.DestinationRule {
-	subsets := make([]*networkingv1beta1.Subset, 0, len(releases))
+func newDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) *istiov1alpha3.DestinationRule {
+	subsets := make([]*networkingv1alpha3.Subset, 0, len(releases))
 	name := at.Spec.App
 
 	for _, ar := range releases {
-		subsets = append(subsets, &networkingv1beta1.Subset{
+		subsets = append(subsets, &networkingv1alpha3.Subset{
 			Name: ar.Name,
 			Labels: map[string]string{
 				resources.APP_RELEASE_LABEL: ar.Name,
@@ -183,19 +183,19 @@ func newDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease)
 		})
 	}
 
-	dr := &istio.DestinationRule{
+	dr := &istiov1alpha3.DestinationRule{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: at.TargetNamespace(),
 		},
-		Spec: networkingv1beta1.DestinationRule{
+		Spec: networkingv1alpha3.DestinationRule{
 			Host:    name,
 			Subsets: subsets,
 			// TODO: allow other types of connections
-			TrafficPolicy: &networkingv1beta1.TrafficPolicy{
-				LoadBalancer: &networkingv1beta1.LoadBalancerSettings{
-					LbPolicy: &networkingv1beta1.LoadBalancerSettings_Simple{
-						Simple: networkingv1beta1.LoadBalancerSettings_ROUND_ROBIN,
+			TrafficPolicy: &networkingv1alpha3.TrafficPolicy{
+				LoadBalancer: &networkingv1alpha3.LoadBalancerSettings{
+					LbPolicy: &networkingv1alpha3.LoadBalancerSettings_Simple{
+						Simple: networkingv1alpha3.LoadBalancerSettings_ROUND_ROBIN,
 					},
 				},
 			},
@@ -204,7 +204,7 @@ func newDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease)
 	return dr
 }
 
-func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) *istio.VirtualService {
+func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) *istiov1alpha3.VirtualService {
 	namespace := at.TargetNamespace()
 	ls := labelsForAppTarget(at)
 	name := at.Spec.App
@@ -212,10 +212,10 @@ func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) 
 	if at.Spec.Ingress != nil {
 		hosts = append(hosts, at.Spec.Ingress.Hosts...)
 	}
-	routeDestinations := make([]*networkingv1beta1.HTTPRouteDestination, 0, len(releases))
+	routeDestinations := make([]*networkingv1alpha3.HTTPRouteDestination, 0, len(releases))
 	for _, ar := range releases {
-		routeDestinations = append(routeDestinations, &networkingv1beta1.HTTPRouteDestination{
-			Destination: &networkingv1beta1.Destination{
+		routeDestinations = append(routeDestinations, &networkingv1alpha3.HTTPRouteDestination{
+			Destination: &networkingv1alpha3.Destination{
 				Host:   name,
 				Subset: ar.Name,
 			},
@@ -223,15 +223,15 @@ func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) 
 		})
 	}
 
-	vs := &istio.VirtualService{
+	vs := &istiov1alpha3.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      name,
 			Labels:    ls,
 		},
-		Spec: networkingv1beta1.VirtualService{
+		Spec: networkingv1alpha3.VirtualService{
 			Hosts: hosts,
-			Http: []*networkingv1beta1.HTTPRoute{
+			Http: []*networkingv1alpha3.HTTPRoute{
 				{
 					Route: routeDestinations,
 				},
