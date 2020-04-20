@@ -158,9 +158,9 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 	}
 	log.Info("updating gateway", "name", gw.Name)
 	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, gw, func() error {
-		objects.MergeObject(&gw.Spec, &gwTemplate.Spec)
 		gw.Labels = gwTemplate.Labels
 		gw.Annotations = gwTemplate.Annotations
+		gw.Spec = gwTemplate.Spec
 		return nil
 	})
 	if err != nil {
@@ -215,7 +215,7 @@ func gatewayForRequests(requests []v1alpha1.IngressRequest) *istio.Gateway {
 					Port: &istionetworking.Port{
 						Number:   80,
 						Protocol: "HTTP",
-						Name:     "http",
+						Name:     "kon-http",
 					},
 				},
 			},

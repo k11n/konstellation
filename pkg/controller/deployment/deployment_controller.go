@@ -145,7 +145,7 @@ func (r *ReconcileDeployment) Reconcile(request reconcile.Request) (res reconcil
 	activeReleases := funk.Filter(releases, func(ar *v1alpha1.AppRelease) bool {
 		return ar.Spec.TrafficPercentage > 0
 	}).([]*v1alpha1.AppRelease)
-	err = r.reconcileDestinationRule(at, activeReleases)
+	err = r.reconcileDestinationRule(at, service, activeReleases)
 	if err != nil {
 		return
 	}
@@ -178,8 +178,10 @@ func (r *ReconcileDeployment) ensureNamespaceCreated(at *v1alpha1.AppTarget) err
 	n := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
-			Annotations: map[string]string{
+			Labels: map[string]string{
 				resources.ISTIO_INJECT_LABEL: "enabled",
+				resources.APP_LABEL:          at.Spec.App,
+				resources.TARGET_LABEL:       at.Spec.Target,
 			},
 		},
 	}

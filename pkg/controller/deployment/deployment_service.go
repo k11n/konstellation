@@ -16,6 +16,10 @@ import (
 	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
+var (
+	allGateways = []string{"mesh", "kon-gateway"}
+)
+
 func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *corev1.Service, err error) {
 	// do we need a service? if no ports defined, we don't
 	serviceNeeded := at.NeedsService()
@@ -73,8 +77,8 @@ func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *cor
 	return
 }
 
-func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) error {
-	drTemplate := newDestinationRule(at, releases)
+func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) error {
+	drTemplate := newDestinationRule(at, service, releases)
 
 	dr := &istio.DestinationRule{
 		ObjectMeta: metav1.ObjectMeta{
@@ -91,7 +95,7 @@ func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, r
 		}
 
 		// use merge to avoid defaults clearing out
-		objects.MergeObject(&dr.Spec, &drTemplate.Spec)
+		dr.Spec = drTemplate.Spec
 		return nil
 	})
 
@@ -99,7 +103,7 @@ func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, r
 }
 
 func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) error {
-	vsTemplate := newVirtualService(at, releases)
+	vsTemplate := newVirtualService(at, service, releases)
 	namespace := at.TargetNamespace()
 	log.Info("Reconciling virtualservice", "appTarget", at.Name, "needsService", at.NeedsService())
 
@@ -179,7 +183,7 @@ func newServiceForAppTarget(at *v1alpha1.AppTarget) *corev1.Service {
 	return &svc
 }
 
-func newDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) *istio.DestinationRule {
+func newDestinationRule(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) *istio.DestinationRule {
 	subsets := make([]*istionetworking.Subset, 0, len(releases))
 	name := at.Spec.App
 
@@ -198,7 +202,7 @@ func newDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease)
 			Namespace: at.TargetNamespace(),
 		},
 		Spec: istionetworking.DestinationRule{
-			Host:    name,
+			Host:    resources.GetServiceDNS(service),
 			Subsets: subsets,
 			// TODO: allow other types of connections
 			TrafficPolicy: &istionetworking.TrafficPolicy{
@@ -213,11 +217,15 @@ func newDestinationRule(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease)
 	return dr
 }
 
-func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) *istio.VirtualService {
+func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) *istio.VirtualService {
 	namespace := at.TargetNamespace()
 	ls := labelsForAppTarget(at)
 	name := at.Spec.App
-	hosts := []string{name}
+
+	svcHost := resources.GetServiceDNS(service)
+	hosts := []string{
+		svcHost,
+	}
 	if at.Spec.Ingress != nil {
 		hosts = append(hosts, at.Spec.Ingress.Hosts...)
 	}
@@ -234,6 +242,7 @@ func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) 
 		route := &istionetworking.HTTPRoute{
 			Match: []*istionetworking.HTTPMatchRequest{
 				{
+					Gateways: allGateways,
 					Uri: &istionetworking.StringMatch{
 						MatchType: &istionetworking.StringMatch_Prefix{
 							Prefix: "/",
@@ -246,7 +255,7 @@ func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) 
 		for _, ar := range releases {
 			rd := &istionetworking.HTTPRouteDestination{
 				Destination: &istionetworking.Destination{
-					Host:   name,
+					Host:   svcHost,
 					Port:   &istionetworking.PortSelector{Number: uint32(port)},
 					Subset: ar.Name,
 				},
@@ -264,7 +273,7 @@ func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) 
 			Labels:    ls,
 		},
 		Spec: istionetworking.VirtualService{
-			Gateways: []string{"mesh", "kon-gateway"},
+			Gateways: allGateways,
 			Hosts:    hosts,
 			Http:     routes,
 		},
