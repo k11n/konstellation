@@ -27,6 +27,10 @@ import (
 	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
+const (
+	istioSystemNamespace = "istio-system"
+)
+
 var log = logf.Log.WithName("controller_ingress")
 
 func Add(mgr manager.Manager) error {
@@ -198,8 +202,8 @@ func gatewayForRequests(requests []v1alpha1.IngressRequest) *istio.Gateway {
 	}
 	gw := &istio.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
+			Namespace: istioSystemNamespace,
 			Name:      "kon-gateway",
-			Namespace: "default",
 		},
 		Spec: istionetworking.Gateway{
 			Selector: map[string]string{
@@ -229,13 +233,17 @@ func (r *ReconcileIngressRequest) ingressForRequests(requests []v1alpha1.Ingress
 	annotations, err := ingressComponent.GetIngressAnnotations(r.client, requests)
 	ingress := netv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "istio-system",
+			Namespace: istioSystemNamespace,
 			Name:      "kon-ingress",
 			// https://medium.com/@cy.chiang/how-to-integrate-aws-alb-with-istio-v1-0-b17e07cae156
 			Annotations: annotations,
 		},
 		Spec: netv1beta1.IngressSpec{
 			Rules: []netv1beta1.IngressRule{},
+			Backend: &netv1beta1.IngressBackend{
+				ServiceName: "istio-ingressgateway",
+				ServicePort: intstr.FromInt(80),
+			},
 		},
 	}
 

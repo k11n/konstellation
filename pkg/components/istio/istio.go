@@ -1,7 +1,6 @@
 package istio
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,12 +8,8 @@ import (
 	"path"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/components"
 	"github.com/davidzhao/konstellation/pkg/utils/cli"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
@@ -100,58 +95,11 @@ func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 		"--set", "components.citadel.enabled=true", // citadel is required by the sidecar injector
 		"--set", "components.sidecarInjector.enabled=true",
 		"--set", "addonComponents.kiali.enabled=true",
-		"--set", "addonComponents.grafana.enabled=true")
-	if err != nil {
-		return err
-	}
-
-	// Delete the default LB service it opens
-	ingressKey := client.ObjectKey{
-		Namespace: istioNamespace,
-		Name:      istioIngressName,
-	}
-	ingressSvc := &corev1.Service{}
-	err = utils.WaitUntilComplete(utils.ShortTimeoutSec, utils.MediumCheckInterval, func() (bool, error) {
-		err := kclient.Get(context.TODO(), ingressKey, ingressSvc)
-		if err == nil {
-			return true, nil
-		}
-		err = client.IgnoreNotFound(err)
-		if err != nil {
-			return false, err
-		} else {
-			return false, nil
-		}
-	})
-	if err != nil {
-		return err
-	}
-	// ignore delete errors
-	kclient.Delete(context.TODO(), ingressSvc)
-
-	// create a new service
-	ingressSvc = &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: istioNamespace,
-			Name:      istioIngressName,
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"app":   istioIngressName,
-				"istio": "ingressgateway",
-			},
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "http",
-					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(80),
-					Port:       80,
-				},
-			},
-		},
-	}
-
-	return kclient.Create(context.TODO(), ingressSvc)
+		"--set", "addonComponents.grafana.enabled=true",
+		"--set", "values.gateways.istio-ingressgateway.type=NodePort",
+		"--set", "values.gateways.enabled=true",
+	)
+	return err
 }
 
 func (i *IstioInstaller) cliPath() string {

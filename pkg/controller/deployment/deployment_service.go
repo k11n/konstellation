@@ -101,6 +101,7 @@ func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, r
 func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) error {
 	vsTemplate := newVirtualService(at, releases)
 	namespace := at.TargetNamespace()
+	log.Info("Reconciling virtualservice", "appTarget", at.Name, "needsService", at.NeedsService())
 
 	// find existing VS obj
 	vs := &istio.VirtualService{
@@ -125,10 +126,11 @@ func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, se
 	// found existing service, but not needed anymore
 	if !at.NeedsService() {
 		// delete existing service
+		log.Info("deleting existing virtual service", "appTarget", at.Name)
 		return r.client.Delete(context.TODO(), vs)
 	}
 
-	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, vs, func() error {
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, vs, func() error {
 		if vs.CreationTimestamp.IsZero() {
 			err := controllerutil.SetControllerReference(at, vs, r.scheme)
 			if err != nil {
@@ -136,9 +138,16 @@ func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, se
 			}
 		}
 		vs.Labels = vsTemplate.Labels
-		objects.MergeObject(&vs.Spec, &vsTemplate.Spec)
+		vs.Spec = vsTemplate.Spec
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	if op != controllerutil.OperationResultNone {
+		log.Info("finished reconciling VS", "operation", op)
+	}
 
 	return err
 }
@@ -212,15 +221,40 @@ func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) 
 	if at.Spec.Ingress != nil {
 		hosts = append(hosts, at.Spec.Ingress.Hosts...)
 	}
-	routeDestinations := make([]*istionetworking.HTTPRouteDestination, 0, len(releases))
+
+	releasesByPort := map[int32][]*v1alpha1.AppRelease{}
 	for _, ar := range releases {
-		routeDestinations = append(routeDestinations, &istionetworking.HTTPRouteDestination{
-			Destination: &istionetworking.Destination{
-				Host:   name,
-				Subset: ar.Name,
+		for _, port := range ar.Spec.Ports {
+			releasesByPort[port.Port] = append(releasesByPort[port.Port], ar)
+		}
+	}
+
+	var routes []*istionetworking.HTTPRoute
+	for port, releases := range releasesByPort {
+		route := &istionetworking.HTTPRoute{
+			Match: []*istionetworking.HTTPMatchRequest{
+				{
+					Uri: &istionetworking.StringMatch{
+						MatchType: &istionetworking.StringMatch_Prefix{
+							Prefix: "/",
+						},
+					},
+					Port: uint32(port),
+				},
 			},
-			Weight: ar.Spec.TrafficPercentage,
-		})
+		}
+		for _, ar := range releases {
+			rd := &istionetworking.HTTPRouteDestination{
+				Destination: &istionetworking.Destination{
+					Host:   name,
+					Port:   &istionetworking.PortSelector{Number: uint32(port)},
+					Subset: ar.Name,
+				},
+				Weight: ar.Spec.TrafficPercentage,
+			}
+			route.Route = append(route.Route, rd)
+		}
+		routes = append(routes, route)
 	}
 
 	vs := &istio.VirtualService{
@@ -230,13 +264,11 @@ func newVirtualService(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) 
 			Labels:    ls,
 		},
 		Spec: istionetworking.VirtualService{
-			Hosts: hosts,
-			Http: []*istionetworking.HTTPRoute{
-				{
-					Route: routeDestinations,
-				},
-			},
+			Gateways: []string{"mesh", "kon-gateway"},
+			Hosts:    hosts,
+			Http:     routes,
 		},
 	}
+
 	return vs
 }

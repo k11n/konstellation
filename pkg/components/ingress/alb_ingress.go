@@ -39,7 +39,6 @@ func (i *AWSALBIngress) Version() string {
 }
 
 func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
-
 	// deploy roles xml
 	url := fmt.Sprintf("https://raw.githubusercontent.com/kubernetes-sigs/aws-alb-ingress-controller/v%s/docs/examples/rbac-role.yaml", i.Version())
 	err := cli.KubeApply(url)
@@ -52,6 +51,23 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 	if err != nil {
 		return err
 	}
+
+	svcAccount := &corev1.ServiceAccount{}
+	err = kclient.Get(context.TODO(), types.NamespacedName{
+		Name:      albIngressName,
+		Namespace: kubeSystemNamespace,
+	}, svcAccount)
+	if err != nil {
+		return err
+	}
+
+	svcAccount.Annotations[albRoleAnnotation] = cc.Spec.AWS.AlbRoleArn
+	err = kclient.Update(context.TODO(), svcAccount)
+	if err != nil {
+		return err
+	}
+
+	// last step to create deployment
 	dep := i.deploymentForIngress(cc)
 	existing := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -65,33 +81,12 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 		}
 		return nil
 	})
-
-	svcAccount := &corev1.ServiceAccount{}
-	err = kclient.Get(context.TODO(), types.NamespacedName{
-		Name:      albIngressName,
-		Namespace: kubeSystemNamespace,
-	}, svcAccount)
-	if err != nil {
-		return err
-	}
-
-	svcAccount.Annotations[albRoleAnnotation] = cc.Spec.AWS.AlbRoleArn
-	return kclient.Update(context.TODO(), svcAccount)
+	return err
 }
 
 func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, requests []v1alpha1.IngressRequest) (annotations map[string]string, err error) {
 	// https://kubernetes-sigs.github.io/aws-alb-ingress-controller/guide/ingress/annotation/
 	// ingress could perform autodiscovery
-	//cc, err := resources.GetClusterConfig(kclient)
-	//if err != nil {
-	//	return
-	//}
-	//
-	//aws := cc.Spec.AWS
-	//subnetIds := make([]string, 0, len(aws.PublicSubnets))
-	//for _, subnet := range aws.PublicSubnets {
-	//	subnetIds = append(subnetIds, subnet.SubnetId)
-	//}
 	annotations = map[string]string{
 		"kubernetes.io/ingress.class":      "alb",
 		"alb.ingress.kubernetes.io/scheme": "internet-facing",
@@ -126,16 +121,6 @@ func (i *AWSALBIngress) deploymentForIngress(cc *v1alpha1.ClusterConfig) *appsv1
 								"--ingress-class=alb",
 								fmt.Sprintf("--cluster-name=%s", cc.Name),
 							},
-							//Env: []corev1.EnvVar{
-							//	{
-							//		Name: "AWS_ACCESS_KEY_ID",
-							//		Value: "",
-							//	},
-							//	{
-							//		Name: "AWS_SECRET_ACCESS_KEY",
-							//		Value: "",
-							//	},
-							//},
 							Image: "docker.io/amazon/aws-alb-ingress-controller:v1.1.6",
 						},
 					},
