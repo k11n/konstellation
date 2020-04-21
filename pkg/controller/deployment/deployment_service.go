@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	allGateways = []string{"mesh", "kon-gateway"}
+	allGateways = []string{"mesh", "kon-gateway.istio-system.cluster.local"}
 )
 
 func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *corev1.Service, err error) {
