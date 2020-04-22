@@ -154,9 +154,10 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 		numSuccessful := 0
 		var createdAt *time.Time
 		for _, pod := range podList.Items {
-			if pod.Status.Phase == corev1.PodPending || pod.Status.Phase == corev1.PodFailed {
+			switch pod.Status.Phase {
+			case corev1.PodPending, corev1.PodFailed:
 				status.Reason = pod.Status.Message
-			} else if pod.Status.Phase == corev1.PodSucceeded {
+			case corev1.PodRunning, corev1.PodSucceeded:
 				numSuccessful += 1
 			}
 			if createdAt == nil || createdAt.After(pod.CreationTimestamp.Time) {
@@ -169,6 +170,7 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	if !apiequality.Semantic.DeepEqual(status, ar.Status) {
+		ar.Status = status
 		err = r.client.Status().Update(context.TODO(), ar)
 	}
 

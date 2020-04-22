@@ -58,6 +58,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		&v1alpha1.IngressRequest{},
 		&corev1.Service{},
 		&istio.VirtualService{},
+		// TODO: when this is added, stuff becomes messed up
+		//&autoscalev2beta2.HorizontalPodAutoscaler{},
 	}
 	for _, t := range secondaryTypes {
 		err = c.Watch(&source.Kind{Type: t}, ownerHandler)

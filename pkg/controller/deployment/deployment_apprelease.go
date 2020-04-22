@@ -129,6 +129,7 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 	} else {
 		// TODO: don't deploy additional builds when outside of schedule
 		// see if there's a new target release (try to deploy latest if possible)
+		// TODO: check if autorelease is enabled for this target..
 		targetRelease = resources.FirstAvailableRelease(releases)
 		if targetRelease == nil {
 			// revert back to active, not ready to deploy something new
@@ -336,8 +337,9 @@ func newAutoscalerForAppTarget(at *v1alpha1.AppTarget, ar *v1alpha1.AppRelease) 
 		},
 		Spec: autoscalev2beta2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalev2beta2.CrossVersionObjectReference{
-				Kind: "ReplicaSet",
-				Name: ar.Name,
+				APIVersion: "apps/v1",
+				Kind:       "ReplicaSet",
+				Name:       ar.Name,
 			},
 			MinReplicas: &minReplicas,
 			MaxReplicas: maxReplicas,

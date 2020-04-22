@@ -11,6 +11,7 @@ import (
 	"github.com/davidzhao/konstellation/pkg/components"
 	"github.com/davidzhao/konstellation/pkg/components/istio"
 	"github.com/davidzhao/konstellation/pkg/components/kubedash"
+	"github.com/davidzhao/konstellation/pkg/components/metricsserver"
 	"github.com/davidzhao/konstellation/pkg/components/prometheus"
 )
 
@@ -34,6 +35,8 @@ var (
 		&istio.IstioInstaller{},
 		&kubedash.KubeDash{},
 		&prometheus.PrometheusOperator{},
+		// TODO: this might not be required on some installs
+		&metricsserver.MetricsServer{},
 	}
 )
 
