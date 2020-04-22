@@ -41,6 +41,7 @@ func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget) (rele
 		if existingReleases[b.Name] {
 			continue
 		}
+
 		ar := appReleaseForTarget(at, &b)
 		releases = append(releases, ar)
 	}
@@ -184,6 +185,7 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 			ar.Spec.Role = v1alpha1.ReleaseRoleTarget
 		} else {
 			ar.Spec.Role = v1alpha1.ReleaseRoleNone
+			ar.Spec.TrafficPercentage = 0
 			// other releases should run at 0 or minimal
 			if earlierThanActive {
 				ar.Spec.NumDesired = 0

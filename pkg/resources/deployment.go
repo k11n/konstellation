@@ -25,11 +25,12 @@ func GetReplicasetsForDeployment(kclient client.Client, deployment *appsv1.Deplo
 		}
 		return replicaSets.Items[i].CreationTimestamp.Before(&replicaSets.Items[j].CreationTimestamp)
 	})
-	for _, r := range replicaSets.Items {
+	for i := range replicaSets.Items {
+		r := &replicaSets.Items[i]
 		if newReplica == nil && equalIgnoreHash(&r.Spec.Template, &deployment.Spec.Template) {
-			newReplica = &r
+			newReplica = r
 		} else {
-			oldReplicas = append(oldReplicas, &r)
+			oldReplicas = append(oldReplicas, r)
 		}
 	}
 	return

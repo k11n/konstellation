@@ -10,8 +10,9 @@ import (
 	"github.com/davidzhao/konstellation/pkg/utils/files"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+const (
+	DefaultRegistry = "registry.hub.docker.com"
+)
 
 // BuildSpec defines the desired state of Build
 type BuildSpec struct {
@@ -85,6 +86,9 @@ func (b *Build) ShortName() string {
 }
 
 func NewBuild(registry, image, tag string) *Build {
+	if registry == "" {
+		registry = DefaultRegistry
+	}
 	b := Build{
 		Spec: BuildSpec{
 			Registry: registry,

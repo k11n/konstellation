@@ -42,8 +42,9 @@ func GetNodepools(kclient client.Client) (pools []*v1alpha1.Nodepool, err error)
 		return
 	}
 
-	for _, item := range npList.Items {
-		pools = append(pools, &item)
+	for i := range npList.Items {
+		pool := npList.Items[i]
+		pools = append(pools, &pool)
 	}
 	return
 }

@@ -253,6 +253,7 @@ func (r *ReconcileIngressRequest) ingressForRequests(requests []v1alpha1.Ingress
 			if hostsUsed[host] {
 				continue
 			}
+			// TODO: include SSL/433 if cert is available
 			rule := netv1beta1.IngressRule{
 				Host: host,
 				IngressRuleValue: netv1beta1.IngressRuleValue{

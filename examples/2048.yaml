@@ -1,0 +1,15 @@
+apiVersion: k11n.dev/v1alpha1
+kind: App
+metadata:
+  name: 2048
+spec:
+  image: alexwhen/docker-2048
+  ports:
+    - name: http
+      port: 80
+  targets:
+    - name: development
+      ingress:
+        hosts:
+          - 2048.davidzhao.com
+        port: 80

@@ -56,6 +56,8 @@ func mergeSliceValue(dst, src reflect.Value) error {
 			dstPtr.Elem().Set(dstVal)
 			MergeObject(dstPtr.Interface(), srcVal.Interface())
 			dstVal.Set(dstPtr.Elem())
+		default:
+			dstVal.Set(srcVal)
 		}
 	}
 	return nil

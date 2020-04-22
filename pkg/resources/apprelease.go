@@ -22,7 +22,8 @@ func GetAppReleases(kclient client.Client, app string, target string, count int)
 
 	// sort list by build name, newest first
 	releases := make([]*v1alpha1.AppRelease, 0, len(releaseList.Items))
-	for _, r := range releaseList.Items {
+	for i := range releaseList.Items {
+		r := releaseList.Items[i]
 		releases = append(releases, &r)
 	}
 	SortAppReleasesByBuild(releases)

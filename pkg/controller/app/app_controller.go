@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/thoas/go-funk"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -277,8 +276,6 @@ func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Build)
 			Probes:        *app.Spec.ProbesForTarget(target),
 		},
 	}
-
-	fmt.Printf("new resources: %v\n", app.Spec.ResourcesForTarget(target))
 
 	tc := app.Spec.GetTargetConfig(target)
 	// TODO: this should never be nil
