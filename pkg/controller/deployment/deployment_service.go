@@ -2,6 +2,7 @@ package deployment
 
 import (
 	"context"
+	"fmt"
 
 	istionetworking "istio.io/api/networking/v1alpha3"
 	istio "istio.io/client-go/pkg/apis/networking/v1alpha3"
@@ -17,7 +18,7 @@ import (
 )
 
 var (
-	allGateways = []string{"mesh", "kon-gateway.istio-system.cluster.local"}
+	allGateways = []string{"mesh", fmt.Sprintf("%s.%s.cluster.local", resources.GatewayName, resources.IngressNamespace)}
 )
 
 func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *corev1.Service, err error) {

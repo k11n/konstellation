@@ -10,7 +10,6 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
 )
 
@@ -91,12 +90,6 @@ func appStatus(c *cli.Context) error {
 	}
 	kclient := ac.kubernetesClient()
 
-	app, err := resources.GetAppByName(kclient, appName)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("got app: %s\n", app.Name)
-
 	// find all the app targets
 	targets, err := resources.GetAppTargets(kclient, appName)
 	if err != nil {
@@ -113,42 +106,32 @@ func appStatus(c *cli.Context) error {
 		}
 
 		// find all targets of this app
-		releases, err := resources.GetBuildsByImage(kclient,
-			target.Labels[resources.BUILD_REGISTRY_LABEL],
-			target.Labels[resources.BUILD_IMAGE_LABEL],
-			5)
+		releases, err := resources.GetAppReleases(kclient, target.Spec.App, target.Spec.Target, 100)
 		if err != nil {
 			return err
 		}
-
-		activeReleaseMap := map[string]*v1alpha1.AppReleaseStatus{}
-		//for _, ar := range target.Status.ActiveReleases {
-		//	activeReleaseMap[ar.Release] = &ar
-		//}
 
 		fmt.Printf("Target: %s\n", target.Name)
 		fmt.Printf("Scale: %d-%d\n", target.Spec.Scale.Min, target.Spec.Scale.Max)
 		fmt.Println()
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{
-			"Build", "Date", "Pods", "Status",
+			"Release", "Build", "Date", "Pods", "Status", "Traffic",
 		})
 		for _, release := range releases {
-			ar := activeReleaseMap[release.Name]
-			vals := []string{
-				release.ShortName(),
-				release.GetCreationTimestamp().Format("2006-01-02 15:04:05"),
+			utils.PrintJSON(release)
+			// loading build
+			build, err := resources.GetBuildByName(kclient, release.Spec.Build)
+			if err != nil {
+				return err
 			}
-			if ar != nil {
-				vals = append(vals,
-					fmt.Sprintf("%d/%d", ar.NumAvailable, ar.NumDesired),
-					ar.State.String(),
-				)
-			} else {
-				vals = append(vals,
-					"",
-					"archived",
-				)
+			vals := []string{
+				release.Name,
+				build.ShortName(),
+				release.GetCreationTimestamp().Format("2006-01-02 15:04:05"),
+				fmt.Sprintf("%d/%d", release.Status.NumAvailable, release.Status.NumDesired),
+				release.Status.State.String(),
+				fmt.Sprintf("%d%%", release.Spec.TrafficPercentage),
 			}
 			table.Append(vals)
 		}
@@ -157,9 +140,11 @@ func appStatus(c *cli.Context) error {
 		table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 		table.SetColMinWidth(0, 30)
 		table.SetColMinWidth(1, 27)
-		table.SetColMinWidth(2, 8)
-		table.SetCenterSeparator("")
-		table.SetColumnSeparator("")
+		table.SetColMinWidth(2, 25)
+		table.SetColMinWidth(3, 8)
+		table.SetColMinWidth(4, 10)
+		table.SetCenterSeparator(" ")
+		table.SetColumnSeparator(" ")
 		table.SetHeaderLine(false)
 		table.SetNoWhiteSpace(true)
 		table.Render()
