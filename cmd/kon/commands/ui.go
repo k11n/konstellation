@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/davidzhao/konstellation/pkg/components/kubedash"
+	"github.com/davidzhao/konstellation/pkg/resources"
 	koncli "github.com/davidzhao/konstellation/pkg/utils/cli"
 )
 
@@ -37,12 +37,14 @@ func kubeDashboard(c *cli.Context) error {
 	}
 
 	// print token
-	token, err := ac.Manager.KubernetesProvider().GetAuthToken(context.TODO(), ac.Cluster)
+	secret, err := resources.GetSecretForAccount(ac.kubernetesClient(), resources.SERVICE_ACCOUNT_KON_ADMIN)
+	//token, err := ac.Manager.KubernetesProvider().GetAuthToken(context.TODO(), ac.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to get authentication token")
 	}
 
-	fmt.Printf("Authentication token (copy and use token auth)\n%s\n\n", token.Status.Token)
+	//fmt.Printf("Authentication token (copy and use token auth)\n%s\n\n", token.Status.Token)
+	fmt.Printf("Authentication token (copy and use token auth)\n%s\n\n", secret.Data["token"])
 
 	// run proxy
 	proxy := koncli.NewKubeProxy()

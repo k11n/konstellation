@@ -20,6 +20,7 @@ var (
 		"service_account.yaml",
 		"role.yaml",
 		"role_binding.yaml",
+		"admin_account.yaml",
 		"crds/k11n.dev_apps_crd.yaml",
 		"crds/k11n.dev_appreleases_crd.yaml",
 		"crds/k11n.dev_apptargets_crd.yaml",

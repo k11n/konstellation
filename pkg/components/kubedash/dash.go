@@ -26,11 +26,11 @@ func (d *KubeDash) Name() string {
 
 func (d *KubeDash) Version() string {
 	// TODO: should we match Kube versions
-	return "v2.0.0-beta8"
+	return "2.0.0"
 }
 
 func (d *KubeDash) InstallComponent(kclient client.Client) error {
-	url := fmt.Sprintf("https://raw.githubusercontent.com/kubernetes/dashboard/%s/aio/deploy/recommended.yaml",
+	url := fmt.Sprintf("https://raw.githubusercontent.com/kubernetes/dashboard/v%s/aio/deploy/recommended.yaml",
 		d.Version())
 	return cli.KubeApply(url)
 }
