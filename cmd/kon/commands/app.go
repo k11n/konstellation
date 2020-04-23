@@ -112,7 +112,7 @@ func appStatus(c *cli.Context) error {
 		}
 
 		fmt.Printf("Target: %s\n", target.Name)
-		fmt.Printf("Scale: %d-%d\n", target.Spec.Scale.Min, target.Spec.Scale.Max)
+		fmt.Printf("Scale: %d min, %d max\n", target.Spec.Scale.Min, target.Spec.Scale.Max)
 		fmt.Println()
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{
