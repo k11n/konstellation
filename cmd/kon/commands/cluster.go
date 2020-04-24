@@ -279,6 +279,16 @@ func clusterDestroy(c *cli.Context) error {
 		return err
 	}
 
+	// Reset it from being selected
+	conf := config.GetConfig()
+	if conf.SelectedCluster == clusterName {
+		conf.SelectedCluster = ""
+		err := conf.Persist()
+		if err != nil {
+			return err
+		}
+	}
+
 	// remove all apps and then ingress
 	ac, err := getActiveCluster()
 	if err != nil {
@@ -337,10 +347,10 @@ func clusterSelect(clusterName string) error {
 
 	// TODO: in release versions don't reload resources
 	// still load the resources
-	err = ac.loadResourcesIntoKube()
-	if err != nil {
-		return err
-	}
+	//err = ac.loadResourcesIntoKube()
+	//if err != nil {
+	//	return err
+	//}
 
 	// see if we have a nodepool
 	pools, err := resources.GetNodepools(kclient)

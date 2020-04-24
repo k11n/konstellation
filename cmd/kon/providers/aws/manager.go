@@ -186,14 +186,6 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 	sess := session.Must(a.awsSession())
 	eksSvc := kaws.NewEKSService(sess)
 
-	// remove from selected
-	conf := config.GetConfig()
-	conf.SelectedCluster = ""
-	err := conf.Persist()
-	if err != nil {
-		return err
-	}
-
 	listRes, err := eksSvc.EKS.ListNodegroups(&eks.ListNodegroupsInput{
 		ClusterName: &cluster,
 	})
