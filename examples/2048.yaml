@@ -1,7 +1,7 @@
 apiVersion: k11n.dev/v1alpha1
 kind: App
 metadata:
-  name: 2048
+  name: app2048
 spec:
   image: alexwhen/docker-2048
   ports:

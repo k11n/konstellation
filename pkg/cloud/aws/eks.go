@@ -138,6 +138,59 @@ func (s *EKSService) IsNodepoolDeleted(ctx context.Context, clusterName string, 
 	return true, nil
 }
 
+func (s *EKSService) DeleteNodeGroupNetworkingResources(ctx context.Context, nodegroup string) error {
+	ec2Svc := ec2.New(s.session)
+
+	sgs, err := ec2Svc.DescribeSecurityGroupsWithContext(ctx, &ec2.DescribeSecurityGroupsInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String(fmt.Sprintf("tag:%s", TagEKSNodeGroupName)),
+				Values: []*string{&nodegroup},
+			},
+		}})
+	if err != nil {
+		return err
+	}
+
+	var groupIds []*string
+	for _, sg := range sgs.SecurityGroups {
+		groupIds = append(groupIds, sg.GroupId)
+	}
+	// find all network interfaces and delete
+	niRes, err := ec2Svc.DescribeNetworkInterfacesWithContext(ctx, &ec2.DescribeNetworkInterfacesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("group-id"),
+				Values: groupIds,
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	isSuccess := true
+	for _, ni := range niRes.NetworkInterfaces {
+		// ignore errors
+		_, err := ec2Svc.DeleteNetworkInterfaceWithContext(ctx, &ec2.DeleteNetworkInterfaceInput{
+			NetworkInterfaceId: ni.NetworkInterfaceId,
+		})
+		if err != nil {
+			isSuccess = false
+		}
+	}
+
+	if isSuccess {
+		// delete security groups
+		for _, groupId := range groupIds {
+			ec2Svc.DeleteSecurityGroupWithContext(ctx, &ec2.DeleteSecurityGroupInput{
+				GroupId: groupId,
+			})
+		}
+	}
+	return nil
+}
+
 func (s *EKSService) CreateNodepool(ctx context.Context, clusterName string, np *v1alpha1.Nodepool) error {
 	// tag VPC subnets if needed
 	ec2Svc := ec2.New(s.session)

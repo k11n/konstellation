@@ -218,6 +218,13 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 			return
 		}
 		finished = len(listRes.Nodegroups) == 0
+		if !finished {
+			// try to delete the security group and network interface manually
+			// for some reasons AWS doesn't clean it up
+			for _, item := range listRes.Nodegroups {
+				eksSvc.DeleteNodeGroupNetworkingResources(context.TODO(), *item)
+			}
+		}
 		return
 	})
 	if err != nil {
