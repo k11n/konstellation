@@ -156,6 +156,11 @@ func (s *EKSService) DeleteNodeGroupNetworkingResources(ctx context.Context, nod
 	for _, sg := range sgs.SecurityGroups {
 		groupIds = append(groupIds, sg.GroupId)
 	}
+
+	if len(groupIds) == 0 {
+		return nil
+	}
+
 	// find all network interfaces and delete
 	niRes, err := ec2Svc.DescribeNetworkInterfacesWithContext(ctx, &ec2.DescribeNetworkInterfacesInput{
 		Filters: []*ec2.Filter{
