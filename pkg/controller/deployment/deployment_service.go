@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
@@ -47,6 +46,7 @@ func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *cor
 
 	// do we still want this service?
 	if !serviceNeeded {
+		log.Info("Deleting unneeded Service", "appTarget", at.Name)
 		// delete existing service
 		err = r.client.Delete(context.TODO(), existing)
 		return
@@ -70,7 +70,8 @@ func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *cor
 	if err != nil {
 		return
 	}
-	log.Info("Updated service", "operation", op)
+
+	resources.LogUpdates(log, op, "Updated service", "appTarget", at.Name)
 
 	// update service hostname
 	at.Status.Hostname = svc.Spec.ExternalName
@@ -85,7 +86,6 @@ func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, s
 
 func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) error {
 	vs := newVirtualService(at, service, releases)
-	log.Info("Reconciling virtualservice", "appTarget", at.Name, "needsService", at.NeedsService())
 
 	// find existing VS obj
 	existing := &istio.VirtualService{}
@@ -109,7 +109,7 @@ func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, se
 	// found existing service, but not needed anymore
 	if !at.NeedsService() {
 		// delete existing service
-		log.Info("deleting existing virtual service", "appTarget", at.Name)
+		log.Info("Deleting unneeded virtual service", "appTarget", at.Name)
 		return r.client.Delete(context.TODO(), existing)
 	}
 
@@ -118,9 +118,7 @@ func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, se
 		return err
 	}
 
-	if op != controllerutil.OperationResultNone {
-		log.Info("finished reconciling VS", "operation", op)
-	}
+	resources.LogUpdates(log, op, "Updated VirtualService", "appTarget", at.Name)
 
 	return err
 }

@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -22,7 +23,7 @@ import (
 	"github.com/davidzhao/konstellation/pkg/resources"
 )
 
-var log = logf.Log.WithName("controller_apprelease")
+var log = logf.Log.WithName("controller.AppRelease")
 
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
@@ -70,8 +71,7 @@ type ReconcileAppRelease struct {
 
 // Creates ReplicaSets matching request, TargetRelease uses
 func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling AppRelease")
+	reqLogger := log.WithValues("release", request.Name)
 	res := reconcile.Result{}
 
 	// Fetch the AppRelease instance
@@ -101,7 +101,9 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 			r.client.Delete(context.TODO(), rs),
 		)
 	} else {
-		_, err = resources.UpdateResource(r.client, rs, ar, r.scheme)
+		var op controllerutil.OperationResult
+		op, err = resources.UpdateResource(r.client, rs, ar, r.scheme)
+		resources.LogUpdates(reqLogger, op, "Updated ReplicaSet")
 	}
 	if err != nil {
 		return res, err
@@ -155,6 +157,10 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	if !apiequality.Semantic.DeepEqual(status, ar.Status) {
 		ar.Status = status
 		err = r.client.Status().Update(context.TODO(), ar)
+		reqLogger.Info("Updated AppRelease status", "numAvailable", status.NumAvailable, "numDesired", status.NumDesired)
+		if err != nil {
+			return res, err
+		}
 	}
 
 	return res, err

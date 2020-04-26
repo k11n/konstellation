@@ -12,6 +12,7 @@ require (
 	github.com/coreos/prometheus-operator v0.38.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/daaku/go.zipexe v1.0.1 // indirect
+	github.com/go-logr/logr v0.1.0
 	github.com/golang/protobuf v1.4.0 // indirect
 	github.com/gophercloud/gophercloud v0.10.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect

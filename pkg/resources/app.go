@@ -45,3 +45,18 @@ func GetAppTarget(kclient client.Client, name string) (*v1alpha1.AppTarget, erro
 	}
 	return at, nil
 }
+
+func GetAppTargetWithLabels(kclient client.Client, app, target string) (*v1alpha1.AppTarget, error) {
+	appTargetList := v1alpha1.AppTargetList{}
+	err := kclient.List(context.TODO(), &appTargetList, client.MatchingLabels{
+		APP_LABEL:    app,
+		TARGET_LABEL: target,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(appTargetList.Items) == 0 {
+		return nil, ErrNotFound
+	}
+	return &appTargetList.Items[0], nil
+}

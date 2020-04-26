@@ -23,7 +23,7 @@ import (
 	"github.com/davidzhao/konstellation/pkg/resources"
 )
 
-var log = logf.Log.WithName("controller_ingress")
+var log = logf.Log.WithName("controller.Ingress")
 
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
@@ -129,8 +129,7 @@ type ReconcileIngressRequest struct {
 // Reconcile reads that state of the cluster for a IngressRequest object and makes changes based on the state read
 // and what is in the IngressRequest.Spec
 func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling IngressRequest")
+	logger := log.WithValues("ingress", request.Name)
 
 	res := reconcile.Result{}
 
@@ -154,11 +153,11 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 		return res, err
 	}
 
-	_, err = resources.UpdateResource(r.client, ingress, nil, nil)
+	op, err := resources.UpdateResource(r.client, ingress, nil, nil)
 	if err != nil {
 		return res, err
 	}
-	reqLogger.Info("reconciled Ingress")
+	resources.LogUpdates(logger, op, "Updated Ingress")
 
 	return res, nil
 }

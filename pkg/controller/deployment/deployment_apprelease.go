@@ -9,6 +9,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
@@ -65,10 +66,13 @@ func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget) (rele
 		}
 
 		// see if we can find the existing item
-		_, err = resources.UpdateResource(r.client, ar, at, r.scheme)
+		var op controllerutil.OperationResult
+		op, err = resources.UpdateResource(r.client, ar, at, r.scheme)
 		if err != nil {
 			return
 		}
+
+		resources.LogUpdates(log, op, "Updated AppRelease", "appTarget", at.Name, "release", ar.Name)
 	}
 	return
 }
@@ -77,6 +81,8 @@ func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget) (rele
  * Determine current releases and flip release switch. TODO: figure out how to signal requeue
  */
 func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) (res *reconcile.Result, err error) {
+	logger := log.WithValues("appTarget", at.Name)
+
 	if len(releases) == 0 {
 		err = fmt.Errorf("cannot deploy empty releases")
 		return
@@ -111,14 +117,19 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 	if activeRelease == nil {
 		activeRelease = releases[0]
 		targetRelease = activeRelease
+		logger.Info("Deploying initial release", "release", activeRelease.Name)
 	} else {
 		// TODO: don't deploy additional builds when outside of schedule
 		// see if there's a new target release (try to deploy latest if possible)
 		// TODO: check if autorelease is enabled for this target..
-		targetRelease = resources.FirstAvailableRelease(releases)
-		if targetRelease == nil {
-			// revert back to active, not ready to deploy something new
-			targetRelease = activeRelease
+		newTarget := resources.FirstAvailableRelease(releases)
+		if newTarget != nil {
+			var previousTarget string
+			if targetRelease != nil {
+				previousTarget = targetRelease.Name
+			}
+			logger.Info("Setting new target release", "target", newTarget.Name, "previousTarget", previousTarget)
+			targetRelease = newTarget
 		}
 	}
 
@@ -127,11 +138,14 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 	if targetRelease == activeRelease {
 		targetTrafficPercentage = 100
 		targetRelease.Spec.NumDesired = desiredInstances
-	} else if targetRelease.Status.NumAvailable < targetRelease.Status.NumDesired {
+	} else if targetRelease.Status.NumAvailable < targetRelease.Spec.NumDesired {
 		// has not reached our desired point, requeue but don't match traffic to this level
 		res = &reconcile.Result{
 			RequeueAfter: at.Spec.Probes.GetReadinessTimeout() / 2,
 		}
+		logger.Info("Target pods are not ready yet", "release", targetRelease.Name,
+			"numAvailable", targetRelease.Status.NumAvailable,
+			"numDesired", targetRelease.Spec.NumDesired)
 		return
 	} else {
 		// determine current progress, then next steps
@@ -153,12 +167,17 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 			if targetRelease.Spec.NumDesired > desiredInstances {
 				targetRelease.Spec.NumDesired = desiredInstances
 			}
+
+			logger.Info("Increasing pods", "release", targetRelease.Name,
+				"increment", podsIncrement, "numDesired", targetRelease.Spec.NumDesired)
 			res = &reconcile.Result{
 				RequeueAfter: at.Spec.Probes.GetReadinessTimeout(),
 			}
 		} else {
 			// we are fully switched over, update roles
 			activeRelease = targetRelease
+			logger.Info("Target fully deployed, marking as active", "release", targetRelease.Name)
+			// TODO: requeue to start ramping activeRelease down
 		}
 	}
 
@@ -177,7 +196,12 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 			}
 		} else if ar == targetRelease {
 			ar.Spec.Role = v1alpha1.ReleaseRoleTarget
+			if ar.Spec.TrafficPercentage != targetTrafficPercentage {
+				logger.Info("Updating traffic", "release", ar.Name, "traffic", targetTrafficPercentage,
+					"lastTraffic", ar.Spec.TrafficPercentage)
+			}
 			ar.Spec.TrafficPercentage = targetTrafficPercentage
+
 		} else {
 			// TODO: update traffic for canaries
 			ar.Spec.Role = v1alpha1.ReleaseRoleNone
@@ -201,6 +225,12 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 	at.Status.ActiveRelease = activeRelease.Name
 	at.Status.TargetRelease = targetRelease.Name
 	at.Status.DeployUpdatedAt = metav1.Now()
+
+	if !activeRelease.CreationTimestamp.IsZero() {
+		at.Status.NumDesired = activeRelease.Status.NumDesired
+		at.Status.NumReady = activeRelease.Status.NumReady
+		at.Status.NumAvailable = activeRelease.Status.NumAvailable
+	}
 	return
 }
 
@@ -233,6 +263,7 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 	// remove all the existing scalers and exit
 	if !needsScaler {
 		for _, scaler := range scalerList.Items {
+			log.Info("Deleting unused autoscaler", "appTarget", at.Name)
 			if err = r.client.Delete(ctx, &scaler); err != nil {
 				return err
 			}
@@ -247,16 +278,18 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 			scaler = &s
 		} else {
 			// delete the other ones (there should be only one scaler at any time
+			log.Info("Deleting autoscaler for old releases", "appTarget", at.Name)
 			if err := r.client.Delete(ctx, &s); err != nil {
 				return err
 			}
 		}
 	}
 
-	_, err = resources.UpdateResource(r.client, scaler, at, r.scheme)
+	op, err := resources.UpdateResource(r.client, scaler, at, r.scheme)
 	if err != nil {
 		return err
 	}
+	resources.LogUpdates(log, op, "Updated autoscaler", "appTarget", at.Name)
 
 	// update status
 	at.Status.LastScaledAt = scaler.Status.LastScaleTime

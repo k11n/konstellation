@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/go-logr/logr"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,14 +26,13 @@ var (
 func UpdateResource(kclient client.Client, object, owner v1.Object, scheme *runtime.Scheme) (result controllerutil.OperationResult, err error) {
 	newVal := reflect.New(reflect.TypeOf(object).Elem())
 	newObj := newVal.Interface().(v1.Object)
+	newObj.SetNamespace(object.GetNamespace())
+	newObj.SetName(object.GetName())
 	lookupObj, ok := newObj.(runtime.Object)
 	if !ok {
 		err = fmt.Errorf("Not an runtime Object")
 		return
 	}
-
-	newObj.SetNamespace(object.GetNamespace())
-	newObj.SetName(object.GetName())
 
 	result, err = controllerutil.CreateOrUpdate(context.TODO(), kclient, lookupObj, func() error {
 		if owner != nil {
@@ -58,9 +58,10 @@ func UpdateResource(kclient client.Client, object, owner v1.Object, scheme *runt
 	return
 }
 
-func toStructPtr(val reflect.Value) interface{} {
-	// Create a new instance of the underlying type
-	vp := reflect.New(val.Type())
-	vp.Elem().Set(val)
-	return vp.Interface()
+func LogUpdates(log logr.Logger, op controllerutil.OperationResult, message string, keysAndValues ...interface{}) {
+	if op == controllerutil.OperationResultNone {
+		return
+	}
+	keysAndValues = append(keysAndValues, "op", op)
+	log.Info(message, keysAndValues...)
 }

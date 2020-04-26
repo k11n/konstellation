@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -21,7 +20,7 @@ import (
 	"github.com/davidzhao/konstellation/pkg/resources"
 )
 
-var log = logf.Log.WithName("controller_app")
+var log = logf.Log.WithName("controller.App")
 
 /**
 * App Controller is the top level handler. It generates Build(s) and AppTarget(s)
@@ -128,8 +127,7 @@ type ReconcileApp struct {
 }
 
 func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Result, err error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling App")
+	reqLogger := log.WithValues("app", request.Name)
 
 	// Fetch the App instance
 	app := &v1alpha1.App{}
@@ -182,15 +180,16 @@ func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Resul
 		}
 	}
 
-	// TODO: remove old targets that aren't valid
+	// remove old targets that aren't valid
 	for _, target := range invalidTargets {
 		at, err := resources.GetAppTarget(r.client, target)
 		if err != nil {
 			if !errors.IsNotFound(err) {
-				log.Error(err, "Could not get AppTarget", "target", target, "app", app.Name)
+				reqLogger.Error(err, "Could not get AppTarget", "target", target, "app", app.Name)
 			}
 			continue
 		}
+		reqLogger.Info("Deleting inactive AppTargets", "target", target)
 		err = r.client.Delete(context.TODO(), at)
 	}
 
@@ -231,8 +230,8 @@ func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string, buil
 	if err != nil {
 		return
 	}
-	updated = op != controllerutil.OperationResultNone
-	log.Info("Reconciled appTarget", "target", target, "operation", op)
+
+	resources.LogUpdates(log, op, "reconciled AppTarget", "app", app.Name, "target", target)
 	return
 }
 

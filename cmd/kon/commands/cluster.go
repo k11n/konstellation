@@ -193,6 +193,7 @@ func clusterCreate(c *cli.Context) error {
 		if err != nil {
 			return err
 		}
+
 		cc, err = generator.CreateClusterConfig()
 		if err != nil {
 			return err
