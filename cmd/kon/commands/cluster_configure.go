@@ -75,7 +75,7 @@ func (c *activeCluster) addTargetPrompt(cc *v1alpha1.ClusterConfig) error {
 		cc.Spec.Targets = append(cc.Spec.Targets, p)
 	}
 
-	err = resources.SaveClusterConfig(c.kubernetesClient(), cc)
+	_, err = resources.UpdateResource(c.kubernetesClient(), cc, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (c *activeCluster) removeTargetPrompt(cc *v1alpha1.ClusterConfig) error {
 	}
 
 	cc.Spec.Targets = append(cc.Spec.Targets[:idx], cc.Spec.Targets[idx+1:]...)
-	err = resources.SaveClusterConfig(c.kubernetesClient(), cc)
+	_, err = resources.UpdateResource(c.kubernetesClient(), cc, nil, nil)
 	if err != nil {
 		return err
 	}

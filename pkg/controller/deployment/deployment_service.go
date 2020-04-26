@@ -9,12 +9,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
-	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
 var (
@@ -24,17 +23,15 @@ var (
 func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *corev1.Service, err error) {
 	// do we need a service? if no ports defined, we don't
 	serviceNeeded := at.NeedsService()
-	svcTemplate := newServiceForAppTarget(at)
-	namespace := at.TargetNamespace()
+	svc = newServiceForAppTarget(at)
 
 	// find existing service obj
-	svc = &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      svcTemplate.Name,
-			Namespace: svcTemplate.Namespace,
-		},
+	existing := &corev1.Service{}
+	key, err := client.ObjectKeyFromObject(svc)
+	if err != nil {
+		return
 	}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: svc.Name}, svc)
+	err = r.client.Get(context.TODO(), key, existing)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			if !serviceNeeded {
@@ -51,23 +48,25 @@ func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *cor
 	// do we still want this service?
 	if !serviceNeeded {
 		// delete existing service
-		err = r.client.Delete(context.TODO(), svc)
+		err = r.client.Delete(context.TODO(), existing)
 		return
 	}
 
 	// service still needed, update
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, svc, func() error {
-		svc.Labels = svcTemplate.Labels
-		objects.MergeSlice(&svc.Spec.Ports, &svcTemplate.Spec.Ports)
-		if svc.CreationTimestamp.IsZero() {
-			svc.Spec.Selector = svcTemplate.Spec.Selector
-			// Set AppTarget instance as the owner and controller
-			if err := controllerutil.SetControllerReference(at, svc, r.scheme); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
+	op, err := resources.UpdateResource(r.client, svc, at, r.scheme)
+	// TODO: test to ensure ports is merged correctly
+	//op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, svc, func() error {
+	//	svc.Labels = svcTemplate.Labels
+	//	objects.MergeSlice(&svc.Spec.Ports, &svcTemplate.Spec.Ports)
+	//	if svc.CreationTimestamp.IsZero() {
+	//		svc.Spec.Selector = svcTemplate.Spec.Selector
+	//		// Set AppTarget instance as the owner and controller
+	//		if err := controllerutil.SetControllerReference(at, svc, r.scheme); err != nil {
+	//			return err
+	//		}
+	//	}
+	//	return nil
+	//})
 	if err != nil {
 		return
 	}
@@ -79,43 +78,22 @@ func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *cor
 }
 
 func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) error {
-	drTemplate := newDestinationRule(at, service, releases)
-
-	dr := &istio.DestinationRule{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      at.Spec.App,
-			Namespace: at.TargetNamespace(),
-		},
-	}
-	_, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, dr, func() error {
-		if dr.CreationTimestamp.IsZero() {
-			err := controllerutil.SetControllerReference(at, dr, r.scheme)
-			if err != nil {
-				return err
-			}
-		}
-
-		// use merge to avoid defaults clearing out
-		dr.Spec = drTemplate.Spec
-		return nil
-	})
-
+	dr := newDestinationRule(at, service, releases)
+	_, err := resources.UpdateResource(r.client, dr, at, r.scheme)
 	return err
 }
 
 func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) error {
-	vsTemplate := newVirtualService(at, service, releases)
-	namespace := at.TargetNamespace()
+	vs := newVirtualService(at, service, releases)
 	log.Info("Reconciling virtualservice", "appTarget", at.Name, "needsService", at.NeedsService())
 
 	// find existing VS obj
-	vs := &istio.VirtualService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      vsTemplate.Name,
-			Namespace: vsTemplate.Namespace,
-		},
+	existing := &istio.VirtualService{}
+	key, err := client.ObjectKeyFromObject(vs)
+	if err != nil {
+		return err
 	}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: vs.GetName()}, vs)
+	err = r.client.Get(context.TODO(), key, existing)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			if !at.NeedsService() {
@@ -132,20 +110,10 @@ func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, se
 	if !at.NeedsService() {
 		// delete existing service
 		log.Info("deleting existing virtual service", "appTarget", at.Name)
-		return r.client.Delete(context.TODO(), vs)
+		return r.client.Delete(context.TODO(), existing)
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, vs, func() error {
-		if vs.CreationTimestamp.IsZero() {
-			err := controllerutil.SetControllerReference(at, vs, r.scheme)
-			if err != nil {
-				return err
-			}
-		}
-		vs.Labels = vsTemplate.Labels
-		vs.Spec = vsTemplate.Spec
-		return nil
-	})
+	op, err := resources.UpdateResource(r.client, vs, at, r.scheme)
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
+	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
 )
 
@@ -39,6 +40,19 @@ var AppCommands = []*cli.Command{
 				ArgsUsage: "<app>",
 				Flags: []cli.Flag{
 					targetFlag,
+				},
+			},
+			{
+				Name:      "deploy",
+				Usage:     "deploy a new version of an app",
+				Action:    appDeploy,
+				ArgsUsage: "<app>",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "tag",
+						Usage:    "image tag to use",
+						Required: true,
+					},
 				},
 			},
 		},
@@ -79,10 +93,10 @@ func appList(c *cli.Context) error {
 }
 
 func appStatus(c *cli.Context) error {
-	if c.NArg() == 0 {
-		return fmt.Errorf("app is a required argument")
+	appName, err := getAppArg(c)
+	if err != nil {
+		return err
 	}
-	appName := c.Args().Get(0)
 
 	ac, err := getActiveCluster()
 	if err != nil {
@@ -151,4 +165,60 @@ func appStatus(c *cli.Context) error {
 		fmt.Println()
 	}
 	return nil
+}
+
+func appDeploy(c *cli.Context) error {
+	appName, err := getAppArg(c)
+	if err != nil {
+		return err
+	}
+	tag := c.String("tag")
+
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+	kclient := ac.kubernetesClient()
+
+	targets, err := resources.GetAppTargets(kclient, appName)
+	if err != nil {
+		return err
+	}
+
+	if len(targets) == 0 {
+		return fmt.Errorf("No targets found")
+	}
+
+	appTarget := funk.Head(targets).(v1alpha1.AppTarget)
+	builds, err := resources.GetBuildsByImage(kclient, appTarget.Spec.BuildRegistry, appTarget.Spec.BuildImage, 0)
+	if err != nil {
+		return err
+	}
+
+	// if already exists, return err
+	var registry, image string
+	for _, build := range builds {
+		registry = build.Spec.Registry
+		image = build.Spec.Image
+		if build.Spec.Tag == tag {
+			return fmt.Errorf("Build %s already exists", build.ShortName())
+		}
+	}
+
+	if image == "" {
+		return fmt.Errorf("Could not find valid build for %s", appTarget.Spec.App)
+	}
+
+	// create new build
+	build := v1alpha1.NewBuild(registry, image, tag)
+
+	_, err = resources.UpdateResource(kclient, build, nil, nil)
+	return err
+}
+
+func getAppArg(c *cli.Context) (string, error) {
+	if c.NArg() == 0 {
+		return "", fmt.Errorf("Required argument \"app\" was not passed in")
+	}
+	return c.Args().Get(0), nil
 }

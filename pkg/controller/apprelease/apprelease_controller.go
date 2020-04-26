@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -21,7 +20,6 @@ import (
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
-	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
 var log = logf.Log.WithName("controller_apprelease")
@@ -95,30 +93,15 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	if err != nil {
 		return res, err
 	}
-	rsTemplate := newReplicaSetForAR(ar, build)
+	rs := newReplicaSetForAR(ar, build)
 
-	rs := appsv1.ReplicaSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: rsTemplate.Namespace,
-			Name:      rsTemplate.Name,
-		},
-	}
 	if ar.Spec.NumDesired == 0 {
-		// delete replicaset
+		// delete ReplicaSet
 		err = client.IgnoreNotFound(
-			r.client.Delete(context.TODO(), &rs),
+			r.client.Delete(context.TODO(), rs),
 		)
 	} else {
-		_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, &rs, func() error {
-			rs.ObjectMeta.Labels = rsTemplate.ObjectMeta.Labels
-			if rs.CreationTimestamp.IsZero() {
-				if err := controllerutil.SetControllerReference(ar, &rs, r.scheme); err != nil {
-					return err
-				}
-			}
-			objects.MergeObject(&rs.Spec, &rsTemplate.Spec)
-			return nil
-		})
+		_, err = resources.UpdateResource(r.client, rs, ar, r.scheme)
 	}
 	if err != nil {
 		return res, err

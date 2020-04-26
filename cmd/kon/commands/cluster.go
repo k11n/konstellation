@@ -238,10 +238,10 @@ func clusterCreate(c *cli.Context) error {
 	if err = ac.loadResourcesIntoKube(); err != nil {
 		return err
 	}
-	if err = resources.SaveClusterConfig(ac.kubernetesClient(), cc); err != nil {
+	if _, err = resources.UpdateResource(ac.kubernetesClient(), cc, nil, nil); err != nil {
 		return err
 	}
-	if err = resources.SaveNodepool(ac.kubernetesClient(), nodepool); err != nil {
+	if _, err = resources.UpdateResource(ac.kubernetesClient(), nodepool, nil, nil); err != nil {
 		return err
 	}
 
@@ -511,7 +511,7 @@ func (c *activeCluster) configureNodepool() error {
 	}
 
 	// save spec to Kube
-	if err = resources.SaveNodepool(kclient, np); err != nil {
+	if _, err = resources.UpdateResource(kclient, np, nil, nil); err != nil {
 		return err
 	}
 

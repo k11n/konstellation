@@ -9,7 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/components"
@@ -69,18 +68,9 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 
 	// last step to create deployment
 	dep := i.deploymentForIngress(cc)
-	existing := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      albIngressName,
-			Namespace: kubeSystemNamespace,
-		},
-	}
-	_, err = controllerutil.CreateOrUpdate(context.TODO(), kclient, existing, func() error {
-		if existing.CreationTimestamp.IsZero() {
-			existing.Spec = dep.Spec
-		}
-		return nil
-	})
+
+	_, err = resources.UpdateResource(kclient, dep, nil, nil)
+
 	return err
 }
 

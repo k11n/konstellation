@@ -118,10 +118,13 @@ func certSync(c *cli.Context) error {
 	}
 
 	seenCerts := map[string]bool{}
+	count := 0
 	for _, cert := range certs {
 		seenCerts[cert.ID] = true
-		if err := syncCertificate(kclient, cert); err != nil {
+		if updated, err := syncCertificate(kclient, cert); err != nil {
 			return err
+		} else if updated {
+			count += 1
 		}
 	}
 
@@ -133,7 +136,12 @@ func certSync(c *cli.Context) error {
 			return err
 		}
 	}
-	fmt.Printf("Successfully synced %d certificates\n", len(certs))
+	if count == 0 {
+		fmt.Println("Certificates already up to date")
+	} else {
+		fmt.Printf("Successfully synced %d certificates\n", count)
+	}
+
 	return nil
 }
 
@@ -180,37 +188,41 @@ func certImport(c *cli.Context) error {
 	fmt.Printf("Successfully imported certificate %s\n", certificate.Domain)
 
 	// import it into cloud
-	err = syncCertificate(ac.kubernetesClient(), certificate)
+	_, err = syncCertificate(ac.kubernetesClient(), certificate)
 	if err != nil {
-		return errors.Wrap(err, "Could not sync imported cert, please sync again later")
+		err = errors.Wrap(err, "Could not sync imported cert, please sync again later")
 	}
 
-	return nil
+	return err
 }
 
-func syncCertificate(kclient client.Client, cert *types.Certificate) error {
-	existing := v1alpha1.CertificateRef{
+func syncCertificate(kclient client.Client, cert *types.Certificate) (updated bool, err error) {
+	certRef := &v1alpha1.CertificateRef{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: cert.ID,
+			Labels: map[string]string{
+				resources.DOMAIN_LABEL: cert.Domain,
+			},
 		},
-	}
-
-	_, err := controllerutil.CreateOrUpdate(context.TODO(), kclient, &existing, func() error {
-		existing.Labels = map[string]string{
-			resources.DOMAIN_LABEL: cert.Domain,
-		}
-		existing.Spec = v1alpha1.CertificateRefSpec{
+		Spec: v1alpha1.CertificateRefSpec{
 			ProviderID:         cert.ProviderID,
 			Domain:             cert.Domain,
 			Issuer:             cert.Issuer,
 			Status:             cert.Status.String(),
 			KeyAlgorithm:       cert.KeyAlgorithm,
 			SignatureAlgorithm: cert.SignatureAlgorithm,
-		}
-		if cert.ExpiresAt != nil {
-			existing.Spec.ExpiresAt = metav1.NewTime(*cert.ExpiresAt)
-		}
-		return nil
-	})
-	return err
+		},
+	}
+	if cert.ExpiresAt != nil {
+		certRef.Spec.ExpiresAt = metav1.NewTime(*cert.ExpiresAt)
+	}
+	op, err := resources.UpdateResource(kclient, certRef, nil, nil)
+
+	if op != controllerutil.OperationResultNone {
+		updated = true
+	}
+
+	utils.PrintJSON(certRef)
+
+	return
 }

@@ -6,21 +6,20 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-	"github.com/davidzhao/konstellation/pkg/utils/objects"
+	"github.com/davidzhao/konstellation/pkg/resources"
 )
 
 func (r *ReconcileDeployment) reconcileIngressRequest(at *v1alpha1.AppTarget) error {
-	irTemplate := newIngressRequestForAppTarget(at)
-	ir := &v1alpha1.IngressRequest{
+	ir := newIngressRequestForAppTarget(at)
+	existing := &v1alpha1.IngressRequest{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: irTemplate.Name,
+			Name: ir.Name,
 		},
 	}
 	// find IR
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: ir.Name}, ir)
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: ir.Name}, existing)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// don't need an ingress, we are good
@@ -34,20 +33,11 @@ func (r *ReconcileDeployment) reconcileIngressRequest(at *v1alpha1.AppTarget) er
 
 	// if we don't need it, delete existing one
 	if !at.NeedsIngress() {
-		return r.client.Delete(context.TODO(), ir)
+		return r.client.Delete(context.TODO(), existing)
 	}
 
 	// create or update
-	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, ir, func() error {
-		if ir.CreationTimestamp.IsZero() {
-			err := controllerutil.SetControllerReference(at, ir, r.scheme)
-			if err != nil {
-				return err
-			}
-		}
-		objects.MergeObject(&ir.Spec, &irTemplate.Spec)
-		return nil
-	})
+	_, err = resources.UpdateResource(r.client, ir, at, r.scheme)
 	return err
 }
 

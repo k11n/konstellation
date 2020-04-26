@@ -19,7 +19,6 @@ import (
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
-	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
 var log = logf.Log.WithName("controller_app")
@@ -228,22 +227,7 @@ func (r *ReconcileApp) reconcileBuild(app *v1alpha1.App) (*v1alpha1.Build, error
 func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string, build *v1alpha1.Build) (updated bool, err error) {
 	appTarget := newAppTargetForApp(app, target, build)
 
-	// see if we already have a target for this
-	existing := &v1alpha1.AppTarget{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: app.GetAppTargetName(target),
-		},
-	}
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, existing, func() error {
-		// Set App instance as the owner and controller
-		if err := controllerutil.SetControllerReference(app, existing, r.scheme); err != nil {
-			return err
-		}
-
-		existing.Labels = appTarget.Labels
-		objects.MergeObject(&existing.Spec, &appTarget.Spec)
-		return nil
-	})
+	op, err := resources.UpdateResource(r.client, appTarget, app, r.scheme)
 	if err != nil {
 		return
 	}

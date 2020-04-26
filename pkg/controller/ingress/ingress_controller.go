@@ -1,8 +1,6 @@
 package ingress
 
 import (
-	"context"
-
 	istionetworking "istio.io/api/networking/v1alpha3"
 	istio "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
@@ -12,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -24,7 +21,6 @@ import (
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/components/ingress"
 	"github.com/davidzhao/konstellation/pkg/resources"
-	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
 var log = logf.Log.WithName("controller_ingress")
@@ -145,42 +141,20 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 	}
 
 	// create gateway, shared across all domains
-	gwTemplate := gatewayForRequests(requestList.Items)
-	gw := &istio.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      gwTemplate.Name,
-			Namespace: gwTemplate.Namespace,
-		},
-	}
-	log.Info("updating gateway", "name", gw.Name)
-	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, gw, func() error {
-		gw.Labels = gwTemplate.Labels
-		gw.Annotations = gwTemplate.Annotations
-		gw.Spec = gwTemplate.Spec
-		return nil
-	})
+	gw := gatewayForRequests(requestList.Items)
+
+	_, err = resources.UpdateResource(r.client, gw, nil, nil)
 	if err != nil {
 		return res, err
 	}
 
 	// create ingress, one for all hosts
-	ingressTemplate, err := r.ingressForRequests(requestList.Items)
+	ingress, err := r.ingressForRequests(requestList.Items)
 	if err != nil {
 		return res, err
 	}
-	ingress := netv1beta1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ingressTemplate.Name,
-			Namespace: ingressTemplate.Namespace,
-		},
-	}
-	log.Info("updating ingress", "name", ingress.Name)
-	_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, &ingress, func() error {
-		objects.MergeObject(&ingress.Spec, &ingressTemplate.Spec)
-		ingress.Annotations = ingressTemplate.Annotations
-		ingress.Labels = ingressTemplate.Labels
-		return nil
-	})
+
+	_, err = resources.UpdateResource(r.client, ingress, nil, nil)
 	if err != nil {
 		return res, err
 	}

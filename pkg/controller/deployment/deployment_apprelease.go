@@ -9,12 +9,10 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
-	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
 func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget) (releases []*v1alpha1.AppRelease, res *reconcile.Result, err error) {
@@ -65,24 +63,9 @@ func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget) (rele
 		if !ar.CreationTimestamp.IsZero() && apiequality.Semantic.DeepEqual(ar, releasesCopy[i]) {
 			continue
 		}
-		existing := &v1alpha1.AppRelease{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ar.Name,
-				Namespace: ar.Namespace,
-			},
-		}
 
 		// see if we can find the existing item
-		_, err = controllerutil.CreateOrUpdate(context.TODO(), r.client, existing, func() error {
-			if existing.CreationTimestamp.IsZero() {
-				if err := controllerutil.SetControllerReference(at, existing, r.scheme); err != nil {
-					return err
-				}
-			}
-			existing.Labels = ar.Labels
-			objects.MergeObject(&existing.Spec, &ar.Spec)
-			return nil
-		})
+		_, err = resources.UpdateResource(r.client, ar, at, r.scheme)
 		if err != nil {
 			return
 		}
@@ -257,11 +240,10 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 		return nil
 	}
 
-	var scaler *autoscalev2beta2.HorizontalPodAutoscaler
-	scalerTemplate := newAutoscalerForAppTarget(at, activeRelease)
+	scaler := newAutoscalerForAppTarget(at, activeRelease)
 	// see if any of the existing scalers match the current template
 	for _, s := range scalerList.Items {
-		if s.Labels[resources.APP_RELEASE_LABEL] == scalerTemplate.Labels[resources.APP_RELEASE_LABEL] {
+		if s.Labels[resources.APP_RELEASE_LABEL] == scaler.Labels[resources.APP_RELEASE_LABEL] {
 			scaler = &s
 		} else {
 			// delete the other ones (there should be only one scaler at any time
@@ -271,26 +253,7 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 		}
 	}
 
-	if scaler == nil {
-		scaler = &autoscalev2beta2.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: scalerTemplate.Namespace,
-				Name:      scalerTemplate.Name,
-			},
-		}
-	}
-
-	_, err = controllerutil.CreateOrUpdate(ctx, r.client, scaler, func() error {
-		if scaler.CreationTimestamp.IsZero() {
-			err := controllerutil.SetControllerReference(at, scaler, r.scheme)
-			if err != nil {
-				return err
-			}
-		}
-		scaler.Labels = scalerTemplate.Labels
-		objects.MergeObject(&scaler.Spec, &scalerTemplate.Spec)
-		return nil
-	})
+	_, err = resources.UpdateResource(r.client, scaler, at, r.scheme)
 	if err != nil {
 		return err
 	}
