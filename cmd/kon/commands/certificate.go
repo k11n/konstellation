@@ -21,8 +21,9 @@ import (
 
 var CertificateCommands = []*cli.Command{
 	{
-		Name:  "certificate",
-		Usage: "Add, remove, and manage SSL certificates",
+		Name:     "certificate",
+		Category: "Cluster",
+		Usage:    "Manage SSL certificates on this cluster",
 		Action: func(c *cli.Context) error {
 			return cli.ShowAppHelp(c)
 		},

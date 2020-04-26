@@ -15,8 +15,9 @@ import (
 
 var UICommands = []*cli.Command{
 	{
-		Name:  "ui",
-		Usage: "Launch various WebUI",
+		Name:     "ui",
+		Usage:    "Launch various WebUI",
+		Category: "Cluster",
 		Action: func(c *cli.Context) error {
 			return cli.ShowAppHelp(c)
 		},

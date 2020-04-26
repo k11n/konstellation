@@ -20,43 +20,56 @@ var targetFlag = &cli.StringFlag{
 	Usage:   "filter results by target",
 }
 
+var mirroredCommands = []*cli.Command{
+	{
+		Name:      "status",
+		Usage:     "Information about the app and its targets",
+		Action:    appStatus,
+		ArgsUsage: "<app>",
+		Flags: []cli.Flag{
+			targetFlag,
+		},
+	},
+	{
+		Name:      "deploy",
+		Usage:     "Deploy a new version of an app",
+		Action:    appDeploy,
+		ArgsUsage: "<app>",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "tag",
+				Usage:    "image tag to use",
+				Required: true,
+			},
+		},
+	},
+}
+
 var AppCommands = []*cli.Command{
 	{
-		Name:  "app",
-		Usage: "App management",
+		Name:     "app",
+		Usage:    "App management",
+		Category: "App",
 		Subcommands: []*cli.Command{
 			{
 				Name:   "list",
-				Usage:  "list apps",
+				Usage:  "List apps on this cluster",
 				Action: appList,
 				Flags: []cli.Flag{
 					targetFlag,
 				},
 			},
-			{
-				Name:      "status",
-				Usage:     "information about the app and its targets",
-				Action:    appStatus,
-				ArgsUsage: "<app>",
-				Flags: []cli.Flag{
-					targetFlag,
-				},
-			},
-			{
-				Name:      "deploy",
-				Usage:     "deploy a new version of an app",
-				Action:    appDeploy,
-				ArgsUsage: "<app>",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:     "tag",
-						Usage:    "image tag to use",
-						Required: true,
-					},
-				},
-			},
 		},
 	},
+}
+
+func init() {
+	for _, cmd := range mirroredCommands {
+		cmdCopy := *cmd
+		cmdCopy.Category = "App"
+		AppCommands = append(AppCommands, &cmdCopy)
+	}
+	AppCommands[0].Subcommands = append(AppCommands[0].Subcommands, mirroredCommands...)
 }
 
 func appList(c *cli.Context) error {

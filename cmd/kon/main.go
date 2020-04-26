@@ -18,9 +18,9 @@ func main() {
 	app.Version = version.Version
 	commandSets := [][]*cli.Command{
 		commands.AppCommands,
-		commands.CertificateCommands,
 		commands.ConfigCommands,
 		commands.ClusterCommands,
+		commands.CertificateCommands,
 		commands.UICommands,
 	}
 	for _, cmds := range commandSets {

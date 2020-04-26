@@ -14,9 +14,10 @@ import (
 
 var ConfigCommands = []*cli.Command{
 	{
-		Name:   "setup",
-		Usage:  "Setup Konstellation CLI",
-		Action: setupStart,
+		Name:     "setup",
+		Usage:    "Setup Konstellation CLI",
+		Category: "Cluster",
+		Action:   setupStart,
 	},
 	// cli.Command{
 	// 	Name:  "config",
