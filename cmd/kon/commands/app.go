@@ -41,6 +41,11 @@ var mirroredCommands = []*cli.Command{
 				Usage:    "image tag to use",
 				Required: true,
 			},
+			&cli.StringFlag{
+				Name:     "app",
+				Usage:    "app to deploy",
+				Required: true,
+			},
 		},
 	},
 }
@@ -194,10 +199,7 @@ func appStatus(c *cli.Context) error {
 }
 
 func appDeploy(c *cli.Context) error {
-	appName, err := getAppArg(c)
-	if err != nil {
-		return err
-	}
+	appName := c.String("app")
 	tag := c.String("tag")
 
 	ac, err := getActiveCluster()
