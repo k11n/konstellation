@@ -124,11 +124,13 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		// TODO: check if autorelease is enabled for this target..
 		newTarget := resources.FirstAvailableRelease(releases)
 		if newTarget != nil {
-			var previousTarget string
-			if targetRelease != nil {
-				previousTarget = targetRelease.Name
+			if targetRelease != newTarget {
+				var previousTarget string
+				if targetRelease != nil {
+					previousTarget = targetRelease.Name
+				}
+				logger.Info("Setting new target release", "target", newTarget.Name, "previousTarget", previousTarget)
 			}
-			logger.Info("Setting new target release", "target", newTarget.Name, "previousTarget", previousTarget)
 			targetRelease = newTarget
 		}
 	}

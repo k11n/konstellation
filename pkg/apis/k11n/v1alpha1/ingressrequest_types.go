@@ -12,16 +12,9 @@ type IngressRequestSpec struct {
 
 // IngressRequestStatus defines the observed state of IngressRequest
 type IngressRequestStatus struct {
-	State   IngressState `json:"status"`
-	Message string       `json:"message"`
+	Address string `json:"address"`
+	Message string `json:"message"`
 }
-
-type IngressState string
-
-const (
-	IngressStateEnabled  IngressState = "enabled"
-	IngressStateConflict IngressState = "conflict"
-)
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

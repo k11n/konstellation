@@ -1,9 +1,12 @@
 package ingress
 
 import (
+	"context"
+
 	istionetworking "istio.io/api/networking/v1alpha3"
 	istio "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -105,7 +108,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		// only care about deletes
 		DeleteFunc:  func(e event.DeleteEvent) bool { return true },
 		CreateFunc:  func(e event.CreateEvent) bool { return false },
-		UpdateFunc:  func(e event.UpdateEvent) bool { return false },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return true },
 		GenericFunc: func(e event.GenericEvent) bool { return false },
 	})
 	if err != nil {
@@ -159,7 +162,35 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 	}
 	resources.LogUpdates(logger, op, "Updated Ingress")
 
-	return res, nil
+	var address string
+	for _, lb := range ingress.Status.LoadBalancer.Ingress {
+		if lb.Hostname != "" {
+			address = lb.Hostname
+			break
+		}
+		if lb.IP != "" {
+			address = lb.IP
+			break
+		}
+	}
+
+	if address != "" {
+		// update ingress url
+		for _, ir := range requestList.Items {
+			statusCopy := ir.Status.DeepCopy()
+			ir.Status.Address = address
+
+			if !apiequality.Semantic.DeepEqual(statusCopy, &ir.Status) {
+				err = r.client.Status().Update(context.TODO(), &ir)
+				if err != nil {
+					break
+				}
+				logger.Info("Updated IngressRequest status", "ingress", ir.Name)
+			}
+		}
+	}
+
+	return res, err
 }
 
 func gatewayForRequests(requests []v1alpha1.IngressRequest) *istio.Gateway {

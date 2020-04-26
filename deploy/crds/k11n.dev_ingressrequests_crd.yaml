@@ -44,13 +44,13 @@ spec:
         status:
           description: IngressRequestStatus defines the observed state of IngressRequest
           properties:
+            address:
+              type: string
             message:
               type: string
-            status:
-              type: string
           required:
+          - address
           - message
-          - status
           type: object
       type: object
   version: v1alpha1
