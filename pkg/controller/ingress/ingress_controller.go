@@ -105,9 +105,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return requests
 		}),
 	}, predicate.Funcs{
-		// only care about deletes
+		// grab ingress events so that we could update its status
 		DeleteFunc:  func(e event.DeleteEvent) bool { return true },
-		CreateFunc:  func(e event.CreateEvent) bool { return false },
+		CreateFunc:  func(e event.CreateEvent) bool { return true },
 		UpdateFunc:  func(e event.UpdateEvent) bool { return true },
 		GenericFunc: func(e event.GenericEvent) bool { return false },
 	})

@@ -125,7 +125,21 @@ func appStatus(c *cli.Context) error {
 			return err
 		}
 
-		fmt.Printf("Target: %s\n", target.Name)
+		// find ingress requests
+		ir, err := resources.GetIngressRequestForAppTarget(kclient, target.Spec.App, target.Spec.Target)
+		if err != nil {
+			if err == resources.ErrNotFound {
+				// just skip
+			} else {
+				return err
+			}
+		}
+
+		fmt.Printf("\nTarget: %s\n", target.Spec.Target)
+		if ir != nil {
+			fmt.Printf("Hosts: %s\n", strings.Join(ir.Spec.Hosts, ", "))
+			fmt.Printf("Load Balancer: %s\n", ir.Status.Address)
+		}
 		fmt.Printf("Scale: %d min, %d max\n", target.Spec.Scale.Min, target.Spec.Scale.Max)
 		fmt.Println()
 		table := tablewriter.NewWriter(os.Stdout)
@@ -133,7 +147,6 @@ func appStatus(c *cli.Context) error {
 			"Release", "Build", "Date", "Pods", "Status", "Traffic",
 		})
 		for _, release := range releases {
-			utils.PrintJSON(release)
 			// loading build
 			build, err := resources.GetBuildByName(kclient, release.Spec.Build)
 			if err != nil {

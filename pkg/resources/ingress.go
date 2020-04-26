@@ -29,6 +29,23 @@ func GetIngressRequests(kclient client.Client) (requestList *v1alpha1.IngressReq
 	}
 	return
 }
+func GetIngressRequestForAppTarget(kclient client.Client, app, target string) (ir *v1alpha1.IngressRequest, err error) {
+	reqList := &v1alpha1.IngressRequestList{}
+	err = kclient.List(context.TODO(), reqList, client.MatchingLabels{
+		APP_LABEL:    app,
+		TARGET_LABEL: target,
+	})
+	if err != nil {
+		return
+	}
+
+	if len(reqList.Items) == 0 {
+		return
+	}
+
+	ir = &reqList.Items[0]
+	return
+}
 
 func GetKonIngress(kclient client.Client) (*netv1beta1.Ingress, error) {
 	ingress := netv1beta1.Ingress{}
