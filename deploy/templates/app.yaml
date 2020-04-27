@@ -66,6 +66,7 @@ spec:
   # Uncomment ingress to create a load balancer and/or handle SSL termination for your host
   # Konstellation will automatically create the load balancer for you on your cloud provider
   # You'd just have to point your domain's DNS entries to the load balancer address.
+  # Each target may also override any env, resources, or probes defined in the app
   targets:
     - name: {{.Target}}
       scale: {min: 1, max: 5}
@@ -73,3 +74,7 @@ spec:
 #        hosts:
 #          - www.yourhost.com
 #        port: 3000
+#      env:
+#      resources:
+#      probes:
+#
