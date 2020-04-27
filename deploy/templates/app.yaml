@@ -1,0 +1,75 @@
+apiVersion: k11n.dev/v1alpha1
+kind: App
+metadata:
+  name: {{.AppName}}
+spec:
+  # Docker registry, leave blank if using Docker Hub as your docker registry
+  # If using Amazon ECR in the same account as the Kubernetes cluster, it should have access to repos in Amazon ECR
+  # If using other docker registries, ensure Kubernetes has access to them:
+  # https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+#  registry: registry_url
+  image: {{.DockerImage}}
+  imageTag: {{.DockerTag}}
+
+  # Set command to override the default CMD in your docker image
+#  command: cmd_to_run
+
+  # Port configuration,
+  # Change port below to match the port that your app runs on
+  # This could be any port, and is not related to the ultimate port your website will run on
+  ports:
+    - name: http
+      port: 3000
+
+  # Set any environment variables that your app might need
+#  env:
+#    - name: MYVAR
+#      value: value
+
+  # Define resources that your apps need
+  # with CPU, 1000m equals to a single core
+#  resources:
+#    requests:
+#      memory: '50Mi'
+#      cpu: '100m'
+#    limits:
+#      memory: '200Mi'
+#      cpu: '200m'
+
+  # Scaling configuration
+#  scale:
+#    targetCPUUtilizationPercentage: 60
+
+  # Probes
+  # * liveness: restarts this pod if probe does not return 200
+  # * readiness: does not send your pod traffic unless this succeeds
+  # parameters
+  # - initialDelaySeconds: amount of time to wait before probes should start
+  # - timeoutSeconds: amount of time to allow the probes to wait
+  # - periodSeconds: frequency of probe pings
+#  probes:
+#      initialDelaySeconds: 15
+#      timeoutSeconds: 3
+#      periodSeconds: 10
+#      liveness:
+#        httpGet:
+#          path: /running
+#          port: 3000
+#        failureThreshold: 3
+#      readiness:
+#        httpGet:
+#          path: /ready
+#          port: 3000
+#        failureThreshold: 6
+
+  # One or more targets to deploy your app to
+  # Uncomment ingress to create a load balancer and/or handle SSL termination for your host
+  # Konstellation will automatically create the load balancer for you on your cloud provider
+  # You'd just have to point your domain's DNS entries to the load balancer address.
+  targets:
+    - name: {{.Target}}
+      scale: {min: 1, max: 5}
+#      ingress:
+#        hosts:
+#          - www.yourhost.com
+#        port: 3000

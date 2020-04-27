@@ -157,6 +157,9 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		// should not increment more than 20% at a time
 		if targetTrafficPercentage-targetRelease.Spec.TrafficPercentage > 20 {
 			targetTrafficPercentage = targetRelease.Spec.TrafficPercentage + 20
+			if targetTrafficPercentage > 100 {
+				targetTrafficPercentage = 100
+			}
 		}
 
 		if ratioDeployed < 1 {
@@ -175,11 +178,10 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 			res = &reconcile.Result{
 				RequeueAfter: at.Spec.Probes.GetReadinessTimeout(),
 			}
-		} else {
+		} else if targetRelease.Spec.TrafficPercentage == 100 {
 			// we are fully switched over, update roles
 			activeRelease = targetRelease
 			logger.Info("Target fully deployed, marking as active", "release", targetRelease.Name)
-			// TODO: requeue to start ramping activeRelease down
 		}
 	}
 

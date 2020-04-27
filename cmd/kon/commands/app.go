@@ -2,9 +2,12 @@ package commands
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
+	"text/template"
 
+	"github.com/manifoldco/promptui"
 	"github.com/olekukonko/tablewriter"
 	"github.com/thoas/go-funk"
 	"github.com/urfave/cli/v2"
@@ -63,6 +66,16 @@ var AppCommands = []*cli.Command{
 				Flags: []cli.Flag{
 					targetFlag,
 				},
+			},
+			{
+				Name:   "new",
+				Usage:  "Create a new app config",
+				Action: appNew,
+			},
+			{
+				Name:   "load",
+				Usage:  "Load app config into Kubernetes",
+				Action: appLoad,
 			},
 		},
 	},
@@ -244,9 +257,109 @@ func appDeploy(c *cli.Context) error {
 	return err
 }
 
+type appInfo struct {
+	AppName     string
+	DockerImage string
+	DockerTag   string
+	Target      string
+}
+
+func appNew(c *cli.Context) error {
+	ai, err := promptAppInfo()
+	if err != nil {
+		return err
+	}
+
+	box := utils.DeployResourcesBox()
+	f, err := box.Open("templates/app.yaml")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	content, err := ioutil.ReadAll(f)
+	if err != nil {
+		return err
+	}
+
+	tmpl, err := template.New("app").Parse(string(content))
+	if err != nil {
+		return err
+	}
+
+	output, err := os.Create(fmt.Sprintf("%s.yaml", ai.AppName))
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+
+	err = tmpl.Execute(output, ai)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Your app config has been successfully created: %s\n", output.Name())
+
+	return nil
+}
+
+func appLoad(c *cli.Context) error {
+	return nil
+}
+
 func getAppArg(c *cli.Context) (string, error) {
 	if c.NArg() == 0 {
 		return "", fmt.Errorf("Required argument \"app\" was not passed in")
 	}
 	return c.Args().Get(0), nil
+}
+
+func promptAppInfo() (ai *appInfo, err error) {
+	prompt := promptui.Prompt{
+		Label:    "Enter app name",
+		Validate: utils.ValidateKubeName,
+	}
+	utils.FixPromptBell(&prompt)
+
+	ai = &appInfo{}
+	val, err := prompt.Run()
+	if err != nil {
+		return
+	}
+	ai.AppName = val
+
+	// docker image
+	prompt = promptui.Prompt{
+		Label:    "Docker image",
+		Validate: utils.ValidateMinLength(3),
+	}
+	utils.FixPromptBell(&prompt)
+	if val, err = prompt.Run(); err != nil {
+		return
+	}
+
+	// see if tag is provided
+	parts := strings.Split(val, ":")
+	if len(parts) == 2 {
+		ai.DockerImage = parts[0]
+		ai.DockerTag = parts[1]
+	} else {
+		ai.DockerImage = val
+		ai.DockerTag = "latest"
+	}
+
+	// if connected to kube, load the first target
+	ac, err := getActiveCluster()
+	if err != nil {
+		return ai, nil
+	}
+
+	cc, err := resources.GetClusterConfig(ac.kubernetesClient())
+	if err != nil {
+		return ai, nil
+	}
+
+	if len(cc.Spec.Targets) > 0 {
+		ai.Target = cc.Spec.Targets[0]
+	}
+	return
 }

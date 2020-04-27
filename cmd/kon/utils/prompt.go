@@ -47,6 +47,17 @@ func ValidateKubeName(val string) error {
 	}
 }
 
+func ValidateMinLength(length int) func(val string) error {
+	return func(val string) error {
+		if len(val) == 0 {
+			return fmt.Errorf("Cannot be empty")
+		} else if len(val) < length {
+			return fmt.Errorf("At least %d characters", length)
+		}
+		return nil
+	}
+}
+
 func SearchFuncFor(slice []string, requirePrefix bool) func(string, int) bool {
 	return func(input string, idx int) bool {
 		item := slice[idx]
