@@ -1,6 +1,7 @@
 package istio
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -8,6 +9,11 @@ import (
 	"path"
 	"strings"
 
+	"github.com/google/uuid"
+	"github.com/lytics/base62"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/davidzhao/konstellation/pkg/components"
@@ -18,6 +24,8 @@ import (
 const (
 	istioNamespace   = "istio-system"
 	istioIngressName = "istio-ingressgateway"
+
+	KialiProxyPath = "/api/v1/namespaces/istio-system/services/http:kiali:20001/proxy/kiali/"
 )
 
 func init() {
@@ -90,12 +98,46 @@ func (i *IstioInstaller) InstallCLI() error {
 
 // installs the component onto the kube cluster
 func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
-	err := cli.RunCommandWithStd(i.cliPath(), "manifest", "apply",
+	// create a secret for kiali
+	data, _ := uuid.New().MarshalBinary()
+	base62.StdEncoding.EncodeToString(data)
+	secret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: istioNamespace,
+			Name:      "kiali",
+			Labels: map[string]string{
+				"app": "kiali",
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"username":   []byte("kiali"),
+			"passphrase": []byte("kiali"),
+		},
+	}
+
+	existing := corev1.Secret{}
+	key, err := client.ObjectKeyFromObject(&secret)
+	err = kclient.Get(context.TODO(), key, &existing)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			err = kclient.Create(context.TODO(), &secret)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	err = kclient.Update(context.TODO(), &secret)
+
+	err = cli.RunCommandWithStd(i.cliPath(), "manifest", "apply",
 		"--skip-confirmation",
 		"--set", "components.citadel.enabled=true", // citadel is required by the sidecar injector
 		"--set", "components.sidecarInjector.enabled=true",
 		"--set", "addonComponents.kiali.enabled=true",
 		"--set", "addonComponents.grafana.enabled=true",
+		"--set", "values.kiali.dashboard.grafanaURL=http://grafana:3000",
 		"--set", "values.gateways.istio-ingressgateway.type=NodePort",
 		"--set", "values.gateways.enabled=true",
 	)

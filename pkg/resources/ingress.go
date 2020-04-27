@@ -11,9 +11,8 @@ import (
 )
 
 const (
-	IngressName      = "kon-ingress"
-	IngressNamespace = "istio-system"
-	GatewayName      = "kon-gateway"
+	IngressName = "kon-ingress"
+	GatewayName = "kon-gateway"
 )
 
 func GetIngressRequests(kclient client.Client) (requestList *v1alpha1.IngressRequestList, err error) {
@@ -49,7 +48,7 @@ func GetIngressRequestForAppTarget(kclient client.Client, app, target string) (i
 
 func GetKonIngress(kclient client.Client) (*netv1beta1.Ingress, error) {
 	ingress := netv1beta1.Ingress{}
-	err := kclient.Get(context.TODO(), client.ObjectKey{Namespace: IngressNamespace, Name: IngressName}, &ingress)
+	err := kclient.Get(context.TODO(), client.ObjectKey{Namespace: IstioNamespace, Name: IngressName}, &ingress)
 	if err != nil {
 		return nil, err
 	}

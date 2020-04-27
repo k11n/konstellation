@@ -535,7 +535,7 @@ func (c *activeCluster) installComponents() error {
 
 	for _, comp := range cc.Spec.Components {
 		if installed[comp.Name] != "" {
-			continue
+			//continue
 		}
 		compInstaller := components.GetComponentByName(comp.Name)
 		if compInstaller == nil {

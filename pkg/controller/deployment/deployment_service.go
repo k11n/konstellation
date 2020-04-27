@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	allGateways = []string{"mesh", fmt.Sprintf("%s.%s.cluster.local", resources.GatewayName, resources.IngressNamespace)}
+	allGateways = []string{"mesh", fmt.Sprintf("%s.%s.cluster.local", resources.GatewayName, resources.IstioNamespace)}
 )
 
 func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *corev1.Service, err error) {

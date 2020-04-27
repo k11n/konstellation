@@ -14,10 +14,12 @@ require (
 	github.com/daaku/go.zipexe v1.0.1 // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/golang/protobuf v1.4.0 // indirect
+	github.com/google/uuid v1.1.1
 	github.com/gophercloud/gophercloud v0.10.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.9
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
+	github.com/lytics/base62 v0.0.0-20180808010106-0ee4de5a5d6d
 	github.com/manifoldco/promptui v0.7.0
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect

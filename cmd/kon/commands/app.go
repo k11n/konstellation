@@ -74,7 +74,7 @@ var AppCommands = []*cli.Command{
 			},
 			{
 				Name:   "load",
-				Usage:  "Load app config into Kubernetes",
+				Usage:  "Load app config into Kubernetes (same as kube apply -f)",
 				Action: appLoad,
 			},
 		},

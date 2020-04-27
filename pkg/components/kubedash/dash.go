@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	PROXY_PATH = "/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/"
+	ProxyPath = "/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/"
 )
 
 func init() {

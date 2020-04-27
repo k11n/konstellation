@@ -17,9 +17,8 @@ import (
 )
 
 const (
-	albIngressName      = "alb-ingress-controller"
-	albRoleAnnotation   = "eks.amazonaws.com/role-arn"
-	kubeSystemNamespace = "kube-system"
+	albIngressName    = "alb-ingress-controller"
+	albRoleAnnotation = "eks.amazonaws.com/role-arn"
 )
 
 func init() {
@@ -54,7 +53,7 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 	svcAccount := &corev1.ServiceAccount{}
 	err = kclient.Get(context.TODO(), types.NamespacedName{
 		Name:      albIngressName,
-		Namespace: kubeSystemNamespace,
+		Namespace: resources.KubeSystemNamespace,
 	}, svcAccount)
 	if err != nil {
 		return err
@@ -92,7 +91,7 @@ func (i *AWSALBIngress) deploymentForIngress(cc *v1alpha1.ClusterConfig) *appsv1
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      albIngressName,
-			Namespace: "kube-system",
+			Namespace: resources.KubeSystemNamespace,
 			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
