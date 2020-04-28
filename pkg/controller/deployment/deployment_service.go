@@ -80,7 +80,8 @@ func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *cor
 
 func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) error {
 	dr := newDestinationRule(at, service, releases)
-	_, err := resources.UpdateResource(r.client, dr, at, r.scheme)
+	op, err := resources.UpdateResource(r.client, dr, at, r.scheme)
+	resources.LogUpdates(log, op, "Updated DestinationRule", "appTarget", at.Name)
 	return err
 }
 
