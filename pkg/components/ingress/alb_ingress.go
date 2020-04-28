@@ -77,8 +77,9 @@ func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, requests []
 	// https://kubernetes-sigs.github.io/aws-alb-ingress-controller/guide/ingress/annotation/
 	// ingress could perform autodiscovery
 	annotations = map[string]string{
-		"kubernetes.io/ingress.class":      "alb",
-		"alb.ingress.kubernetes.io/scheme": "internet-facing",
+		"kubernetes.io/ingress.class":            "alb",
+		"alb.ingress.kubernetes.io/scheme":       "internet-facing",
+		"alb.ingress.kubernetes.io/listen-ports": `[{"HTTP": 80}, {"HTTPS": 443}]`,
 	}
 	return
 }

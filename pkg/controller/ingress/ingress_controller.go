@@ -82,15 +82,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	err = c.Watch(&source.Kind{Type: &netv1beta1.Ingress{}}, &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: handler.ToRequestsFunc(func(configMapObject handler.MapObject) []reconcile.Request {
 			requests := []reconcile.Request{}
-			ingress := configMapObject.Object.(*netv1beta1.Ingress)
-			//
-			//if configMapObject.Meta.GetDeletionTimestamp() == nil {
-			//	return requests
-			//}
-
-			log.Info("Ingress deleted, requesting reconcile", "ingress", ingress.Name)
-			// only thing is if it gets deleted.. we'll need to reconcile
-			// since the reconcile loops are a bit diff here..
 			// any changes to one resource in the domain, will require us
 			// to load all requests for that domain to get merged
 			reqList, err := resources.GetIngressRequests(mgr.GetClient())
@@ -248,12 +239,12 @@ func (r *ReconcileIngressRequest) ingressForRequests(requests []v1alpha1.Ingress
 	}
 
 	hostsUsed := map[string]bool{}
-	for _, r := range requests {
-		for _, host := range r.Spec.Hosts {
+	for _, req := range requests {
+		for _, host := range req.Spec.Hosts {
 			if hostsUsed[host] {
 				continue
 			}
-			// TODO: include SSL/433 if cert is available
+
 			rule := netv1beta1.IngressRule{
 				Host: host,
 				IngressRuleValue: netv1beta1.IngressRuleValue{
@@ -272,6 +263,22 @@ func (r *ReconcileIngressRequest) ingressForRequests(requests []v1alpha1.Ingress
 			}
 			ingress.Spec.Rules = append(ingress.Spec.Rules, rule)
 			hostsUsed[host] = true
+		}
+	}
+
+	var tlsHosts []string
+	for host := range hostsUsed {
+		_, err := resources.GetCertificateThatMatchDomain(r.client, host)
+		if err == nil {
+			tlsHosts = append(tlsHosts, host)
+		}
+	}
+
+	if len(tlsHosts) != 0 {
+		ingress.Spec.TLS = []netv1beta1.IngressTLS{
+			{
+				Hosts: tlsHosts,
+			},
 		}
 	}
 	return &ingress, nil

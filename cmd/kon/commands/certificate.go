@@ -202,7 +202,7 @@ func syncCertificate(kclient client.Client, cert *types.Certificate) (updated bo
 		ObjectMeta: metav1.ObjectMeta{
 			Name: cert.ID,
 			Labels: map[string]string{
-				resources.DOMAIN_LABEL: cert.Domain,
+				resources.DOMAIN_LABEL: resources.TopLevelDomain(cert.Domain),
 			},
 		},
 		Spec: v1alpha1.CertificateRefSpec{
@@ -222,8 +222,6 @@ func syncCertificate(kclient client.Client, cert *types.Certificate) (updated bo
 	if op != controllerutil.OperationResultNone {
 		updated = true
 	}
-
-	utils.PrintJSON(certRef)
 
 	return
 }

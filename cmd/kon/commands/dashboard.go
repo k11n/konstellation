@@ -56,10 +56,11 @@ func kubeDashboard(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to start kubernetes proxy")
 	}
-	fmt.Printf("Starting kube proxy at %s\n", proxy.HostWithPort())
 
 	// launch web browser after delay
-	time.Sleep(3 * time.Second)
+	fmt.Printf("Launching Kubernetes Dashboard: %s\n", proxy.HostWithPort())
+
+	time.Sleep(2 * time.Second)
 	browser.OpenURL(proxy.HostWithPort() + kubedash.ProxyPath)
 
 	proxy.WaitUntilDone()
@@ -90,10 +91,10 @@ func kialiDashboard(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to start kubernetes proxy")
 	}
-	fmt.Printf("Starting kube proxy at %s\n", proxy.HostWithPort())
+	fmt.Printf("Launching Kiali Dashboard: %s\n", proxy.HostWithPort())
 
 	// launch web browser after delay
-	time.Sleep(3 * time.Second)
+	time.Sleep(2 * time.Second)
 	browser.OpenURL(proxy.HostWithPort())
 
 	proxy.WaitUntilDone()
