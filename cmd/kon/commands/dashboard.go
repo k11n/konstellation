@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/davidzhao/konstellation/pkg/components/istio"
 	"github.com/davidzhao/konstellation/pkg/components/kubedash"
 	"github.com/davidzhao/konstellation/pkg/resources"
 	koncli "github.com/davidzhao/konstellation/pkg/utils/cli"
@@ -45,7 +44,6 @@ func kubeDashboard(c *cli.Context) error {
 
 	// print token
 	secret, err := resources.GetSecretForAccount(ac.kubernetesClient(), resources.KubeSystemNamespace, resources.SERVICE_ACCOUNT_KON_ADMIN)
-	//token, err := ac.Manager.KubernetesProvider().GetAuthToken(context.TODO(), ac.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to get authentication token")
 	}
@@ -84,7 +82,10 @@ func kialiDashboard(c *cli.Context) error {
 	fmt.Printf("Passphrase: %s\n\n", secret.Data["passphrase"])
 
 	// run proxy
-	proxy := koncli.NewKubeProxy()
+	proxy, err := koncli.NewKubeProxyForService(ac.kubernetesClient(), "istio-system", "kiali")
+	if err != nil {
+		return err
+	}
 	err = proxy.Start()
 	if err != nil {
 		return errors.Wrap(err, "failed to start kubernetes proxy")
@@ -93,7 +94,7 @@ func kialiDashboard(c *cli.Context) error {
 
 	// launch web browser after delay
 	time.Sleep(3 * time.Second)
-	browser.OpenURL(proxy.HostWithPort() + istio.KialiProxyPath)
+	browser.OpenURL(proxy.HostWithPort())
 
 	proxy.WaitUntilDone()
 	return nil

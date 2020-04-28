@@ -17,15 +17,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/davidzhao/konstellation/pkg/components"
+	"github.com/davidzhao/konstellation/pkg/resources"
 	"github.com/davidzhao/konstellation/pkg/utils/cli"
 	"github.com/davidzhao/konstellation/pkg/utils/files"
-)
-
-const (
-	istioNamespace   = "istio-system"
-	istioIngressName = "istio-ingressgateway"
-
-	KialiProxyPath = "/api/v1/namespaces/istio-system/services/http:kiali:20001/proxy/kiali/"
 )
 
 func init() {
@@ -103,7 +97,7 @@ func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 	base62.StdEncoding.EncodeToString(data)
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: istioNamespace,
+			Namespace: resources.IstioNamespace,
 			Name:      "kiali",
 			Labels: map[string]string{
 				"app": "kiali",
