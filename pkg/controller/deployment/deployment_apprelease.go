@@ -16,6 +16,10 @@ import (
 	"github.com/davidzhao/konstellation/pkg/resources"
 )
 
+const (
+	rampIncrement = 0.25
+)
+
 func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget) (releases []*v1alpha1.AppRelease, res *reconcile.Result, err error) {
 	// find last N builds
 	builds, err := resources.GetBuildsByImage(r.client, at.Spec.BuildRegistry, at.Spec.BuildImage, 5)
@@ -140,46 +144,42 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 	if targetRelease == activeRelease {
 		targetTrafficPercentage = 100
 		targetRelease.Spec.NumDesired = desiredInstances
-	} else if targetRelease.Status.NumAvailable < targetRelease.Spec.NumDesired {
-		// has not reached our desired point, requeue but don't match traffic to this level
-		res = &reconcile.Result{
-			RequeueAfter: at.Spec.Probes.GetReadinessTimeout() / 2,
-		}
-		logger.Info("Target pods are not ready yet", "release", targetRelease.Name,
-			"numAvailable", targetRelease.Status.NumAvailable,
-			"numDesired", targetRelease.Spec.NumDesired)
-		return
 	} else {
-		// determine current progress, then next steps
+		// increase by up to rampIncrement
+		maxIncrement := int32(float32(desiredInstances) * rampIncrement)
+		if maxIncrement < 1 {
+			maxIncrement = 1
+		}
+		targetInstances := targetRelease.Status.NumAvailable + maxIncrement
+		if targetInstances > desiredInstances {
+			targetInstances = desiredInstances
+		}
+		if targetRelease.Spec.NumDesired < targetInstances {
+			logger.Info("Increasing pods", "release", targetRelease.Name,
+				"numDesired", targetRelease.Spec.NumDesired, "newNumDesired", targetInstances)
+			targetRelease.Spec.NumDesired = targetInstances
+		}
+
 		ratioDeployed := float32(targetRelease.Status.NumAvailable) / float32(desiredInstances)
+		if ratioDeployed > 1 {
+			ratioDeployed = 1
+		}
 		targetTrafficPercentage = int32(ratioDeployed * 100)
 
-		// should not increment more than 20% at a time
-		if targetTrafficPercentage-targetRelease.Spec.TrafficPercentage > 20 {
-			targetTrafficPercentage = targetRelease.Spec.TrafficPercentage + 20
-			if targetTrafficPercentage > 100 {
-				targetTrafficPercentage = 100
-			}
+		// should not increment more than ramp increment% at a time
+		rampPercentage := int32(100 * rampIncrement)
+		if targetTrafficPercentage-targetRelease.Spec.TrafficPercentage > rampPercentage {
+			targetTrafficPercentage = targetRelease.Spec.TrafficPercentage + rampPercentage
 		}
 
-		if ratioDeployed < 1 {
-			// compute next step up, increment by 20% at a time
-			podsIncrement := int32(float32(desiredInstances) * 0.2)
-			if podsIncrement == 0 {
-				podsIncrement = 1
-			}
-			targetRelease.Spec.NumDesired += podsIncrement
-			if targetRelease.Spec.NumDesired > desiredInstances {
-				targetRelease.Spec.NumDesired = desiredInstances
-			}
-
-			logger.Info("Increasing pods", "release", targetRelease.Name,
-				"increment", podsIncrement, "numDesired", targetRelease.Spec.NumDesired)
+		if targetTrafficPercentage < 100 || targetTrafficPercentage <= targetRelease.Spec.TrafficPercentage {
+			// before we are fully ramped, requeue to check again
+			// we use <= current traffic ramp since the actual traffic may be less than 100% (due to new canaries/etc)
 			res = &reconcile.Result{
 				RequeueAfter: at.Spec.Probes.GetReadinessTimeout(),
 			}
-		} else if targetRelease.Spec.TrafficPercentage == 100 {
-			// we are fully switched over, update roles
+		} else {
+			// fully deployed, update active roles and we are done
 			activeRelease = targetRelease
 			logger.Info("Target fully deployed, marking as active", "release", targetRelease.Name)
 		}
@@ -196,6 +196,12 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 			if ar == targetRelease {
 				ar.Spec.TrafficPercentage = targetTrafficPercentage
 			} else {
+				// scale down pods as a proportion of traffic
+				instanceCount := int32(float32(desiredInstances) * float32(ar.Spec.TrafficPercentage) / 100)
+				if instanceCount < 1 && ar.Spec.TrafficPercentage != 0 {
+					instanceCount = 1
+				}
+				ar.Spec.NumDesired = instanceCount
 				ar.Spec.TrafficPercentage = 100 - targetTrafficPercentage
 			}
 		} else if ar == targetRelease {
