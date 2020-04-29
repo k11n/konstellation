@@ -5,10 +5,12 @@ import (
 	"reflect"
 
 	"github.com/imdario/mergo"
+	"github.com/thoas/go-funk"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var (
-	transformers = mergeTransformers{}
+	transformers = newMergeTransformers()
 )
 
 // fill in non-empty fields from src to dest
@@ -63,14 +65,32 @@ func mergeSliceValue(dst, src reflect.Value) error {
 	return nil
 }
 
+func mergeOverride(dst, src reflect.Value) error {
+	dst.Set(src)
+	return nil
+}
+
+func newMergeTransformers() mergeTransformers {
+	return mergeTransformers{
+		overrideTypes: []reflect.Type{
+			reflect.TypeOf(corev1.ResourceRequirements{}),
+		},
+	}
+}
+
 type mergeTransformers struct {
+	// types that should be overridden
+	overrideTypes []reflect.Type
 }
 
 func (t mergeTransformers) Transformer(oType reflect.Type) func(dst, src reflect.Value) error {
 	switch oType.Kind() {
 	case reflect.Slice:
 		return mergeSliceValue
-	default:
-		return nil
+	case reflect.Struct:
+		if funk.Contains(t.overrideTypes, oType) {
+			return mergeOverride
+		}
 	}
+	return nil
 }
