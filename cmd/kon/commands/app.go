@@ -73,9 +73,10 @@ var AppCommands = []*cli.Command{
 				Action: appNew,
 			},
 			{
-				Name:   "load",
-				Usage:  "Load app config into Kubernetes (same as kube apply -f)",
-				Action: appLoad,
+				Name:      "load",
+				Usage:     "Load app config into Kubernetes (same as kube apply -f)",
+				ArgsUsage: "<app.yaml>",
+				Action:    appLoad,
 			},
 		},
 	},
@@ -303,6 +304,22 @@ func appNew(c *cli.Context) error {
 }
 
 func appLoad(c *cli.Context) error {
+	app, err := getAppArg(c)
+	if err != nil {
+		return err
+	}
+
+	_, err = getActiveCluster()
+	if err != nil {
+		return err
+	}
+
+	err = utils.KubeApplyFile(app)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Successfully loaded %s\n", app)
 	return nil
 }
 

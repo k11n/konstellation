@@ -292,11 +292,10 @@ func clusterDestroy(c *cli.Context) error {
 	}
 
 	// remove all apps and then ingress
-	ac, err := getActiveCluster()
+	kclient, err := kube.KubernetesClientWithContext(resources.ContextNameForCluster(cm.Cloud(), clusterName))
 	if err != nil {
 		return err
 	}
-	kclient := ac.kubernetesClient()
 	apps, err := resources.ListApps(kclient)
 	if err != nil {
 		return err
