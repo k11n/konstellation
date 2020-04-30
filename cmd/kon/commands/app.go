@@ -15,6 +15,7 @@ import (
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/davidzhao/konstellation/pkg/resources"
+	cliutils "github.com/davidzhao/konstellation/pkg/utils/cli"
 )
 
 var targetFlag = &cli.StringFlag{
@@ -314,7 +315,7 @@ func appLoad(c *cli.Context) error {
 		return err
 	}
 
-	err = utils.KubeApplyFile(app)
+	err = cliutils.KubeApply(app)
 	if err != nil {
 		return err
 	}
