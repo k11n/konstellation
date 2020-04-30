@@ -92,6 +92,20 @@ func (i *IstioInstaller) InstallCLI() error {
 
 // installs the component onto the kube cluster
 func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
+	err := cli.RunCommandWithStd(i.cliPath(), "manifest", "apply",
+		"--skip-confirmation",
+		"--set", "components.citadel.enabled=true", // citadel is required by the sidecar injector
+		"--set", "components.sidecarInjector.enabled=true",
+		"--set", "addonComponents.kiali.enabled=true",
+		"--set", "addonComponents.grafana.enabled=true",
+		"--set", "values.kiali.dashboard.grafanaURL=http://grafana:3000",
+		"--set", "values.gateways.istio-ingressgateway.type=NodePort",
+		"--set", "values.gateways.enabled=true",
+	)
+	if err != nil {
+		return err
+	}
+
 	// create a secret for kiali
 	data, _ := uuid.New().MarshalBinary()
 	base62.StdEncoding.EncodeToString(data)
@@ -124,17 +138,6 @@ func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 		}
 	}
 	err = kclient.Update(context.TODO(), &secret)
-
-	err = cli.RunCommandWithStd(i.cliPath(), "manifest", "apply",
-		"--skip-confirmation",
-		"--set", "components.citadel.enabled=true", // citadel is required by the sidecar injector
-		"--set", "components.sidecarInjector.enabled=true",
-		"--set", "addonComponents.kiali.enabled=true",
-		"--set", "addonComponents.grafana.enabled=true",
-		"--set", "values.kiali.dashboard.grafanaURL=http://grafana:3000",
-		"--set", "values.gateways.istio-ingressgateway.type=NodePort",
-		"--set", "values.gateways.enabled=true",
-	)
 	return err
 }
 
