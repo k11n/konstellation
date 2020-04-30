@@ -181,6 +181,7 @@ func (r *ReconcileDeployment) ensureNamespaceCreated(at *v1alpha1.AppTarget) err
 				resources.ISTIO_INJECT_LABEL: "enabled",
 				resources.APP_LABEL:          at.Spec.App,
 				resources.TARGET_LABEL:       at.Spec.Target,
+				resources.MANAGED_BY_LABEL:   resources.KONSTELLATION,
 			},
 		},
 	}

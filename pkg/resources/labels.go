@@ -12,5 +12,7 @@ const (
 	APP_RELEASE_LABEL    = "k11n.dev/appRelease"
 	DOMAIN_LABEL         = "k11n.dev/domain"
 
+	MANAGED_BY_LABEL   = "app.kubernetes.io/managed-by"
+	KONSTELLATION      = "konstellation"
 	ISTIO_INJECT_LABEL = "istio-injection"
 )
