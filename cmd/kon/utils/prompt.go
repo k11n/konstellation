@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	namePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9\-]*[a-z0-9]$`)
+	namePattern = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9\-]*[a-zA-Z0-9]$`)
 	BellSkipper = &bellSkipper{}
 )
 

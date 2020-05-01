@@ -7,48 +7,23 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/urfave/cli/v2"
 
-	"github.com/davidzhao/konstellation/cmd/kon/config"
 	"github.com/davidzhao/konstellation/cmd/kon/kube"
 	"github.com/davidzhao/konstellation/pkg/components"
 )
 
-var ConfigCommands = []*cli.Command{
+var SetupCommands = []*cli.Command{
 	{
 		Name:     "setup",
 		Usage:    "Setup Konstellation CLI",
 		Category: "Cluster",
 		Action:   setupStart,
 	},
-	// cli.Command{
-	// 	Name:  "config",
-	// 	Usage: "Configuration",
-	// 	Subcommands: []cli.Command{
-	// 		cli.Command{
-	// 			Name:   "show",
-	// 			Usage:  "print current config",
-	// 			Action: configShow,
-	// 		},
-	// 	},
-	// },
 }
 
 var neededExes = []string{
 	"aws",
 	"kubectl",
 	"terraform",
-}
-
-func configShow(c *cli.Context) error {
-	conf := config.GetConfig()
-	if conf.IsPersisted() {
-		fmt.Printf("Loading config from %s\n", conf.ConfigFile())
-	}
-	content, err := conf.ToYAML()
-	if err != nil {
-		return err
-	}
-	fmt.Println(content)
-	return nil
 }
 
 func setupStart(c *cli.Context) error {

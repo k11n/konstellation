@@ -70,12 +70,12 @@ var AppCommands = []*cli.Command{
 			},
 			{
 				Name:   "new",
-				Usage:  "Create a new app config",
+				Usage:  "Create a new app.yaml from template",
 				Action: appNew,
 			},
 			{
 				Name:      "load",
-				Usage:     "Load app config into Kubernetes (same as kube apply -f)",
+				Usage:     "Load app into Kubernetes (same as kube apply -f)",
 				ArgsUsage: "<app.yaml>",
 				Action:    appLoad,
 			},

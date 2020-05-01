@@ -11,6 +11,11 @@ import (
 	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
 
+const (
+	APP_LABEL    = "k11n.dev/app"
+	TARGET_LABEL = "k11n.dev/target"
+)
+
 // AppSpec defines the desired state of App
 type AppSpec struct {
 	Registry string `json:"registry,omitempty"`

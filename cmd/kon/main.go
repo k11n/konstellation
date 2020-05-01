@@ -19,6 +19,7 @@ func main() {
 	commandSets := [][]*cli.Command{
 		commands.AppCommands,
 		commands.ConfigCommands,
+		commands.SetupCommands,
 		commands.ClusterCommands,
 		commands.CertificateCommands,
 		commands.DashboardCommands,

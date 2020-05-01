@@ -78,6 +78,7 @@ rules:
   - ingressrequests
   - certificates
   - appreleases
+  - appconfigs
   verbs:
   - create
   - delete
