@@ -14,9 +14,9 @@ import (
 func LabelsForBuild(build *v1alpha1.Build) map[string]string {
 	image := strings.ReplaceAll(build.Spec.Image, "/", "_")
 	return map[string]string{
-		BUILD_REGISTRY_LABEL: build.Spec.Registry,
-		BUILD_IMAGE_LABEL:    image,
-		BUILD_LABEL:          build.Name,
+		BuildRegistryLabel: build.Spec.Registry,
+		BuildImageLabel:    image,
+		BuildLabel:         build.Name,
 	}
 }
 
@@ -35,8 +35,8 @@ func GetBuildsByImage(kclient client.Client, registry, image string, count int) 
 		count = defaultListSize
 	}
 	err = kclient.List(context.TODO(), &buildList, client.MatchingLabels{
-		BUILD_REGISTRY_LABEL: registry,
-		BUILD_IMAGE_LABEL:    image,
+		BuildRegistryLabel: registry,
+		BuildImageLabel:    image,
 	}, client.Limit(count))
 	if err != nil {
 		return

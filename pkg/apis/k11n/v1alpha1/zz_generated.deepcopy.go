@@ -277,13 +277,6 @@ func (in *AppReleaseSpec) DeepCopyInto(out *AppReleaseSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.Env != nil {
-		in, out := &in.Env, &out.Env
-		*out = make([]v1.EnvVar, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
 	in.Resources.DeepCopyInto(&out.Resources)
 	in.Probes.DeepCopyInto(&out.Probes)
 	return
@@ -332,13 +325,6 @@ func (in *AppSpec) DeepCopyInto(out *AppSpec) {
 		in, out := &in.Args, &out.Args
 		*out = make([]string, len(*in))
 		copy(*out, *in)
-	}
-	if in.Env != nil {
-		in, out := &in.Env, &out.Env
-		*out = make([]v1.EnvVar, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
 	}
 	in.Resources.DeepCopyInto(&out.Resources)
 	in.Scale.DeepCopyInto(&out.Scale)
@@ -462,13 +448,6 @@ func (in *AppTargetSpec) DeepCopyInto(out *AppTargetSpec) {
 		in, out := &in.Args, &out.Args
 		*out = make([]string, len(*in))
 		copy(*out, *in)
-	}
-	if in.Env != nil {
-		in, out := &in.Env, &out.Env
-		*out = make([]v1.EnvVar, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
 	}
 	in.Resources.DeepCopyInto(&out.Resources)
 	in.Scale.DeepCopyInto(&out.Scale)
@@ -1262,13 +1241,6 @@ func (in *TargetConfig) DeepCopyInto(out *TargetConfig) {
 		in, out := &in.Ingress, &out.Ingress
 		*out = new(IngressConfig)
 		(*in).DeepCopyInto(*out)
-	}
-	if in.Env != nil {
-		in, out := &in.Env, &out.Env
-		*out = make([]v1.EnvVar, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
 	}
 	in.Resources.DeepCopyInto(&out.Resources)
 	in.Scale.DeepCopyInto(&out.Scale)

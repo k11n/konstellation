@@ -3,6 +3,7 @@ package resources
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -13,8 +14,8 @@ import (
 func GetAppConfig(kclient client.Client, app, target string) (ac *v1alpha1.AppConfig, err error) {
 	appConfigList := v1alpha1.AppConfigList{}
 	err = kclient.List(context.TODO(), &appConfigList, client.MatchingLabels{
-		APP_LABEL:    app,
-		TARGET_LABEL: target,
+		AppLabel:    app,
+		TargetLabel: target,
 	})
 	if err != nil {
 		return
@@ -43,4 +44,10 @@ func SaveAppConfig(kclient client.Client, ac *v1alpha1.AppConfig) error {
 		return nil
 	})
 	return err
+}
+
+func GetConfigMap(kclient client.Client, namespace string, name string) (cm *corev1.ConfigMap, err error) {
+	cm = &corev1.ConfigMap{}
+	err = kclient.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: name}, cm)
+	return
 }

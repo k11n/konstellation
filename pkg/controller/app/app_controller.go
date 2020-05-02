@@ -253,7 +253,6 @@ func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Build)
 			BuildImage:    build.Spec.Image,
 			Command:       app.Spec.Command,
 			Args:          app.Spec.Args,
-			Env:           app.Spec.EnvForTarget(target),
 			Resources:     *app.Spec.ResourcesForTarget(target),
 			Scale:         *app.Spec.ScaleSpecForTarget(target),
 			Probes:        *app.Spec.ProbesForTarget(target),
@@ -271,7 +270,7 @@ func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Build)
 
 func labelsForAppTarget(app *v1alpha1.App, target string) map[string]string {
 	return map[string]string{
-		resources.APP_LABEL:    app.Name,
-		resources.TARGET_LABEL: target,
+		resources.AppLabel:    app.Name,
+		resources.TargetLabel: target,
 	}
 }

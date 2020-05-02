@@ -10,12 +10,15 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -68,7 +71,40 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		}
 	}
 
-	// TODO: watch new builds and reconcile apps
+	// watch config changes, and watch builds
+	err = c.Watch(&source.Kind{Type: &v1alpha1.AppConfig{}}, &handler.EnqueueRequestsFromMapFunc{
+		ToRequests: handler.ToRequestsFunc(func(configMapObject handler.MapObject) []reconcile.Request {
+			requests := []reconcile.Request{}
+			// check which apps
+			appConfig := configMapObject.Object.(*v1alpha1.AppConfig)
+			targets, err := resources.GetAppTargets(mgr.GetClient(), appConfig.Labels[v1alpha1.AppLabel])
+			if err != nil {
+				return requests
+			}
+			desiredTarget := appConfig.Labels[v1alpha1.TargetLabel]
+
+			for _, target := range targets {
+				if desiredTarget != "" && desiredTarget != target.Spec.Target {
+					// skip if it's a target specific config change
+					continue
+				}
+				requests = append(requests, reconcile.Request{
+					types.NamespacedName{
+						Namespace: target.Namespace,
+						Name:      target.Name,
+					},
+				})
+			}
+
+			return requests
+		}),
+	}, predicate.Funcs{
+		// grab ingress events so that we could update its status
+		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
+		CreateFunc:  func(e event.CreateEvent) bool { return true },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return true },
+		GenericFunc: func(e event.GenericEvent) bool { return false },
+	})
 
 	return nil
 }
@@ -114,8 +150,14 @@ func (r *ReconcileDeployment) Reconcile(request reconcile.Request) (res reconcil
 		return
 	}
 
+	// figure out configs
+	configMap, err := r.reconcileConfigMap(at)
+	if err != nil {
+		return
+	}
+
 	// create releases and figure out traffic split
-	releases, arRes, err := r.reconcileAppReleases(at)
+	releases, arRes, err := r.reconcileAppReleases(at, configMap)
 	if err != nil {
 		return
 	}
@@ -178,10 +220,10 @@ func (r *ReconcileDeployment) ensureNamespaceCreated(at *v1alpha1.AppTarget) err
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 			Labels: map[string]string{
-				resources.ISTIO_INJECT_LABEL: "enabled",
-				resources.APP_LABEL:          at.Spec.App,
-				resources.TARGET_LABEL:       at.Spec.Target,
-				resources.MANAGED_BY_LABEL:   resources.KONSTELLATION,
+				resources.IstioInjectLabel: "enabled",
+				resources.AppLabel:         at.Spec.App,
+				resources.TargetLabel:      at.Spec.Target,
+				resources.ManagedByLabel:   resources.Konstellation,
 			},
 		},
 	}
@@ -194,9 +236,51 @@ func (r *ReconcileDeployment) ensureNamespaceCreated(at *v1alpha1.AppTarget) err
 	return r.client.Create(context.TODO(), &n)
 }
 
+func (r *ReconcileDeployment) reconcileConfigMap(at *v1alpha1.AppTarget) (configMap *corev1.ConfigMap, err error) {
+	// grab app release for this app
+	baseConfig, err := resources.GetAppConfig(r.client, at.Spec.App, "")
+	if err == resources.ErrNotFound {
+		baseConfig = nil
+	} else if err != nil {
+		return
+	}
+
+	targetConfig, err := resources.GetAppConfig(r.client, at.Spec.App, at.Spec.Target)
+	if err == resources.ErrNotFound {
+		targetConfig = nil
+	} else if err != nil {
+		return
+	}
+
+	if baseConfig == nil {
+		baseConfig = targetConfig
+		targetConfig = nil
+	}
+
+	if baseConfig == nil {
+		return
+	}
+
+	// merge if needed
+	if targetConfig != nil {
+		baseConfig.MergeWith(targetConfig)
+	}
+
+	// check if existing configmap with the hash
+	configMap, err = resources.GetConfigMap(r.client, at.ScopedName(), baseConfig.ConfigHash())
+	if errors.IsNotFound(err) {
+		log.Info("Creating ConfigMap", "app", at.Spec.App, "target", at.Spec.Target)
+		// create new
+		configMap = baseConfig.ToConfigMap()
+		configMap.Namespace = at.ScopedName()
+		err = r.client.Create(context.Background(), configMap)
+	}
+	return
+}
+
 func labelsForAppTarget(at *v1alpha1.AppTarget) map[string]string {
 	return map[string]string{
-		resources.APP_LABEL:    at.Spec.App,
-		resources.TARGET_LABEL: at.Spec.Target,
+		resources.AppLabel:    at.Spec.App,
+		resources.TargetLabel: at.Spec.Target,
 	}
 }

@@ -28,7 +28,7 @@ func GetAppByName(kclient client.Client, name string) (app *v1alpha1.App, err er
 func GetAppTargets(kclient client.Client, appName string) (targets []v1alpha1.AppTarget, err error) {
 	appTargetList := v1alpha1.AppTargetList{}
 	err = kclient.List(context.TODO(), &appTargetList, client.MatchingLabels{
-		APP_LABEL: appName,
+		AppLabel: appName,
 	})
 	if err != nil {
 		return
@@ -49,8 +49,8 @@ func GetAppTarget(kclient client.Client, name string) (*v1alpha1.AppTarget, erro
 func GetAppTargetWithLabels(kclient client.Client, app, target string) (*v1alpha1.AppTarget, error) {
 	appTargetList := v1alpha1.AppTargetList{}
 	err := kclient.List(context.TODO(), &appTargetList, client.MatchingLabels{
-		APP_LABEL:    app,
-		TARGET_LABEL: target,
+		AppLabel:    app,
+		TargetLabel: target,
 	})
 	if err != nil {
 		return nil, err

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	autoscalev2beta2 "k8s.io/api/autoscaling/v2beta2"
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,37 +21,49 @@ const (
 	rampIncrement = 0.25
 )
 
-func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget) (releases []*v1alpha1.AppRelease, res *reconcile.Result, err error) {
+func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget, configMap *corev1.ConfigMap) (releases []*v1alpha1.AppRelease, res *reconcile.Result, err error) {
 	// find last N builds
-	builds, err := resources.GetBuildsByImage(r.client, at.Spec.BuildRegistry, at.Spec.BuildImage, 5)
+	builds, err := resources.GetBuildsByImage(r.client, at.Spec.BuildRegistry, at.Spec.BuildImage, 6)
 	if err != nil {
 		return
 	}
 
 	// create new releases if needed
-	releases, err = resources.GetAppReleases(r.client, at.Spec.App, at.Spec.Target, 20)
+	releases, err = resources.GetAppReleases(r.client, at.Spec.App, at.Spec.Target, 50)
 	if err != nil {
 		return
 	}
 
 	// keep track of builds that we already have a release for, those can be ignored
-	existingReleases := map[string]bool{}
+	existingReleases := map[string]*v1alpha1.AppRelease{}
 	for _, ar := range releases {
-		existingReleases[ar.Spec.Build] = true
+		existingReleases[ar.Spec.Build] = ar
 	}
 
 	// create releases for new builds
-	for _, b := range builds {
-		if existingReleases[b.Name] {
-			continue
+	for i, b := range builds {
+		ar := existingReleases[b.Name]
+		if ar != nil {
+			if configMap != nil && i == 0 {
+				// the latest build requires configMap hash to match too
+				// otherwise we should create new release on config changes
+				if ar.Spec.Config == configMap.Name {
+					continue
+				} else {
+					log.Info("config changed, creating new release", "configMap", configMap.Name,
+						"build", b.Name, "appRelease", ar.Name)
+				}
+			} else {
+				continue
+			}
 		}
 
-		ar := appReleaseForTarget(at, &b)
+		ar = appReleaseForTarget(at, &b, configMap)
 		releases = append(releases, ar)
 	}
 
 	// sort releases and determine traffic and latest
-	resources.SortAppReleasesByBuild(releases)
+	resources.SortAppReleasesByLatest(releases)
 
 	releasesCopy := make([]*v1alpha1.AppRelease, 0, len(releases))
 	for _, ar := range releases {
@@ -77,6 +90,19 @@ func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget) (rele
 		}
 
 		resources.LogUpdates(log, op, "Updated AppRelease", "appTarget", at.Name, "release", ar.Name)
+	}
+
+	// delete all except for the last 6
+	if len(releases) > 6 {
+		toDelete := releases[6:]
+		releases = releases[:6]
+
+		for _, ar := range toDelete {
+			err = r.client.Delete(context.TODO(), ar)
+			if err != nil {
+				return
+			}
+		}
 	}
 	return
 }
@@ -284,7 +310,7 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 	scaler := newAutoscalerForAppTarget(at, activeRelease)
 	// see if any of the existing scalers match the current template
 	for _, s := range scalerList.Items {
-		if s.Labels[resources.APP_RELEASE_LABEL] == scaler.Labels[resources.APP_RELEASE_LABEL] {
+		if s.Labels[resources.AppReleaseLabel] == scaler.Labels[resources.AppReleaseLabel] {
 			scaler = &s
 		} else {
 			// delete the other ones (there should be only one scaler at any time
@@ -307,13 +333,14 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 	return err
 }
 
-func appReleaseForTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build) *v1alpha1.AppRelease {
+func appReleaseForTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build, configMap *corev1.ConfigMap) *v1alpha1.AppRelease {
 	labels := labelsForAppTarget(at)
+	labels[resources.ConfigHashLabel] = configMap.Name
 	ar := &v1alpha1.AppRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: at.TargetNamespace(),
+			Name:      fmt.Sprintf("%s-%s", at.Spec.App, time.Now().Format("20060102-150405")),
 			Labels:    labels,
-			// name will be set later with a helper
 		},
 		Spec: v1alpha1.AppReleaseSpec{
 			App:       at.Spec.App,
@@ -323,12 +350,13 @@ func appReleaseForTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build) *v1alpha
 			Ports:     at.Spec.Ports,
 			Command:   at.Spec.Command,
 			Args:      at.Spec.Args,
-			Env:       at.Spec.Env,
 			Resources: at.Spec.Resources,
 			Probes:    at.Spec.Probes,
 		},
 	}
-	ar.Name = ar.NameFromBuild(build)
+	if configMap != nil {
+		ar.Spec.Config = configMap.Name
+	}
 	return ar
 }
 
@@ -356,7 +384,7 @@ func newAutoscalerForAppTarget(at *v1alpha1.AppTarget, ar *v1alpha1.AppRelease) 
 	}
 
 	labels := labelsForAppTarget(at)
-	labels[resources.APP_RELEASE_LABEL] = ar.Name
+	labels[resources.AppReleaseLabel] = ar.Name
 	autoscaler := autoscalev2beta2.HorizontalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-scaler", at.Spec.App),

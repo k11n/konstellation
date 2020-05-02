@@ -13,8 +13,8 @@ import (
 func GetAppReleases(kclient client.Client, app string, target string, count int) ([]*v1alpha1.AppRelease, error) {
 	releaseList := v1alpha1.AppReleaseList{}
 	err := kclient.List(context.TODO(), &releaseList, client.MatchingLabels{
-		APP_LABEL:    app,
-		TARGET_LABEL: target,
+		AppLabel:    app,
+		TargetLabel: target,
 	}, client.Limit(count))
 	if err != nil {
 		return nil, err
@@ -26,11 +26,11 @@ func GetAppReleases(kclient client.Client, app string, target string, count int)
 		r := releaseList.Items[i]
 		releases = append(releases, &r)
 	}
-	SortAppReleasesByBuild(releases)
+	SortAppReleasesByLatest(releases)
 	return releases, nil
 }
 
-func SortAppReleasesByBuild(releases []*v1alpha1.AppRelease) {
+func SortAppReleasesByLatest(releases []*v1alpha1.AppRelease) {
 	sort.Slice(releases, func(i, j int) bool {
 		return strings.Compare(releases[i].Name, releases[j].Name) > 0
 	})

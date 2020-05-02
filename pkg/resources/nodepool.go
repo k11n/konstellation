@@ -16,13 +16,13 @@ import (
 )
 
 func NodepoolName() string {
-	return fmt.Sprintf("%s-%s", NODEPOOL_PREFIX, time.Now().Format(dateTimeFormat))
+	return fmt.Sprintf("%s-%s", NodepoolPrefix, time.Now().Format(dateTimeFormat))
 }
 
 func GetNodepoolOfType(kclient client.Client, kind string) (np *v1alpha1.Nodepool, err error) {
 	items := v1alpha1.NodepoolList{}
 	err = kclient.List(context.Background(), &items, client.InNamespace(""), client.MatchingLabels{
-		NODEPOOL_LABEL: kind,
+		NodepoolLabel: kind,
 	})
 	if err != nil {
 		return

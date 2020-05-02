@@ -88,12 +88,20 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 		return res, err
 	}
 
-	// load build
+	// load build & config
 	build, err := resources.GetBuildByName(r.client, ar.Spec.Build)
 	if err != nil {
 		return res, err
 	}
-	rs := newReplicaSetForAR(ar, build)
+
+	var cm *corev1.ConfigMap
+	if ar.Spec.Config != "" {
+		cm, err = resources.GetConfigMap(r.client, ar.Namespace, ar.Spec.Config)
+		if err != nil && !errors.IsNotFound(err) {
+			return res, err
+		}
+	}
+	rs := newReplicaSetForAR(ar, build, cm)
 
 	if ar.Spec.NumDesired == 0 {
 		// delete ReplicaSet
@@ -166,16 +174,15 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	return res, err
 }
 
-func newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build) *appsv1.ReplicaSet {
+func newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build, cm *corev1.ConfigMap) *appsv1.ReplicaSet {
 	labels := labelsForAppRelease(ar)
-	labels[resources.BUILD_LABEL] = build.Name
+	labels[resources.BuildLabel] = build.Name
 
 	container := corev1.Container{
 		Name:      "app",
 		Image:     build.FullImageWithTag(),
 		Command:   ar.Spec.Command,
 		Args:      ar.Spec.Args,
-		Env:       ar.Spec.Env,
 		Resources: ar.Spec.Resources,
 		Ports:     ar.Spec.ContainerPorts(),
 	}
@@ -188,9 +195,41 @@ func newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build) *appsv1.
 	if ar.Spec.Probes.Startup != nil {
 		container.StartupProbe = ar.Spec.Probes.Startup.ToCoreProbe()
 	}
+	if cm != nil && len(cm.Data) > 0 {
+		// set env
+		for key, val := range cm.Data {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  key,
+				Value: val,
+			})
+		}
+	}
+	podSpec := corev1.PodSpec{
+		Containers: []corev1.Container{
+			container,
+		},
+	}
+
+	// append volume if needed
+	if cm != nil && cm.BinaryData != nil && cm.BinaryData[v1alpha1.ConfigFileName] != nil {
+		podSpec.Volumes = append(podSpec.Volumes, corev1.Volume{
+			Name: "config-volume",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: cm.Name,
+					},
+				},
+			},
+		})
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+			Name:      "config-volume",
+			MountPath: "/etc/config",
+		})
+	}
 
 	// release name would use build creation timestamp
-	return &appsv1.ReplicaSet{
+	rs := &appsv1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ar.Namespace,
 			Name:      ar.Name,
@@ -205,20 +244,17 @@ func newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build) *appsv1.
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
 				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						container,
-					},
-				},
+				Spec: podSpec,
 			},
 		},
 	}
+	return rs
 }
 
 func labelsForAppRelease(ar *v1alpha1.AppRelease) map[string]string {
 	return map[string]string{
-		resources.APP_LABEL:         ar.Spec.App,
-		resources.TARGET_LABEL:      ar.Spec.Target,
-		resources.APP_RELEASE_LABEL: ar.Name,
+		resources.AppLabel:        ar.Spec.App,
+		resources.TargetLabel:     ar.Spec.Target,
+		resources.AppReleaseLabel: ar.Name,
 	}
 }

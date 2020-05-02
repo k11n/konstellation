@@ -8,6 +8,8 @@ import (
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/davidzhao/konstellation/pkg/utils/files"
 )
 
 var (
@@ -74,6 +76,9 @@ func (c *AppConfig) MergeWith(other *AppConfig) {
 
 func (c *AppConfig) ToConfigMap() *corev1.ConfigMap {
 	cm := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: c.ConfigHash(),
+		},
 		Data: make(map[string]string),
 	}
 	for key, val := range c.GetConfig() {
@@ -96,9 +101,13 @@ func (c *AppConfig) ToConfigMap() *corev1.ConfigMap {
 	}
 
 	// include config.yaml as a file
-	cm.BinaryData[ConfigFileName] = c.ConfigYaml
+	cm.Data[ConfigFileName] = string(c.ConfigYaml)
 
 	return &cm
+}
+
+func (c *AppConfig) ConfigHash() string {
+	return files.Sha1ChecksumString(string(c.ConfigYaml))
 }
 
 func NewAppConfig(app, target string) *AppConfig {
@@ -110,8 +119,8 @@ func NewAppConfig(app, target string) *AppConfig {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				APP_LABEL:    app,
-				TARGET_LABEL: target,
+				AppLabel:    app,
+				TargetLabel: target,
 			},
 		},
 	}

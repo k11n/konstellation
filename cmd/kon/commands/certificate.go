@@ -202,7 +202,7 @@ func syncCertificate(kclient client.Client, cert *types.Certificate) (updated bo
 		ObjectMeta: metav1.ObjectMeta{
 			Name: cert.ID,
 			Labels: map[string]string{
-				resources.DOMAIN_LABEL: resources.TopLevelDomain(cert.Domain),
+				resources.DomainLabel: resources.TopLevelDomain(cert.Domain),
 			},
 		},
 		Spec: v1alpha1.CertificateRefSpec{

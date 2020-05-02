@@ -1,8 +1,6 @@
 package v1alpha1
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -12,6 +10,7 @@ type AppReleaseSpec struct {
 	App    string `json:"app"`
 	Target string `json:"target"`
 	Build  string `json:"build"`
+	Config string `json:"config"`
 
 	// num desired default state, autoscaling could change desired in status
 	NumDesired        int32       `json:"numDesired"`
@@ -25,8 +24,6 @@ type AppReleaseSpec struct {
 	Command []string `json:"command,omitempty"`
 	// +optional
 	Args []string `json:"args,omitempty"`
-	// +optional
-	Env []corev1.EnvVar `json:"env,omitempty"`
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// +optional
@@ -96,10 +93,6 @@ type AppReleaseList struct {
 
 func init() {
 	SchemeBuilder.Register(&AppRelease{}, &AppReleaseList{})
-}
-
-func (r *AppRelease) NameFromBuild(b *Build) string {
-	return fmt.Sprintf("%s-%s", r.Spec.App, b.GetCreationTimestamp().Format("20060102-150405"))
 }
 
 func (s *AppReleaseSpec) ContainerPorts() []corev1.ContainerPort {

@@ -159,7 +159,7 @@ func newDestinationRule(at *v1alpha1.AppTarget, service *corev1.Service, release
 		subsets = append(subsets, &istionetworking.Subset{
 			Name: ar.Name,
 			Labels: map[string]string{
-				resources.APP_RELEASE_LABEL: ar.Name,
+				resources.AppReleaseLabel: ar.Name,
 			},
 		})
 	}

@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	APP_LABEL    = "k11n.dev/app"
-	TARGET_LABEL = "k11n.dev/target"
+	AppLabel    = "k11n.dev/app"
+	TargetLabel = "k11n.dev/target"
 )
 
 // AppSpec defines the desired state of App
@@ -32,9 +32,6 @@ type AppSpec struct {
 	// +optional
 	Args []string `json:"args,omitempty"`
 
-	// defaults for the app, overridden by env
-	// +optional
-	Env []corev1.EnvVar `json:"env,omitempty"`
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// +optional
@@ -118,8 +115,6 @@ type TargetConfig struct {
 	// +optional
 	Ingress *IngressConfig `json:"ingress,omitempty"`
 	// +optional
-	Env []corev1.EnvVar `json:"env,omitempty"`
-	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// +optional
 	Scale ScaleSpec `json:"scale,omitempty"`
@@ -150,25 +145,6 @@ func (a *AppSpec) ScaleSpecForTarget(target string) *ScaleSpec {
 		scale.Max = scale.Min
 	}
 	return scale
-}
-
-func (a *AppSpec) EnvForTarget(target string) []corev1.EnvVar {
-	tc := a.GetTargetConfig(target)
-	env := []corev1.EnvVar{}
-	seen := map[string]bool{}
-	if tc != nil {
-		for _, ev := range tc.Env {
-			seen[ev.Name] = true
-			env = append(env, ev)
-		}
-	}
-
-	for _, ev := range a.Env {
-		if !seen[ev.Name] {
-			env = append(env, ev)
-		}
-	}
-	return env
 }
 
 func (a *AppSpec) ResourcesForTarget(target string) *corev1.ResourceRequirements {
