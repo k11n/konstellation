@@ -253,7 +253,6 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 				ar.Spec.NumDesired = 1
 			}
 		}
-		logger.Info("traffic percentage", "trafficPercentage", ar.Spec.TrafficPercentage, "lastTotal", totalTraffic)
 		totalTraffic += ar.Spec.TrafficPercentage
 	}
 
@@ -261,8 +260,6 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 	if totalTraffic != 100 {
 		overage := totalTraffic - 100
 		targetRelease.Spec.TrafficPercentage -= overage
-		log.Info("subtracting trafficPercentage to match total", "totalTraffic", totalTraffic,
-			"overage", overage)
 	}
 
 	at.Status.ActiveRelease = activeRelease.Name

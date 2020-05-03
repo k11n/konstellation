@@ -6,10 +6,13 @@ import (
 	"reflect"
 
 	"github.com/go-logr/logr"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/davidzhao/konstellation/pkg/utils/objects"
 )
@@ -21,6 +24,7 @@ const (
 
 var (
 	ErrNotFound = fmt.Errorf("The resource is not found")
+	log         = logf.Log.WithName("resources")
 )
 
 func UpdateResource(kclient client.Client, object, owner metav1.Object, scheme *runtime.Scheme) (result controllerutil.OperationResult, err error) {
@@ -31,44 +35,78 @@ func UpdateResourceWithMerge(kclient client.Client, object, owner metav1.Object,
 	return updateResource(kclient, object, owner, scheme, true)
 }
 
-func updateResource(kclient client.Client, object, owner metav1.Object, scheme *runtime.Scheme, merge bool) (result controllerutil.OperationResult, err error) {
-	newVal := reflect.New(reflect.TypeOf(object).Elem())
-	newObj := newVal.Interface().(metav1.Object)
-	newObj.SetNamespace(object.GetNamespace())
-	newObj.SetName(object.GetName())
-	lookupObj, ok := newObj.(runtime.Object)
+// Create or update the resource
+// only handles updates to Annotations, Labels, and Spec
+func updateResource(kclient client.Client, object, owner metav1.Object, scheme *runtime.Scheme, merge bool) (controllerutil.OperationResult, error) {
+	existingVal := reflect.New(reflect.TypeOf(object).Elem())
+	existingObj := existingVal.Interface().(metav1.Object)
+	existingObj.SetNamespace(object.GetNamespace())
+	existingObj.SetName(object.GetName())
+	existingRuntimeObj, ok := existingObj.(runtime.Object)
 	if !ok {
-		err = fmt.Errorf("Not an runtime Object")
-		return
+		return controllerutil.OperationResultNone, fmt.Errorf("Not a runtime Object")
 	}
 
-	result, err = controllerutil.CreateOrUpdate(context.TODO(), kclient, lookupObj, func() error {
-		if owner != nil {
-			if err := controllerutil.SetControllerReference(owner, newObj, scheme); err != nil {
-				return err
+	key, err := client.ObjectKeyFromObject(existingRuntimeObj)
+	if err != nil {
+		return controllerutil.OperationResultNone, err
+	}
+
+	// create new if existing is not found
+	if err := kclient.Get(context.TODO(), key, existingRuntimeObj); err != nil {
+		if !errors.IsNotFound(err) {
+			return controllerutil.OperationResultNone, err
+		}
+		if owner != nil && scheme != nil {
+			if err = controllerutil.SetControllerReference(owner, object, scheme); err != nil {
+				return controllerutil.OperationResultNone, err
 			}
 		}
-
-		// update labels/annotations
-		newObj.SetAnnotations(object.GetAnnotations())
-		newObj.SetLabels(object.GetLabels())
-
-		// update spec
-		newSpec := newVal.Elem().FieldByName("Spec")
-		existingSpec := reflect.ValueOf(object).Elem().FieldByName("Spec")
-
-		if merge {
-			objects.MergeObject(newSpec.Addr().Interface(), existingSpec.Addr().Interface())
-		} else {
-			newSpec.Set(existingSpec)
+		if err := kclient.Create(context.TODO(), object.(runtime.Object)); err != nil {
+			return controllerutil.OperationResultNone, err
 		}
+		return controllerutil.OperationResultCreated, nil
+	}
 
-		return nil
-	})
+	changed := false
 
-	reflect.ValueOf(object).Elem().Set(newVal.Elem())
+	if !apiequality.Semantic.DeepEqual(existingObj.GetAnnotations(), object.GetAnnotations()) {
+		existingObj.SetAnnotations(object.GetAnnotations())
+		changed = true
+	}
+	if !apiequality.Semantic.DeepEqual(existingObj.GetLabels(), object.GetLabels()) {
+		existingObj.SetLabels(object.GetLabels())
+		changed = true
+	}
 
-	return
+	// deep copy spec so we can apply and detect changes
+	// particularly with using merge, it's difficult to know what's changed, so we'd have to apply
+	// updates and confirm
+	existingCopy := existingRuntimeObj.DeepCopyObject()
+
+	existingSpec := existingVal.Elem().FieldByName("Spec")
+	targetSpec := reflect.ValueOf(object).Elem().FieldByName("Spec")
+	if merge {
+		objects.MergeObject(existingSpec.Addr().Interface(), targetSpec.Addr().Interface())
+	} else {
+		existingSpec.Set(targetSpec)
+	}
+	copiedSpec := reflect.ValueOf(existingCopy).Elem().FieldByName("Spec")
+	if !apiequality.Semantic.DeepEqual(existingSpec.Addr().Interface(), copiedSpec.Addr().Interface()) {
+		changed = true
+	}
+
+	if !changed {
+		return controllerutil.OperationResultNone, nil
+	}
+
+	if err := kclient.Update(context.TODO(), existingRuntimeObj); err != nil {
+		return controllerutil.OperationResultNone, err
+	}
+
+	// use existing since its status is set
+	reflect.ValueOf(object).Elem().Set(existingVal.Elem())
+	return controllerutil.OperationResultUpdated, nil
 }
 
 func LogUpdates(log logr.Logger, op controllerutil.OperationResult, message string, keysAndValues ...interface{}) {
