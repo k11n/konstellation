@@ -96,17 +96,17 @@ func updateResource(kclient client.Client, object, owner metav1.Object, scheme *
 		changed = true
 	}
 
-	if !changed {
-		return controllerutil.OperationResultNone, nil
+	res := controllerutil.OperationResultNone
+	if changed {
+		if err := kclient.Update(context.TODO(), existingRuntimeObj); err != nil {
+			return res, err
+		}
+		res = controllerutil.OperationResultUpdated
 	}
 
-	if err := kclient.Update(context.TODO(), existingRuntimeObj); err != nil {
-		return controllerutil.OperationResultNone, err
-	}
-
-	// use existing since its status is set
+	// use existing value
 	reflect.ValueOf(object).Elem().Set(existingVal.Elem())
-	return controllerutil.OperationResultUpdated, nil
+	return res, nil
 }
 
 func LogUpdates(log logr.Logger, op controllerutil.OperationResult, message string, keysAndValues ...interface{}) {

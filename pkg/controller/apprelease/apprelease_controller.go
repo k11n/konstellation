@@ -116,14 +116,13 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 		resources.LogUpdates(reqLogger, op, "Updated ReplicaSet", "numAvailable", rs.Status.AvailableReplicas)
 	}
 	if err != nil {
-		reqLogger.Error(err, "Could not update replicaset")
 		return res, err
 	}
 
 	// sync status
 	status := v1alpha1.AppReleaseStatus{
 		State:        v1alpha1.ReleaseStateNew,
-		NumDesired:   *rs.Spec.Replicas,
+		NumDesired:   *rs.Spec.Replicas, // use replicaset data due to autoscaling
 		NumReady:     rs.Status.ReadyReplicas,
 		NumAvailable: rs.Status.AvailableReplicas,
 	}
