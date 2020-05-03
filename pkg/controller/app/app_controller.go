@@ -201,14 +201,14 @@ func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Resul
 }
 
 func (r *ReconcileApp) reconcileBuild(app *v1alpha1.App) (*v1alpha1.Build, error) {
-	// TODO: handle ImageTag being "latest" or empty
 	build := v1alpha1.NewBuild(app.Spec.Registry, app.Spec.Image, app.Spec.ImageTag)
-	build.ObjectMeta.Labels = resources.LabelsForBuild(build)
+	build.Labels = resources.LabelsForBuild(build)
 
 	existing := &v1alpha1.Build{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: build.GetName()}, existing)
 	if err != nil {
 		if errors.IsNotFound(err) {
+			build.Labels[resources.BuildTypeLabel] = resources.BuildTypeLatest
 			// create this build
 			err = r.client.Create(context.TODO(), build)
 			if err != nil {
@@ -246,16 +246,15 @@ func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Build)
 			Labels: ls,
 		},
 		Spec: v1alpha1.AppTargetSpec{
-			App:           app.Name,
-			Target:        target,
-			Ports:         app.Spec.Ports,
-			BuildRegistry: build.Spec.Registry,
-			BuildImage:    build.Spec.Image,
-			Command:       app.Spec.Command,
-			Args:          app.Spec.Args,
-			Resources:     *app.Spec.ResourcesForTarget(target),
-			Scale:         *app.Spec.ScaleSpecForTarget(target),
-			Probes:        *app.Spec.ProbesForTarget(target),
+			App:       app.Name,
+			Target:    target,
+			Build:     build.Name,
+			Ports:     app.Spec.Ports,
+			Command:   app.Spec.Command,
+			Args:      app.Spec.Args,
+			Resources: *app.Spec.ResourcesForTarget(target),
+			Scale:     *app.Spec.ScaleSpecForTarget(target),
+			Probes:    *app.Spec.ProbesForTarget(target),
 		},
 	}
 

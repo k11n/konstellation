@@ -8,11 +8,13 @@ const (
 	BuildRegistryLabel = "k11n.dev/buildRegistry"
 	BuildImageLabel    = "k11n.dev/buildImage"
 	BuildLabel         = "k11n.dev/build"
+	BuildTypeLabel     = "k11n.dev/buildType"
 	AppReleaseLabel    = "k11n.dev/appRelease"
 	DomainLabel        = "k11n.dev/domain"
-	ConfigHashLabel    = "k11n.dev/configHash"
 
 	ManagedByLabel   = "app.kubernetes.io/managed-by"
-	Konstellation    = "konstellation"
 	IstioInjectLabel = "istio-injection"
+
+	Konstellation   = "konstellation"
+	BuildTypeLatest = "latest"
 )

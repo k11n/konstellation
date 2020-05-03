@@ -9,10 +9,9 @@ import (
 
 // AppTargetSpec defines a deployment target for App
 type AppTargetSpec struct {
-	App           string `json:"app"`
-	Target        string `json:"target"`
-	BuildRegistry string `json:"buildRegistry"`
-	BuildImage    string `json:"buildImage"`
+	App    string `json:"app"`
+	Target string `json:"target"`
+	Build  string `json:"build"`
 
 	// +optional
 	Ports []PortSpec `json:"ports,omitempty"`

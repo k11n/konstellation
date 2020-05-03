@@ -2,7 +2,6 @@ package resources
 
 import (
 	"context"
-	"sort"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -16,7 +15,6 @@ func LabelsForBuild(build *v1alpha1.Build) map[string]string {
 	return map[string]string{
 		BuildRegistryLabel: build.Spec.Registry,
 		BuildImageLabel:    image,
-		BuildLabel:         build.Name,
 	}
 }
 
@@ -27,25 +25,4 @@ func GetBuildByName(kclient client.Client, name string) (*v1alpha1.Build, error)
 		return nil, err
 	}
 	return &r, nil
-}
-
-func GetBuildsByImage(kclient client.Client, registry, image string, count int) (builds []v1alpha1.Build, err error) {
-	buildList := v1alpha1.BuildList{}
-	if count == 0 {
-		count = defaultListSize
-	}
-	err = kclient.List(context.TODO(), &buildList, client.MatchingLabels{
-		BuildRegistryLabel: registry,
-		BuildImageLabel:    image,
-	}, client.Limit(count))
-	if err != nil {
-		return
-	}
-
-	builds = buildList.Items
-	// sort by latest at top
-	sort.Slice(builds, func(i, j int) bool {
-		return builds[i].GetCreationTimestamp().After(builds[j].GetCreationTimestamp().Time)
-	})
-	return
 }

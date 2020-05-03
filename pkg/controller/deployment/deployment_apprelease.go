@@ -22,43 +22,42 @@ const (
 )
 
 func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget, configMap *corev1.ConfigMap) (releases []*v1alpha1.AppRelease, res *reconcile.Result, err error) {
-	// find last N builds
-	builds, err := resources.GetBuildsByImage(r.client, at.Spec.BuildRegistry, at.Spec.BuildImage, 6)
+	// find the named build for the app
+	build, err := resources.GetBuildByName(r.client, at.Spec.Build)
 	if err != nil {
 		return
 	}
 
-	// create new releases if needed
-	releases, err = resources.GetAppReleases(r.client, at.Spec.App, at.Spec.Target, 50)
+	// find all existing releases
+	err = resources.ForEach(r.client, &v1alpha1.AppReleaseList{}, func(item interface{}) error {
+		release := item.(v1alpha1.AppRelease)
+		releases = append(releases, &release)
+		return nil
+	}, client.MatchingLabels{
+		resources.AppLabel:    at.Spec.App,
+		resources.TargetLabel: at.Spec.Target,
+	})
 	if err != nil {
 		return
 	}
 
 	// keep track of builds that we already have a release for, those can be ignored
-	existingReleases := map[string]*v1alpha1.AppRelease{}
+	var existingRelease *v1alpha1.AppRelease
 	for _, ar := range releases {
-		existingReleases[ar.Spec.Build] = ar
+		if ar.Spec.Build != build.Name {
+			continue
+		}
+		if configMap == nil || configMap.Name == ar.Spec.Config {
+			existingRelease = ar
+			break
+		}
 	}
 
 	// create releases for new builds
-	for i, b := range builds {
-		ar := existingReleases[b.Name]
-		if ar != nil {
-			if configMap != nil && i == 0 {
-				// the latest build requires configMap hash to match too
-				// otherwise we should create new release on config changes
-				if ar.Spec.Config == configMap.Name {
-					continue
-				} else {
-					log.Info("config changed, creating new release", "configMap", configMap.Name,
-						"build", b.Name, "appRelease", ar.Name)
-				}
-			} else {
-				continue
-			}
-		}
-
-		ar = appReleaseForTarget(at, &b, configMap)
+	if existingRelease == nil {
+		log.Info("config changed, creating new release", "configMap", configMap.Name,
+			"build", build.Name)
+		ar := appReleaseForTarget(at, build, configMap)
 		releases = append(releases, ar)
 	}
 
@@ -132,13 +131,14 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		targetRelease = activeRelease
 	}
 
-	if activeRelease != nil && targetRelease != nil {
+	if activeRelease != nil && targetRelease != nil && activeRelease != targetRelease {
 		// only update when it's time to, otherwise requeue
 		timeDelta := time.Now().Sub(at.Status.DeployUpdatedAt.Time)
 		if timeDelta < at.Spec.Probes.GetReadinessTimeout() {
 			res = &reconcile.Result{
 				RequeueAfter: at.Spec.Probes.GetReadinessTimeout() - timeDelta,
 			}
+			log.Info("waiting for next reconcile")
 			return
 		}
 	}
@@ -152,7 +152,7 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		// TODO: don't deploy additional builds when outside of schedule
 		// see if there's a new target release (try to deploy latest if possible)
 		// TODO: check if autorelease is enabled for this target..
-		newTarget := resources.FirstAvailableRelease(releases)
+		newTarget := releases[0]
 		if newTarget != nil {
 			if targetRelease != newTarget {
 				var previousTarget string
@@ -217,6 +217,9 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 	var totalTraffic int32
 	for _, ar := range releases {
 		if ar == activeRelease {
+			if ar.Spec.Role != v1alpha1.ReleaseRoleActive {
+				logger.Info("setting release role to active", "release", ar.Name, "oldRole", ar.Spec.Role)
+			}
 			ar.Spec.Role = v1alpha1.ReleaseRoleActive
 			earlierThanActive = true
 			if ar == targetRelease {
@@ -250,12 +253,16 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 				ar.Spec.NumDesired = 1
 			}
 		}
+		logger.Info("traffic percentage", "trafficPercentage", ar.Spec.TrafficPercentage, "lastTotal", totalTraffic)
 		totalTraffic += ar.Spec.TrafficPercentage
 	}
 
 	// if we have over 100%, then lower target until we are within threshold
 	if totalTraffic != 100 {
-		targetRelease.Spec.TrafficPercentage -= totalTraffic - 100
+		overage := totalTraffic - 100
+		targetRelease.Spec.TrafficPercentage -= overage
+		log.Info("subtracting trafficPercentage to match total", "totalTraffic", totalTraffic,
+			"overage", overage)
 	}
 
 	at.Status.ActiveRelease = activeRelease.Name
@@ -335,11 +342,21 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 
 func appReleaseForTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build, configMap *corev1.ConfigMap) *v1alpha1.AppRelease {
 	labels := labelsForAppTarget(at)
-	labels[resources.ConfigHashLabel] = configMap.Name
+	labels[v1alpha1.ConfigHashLabel] = configMap.Name
+	for k, v := range resources.LabelsForBuild(build) {
+		labels[k] = v
+	}
+	name := fmt.Sprintf("%s-%s", at.Spec.App, build.CreationTimestamp.Format("20060102-1504"))
+	if configMap != nil {
+		if len(configMap.Labels[v1alpha1.ConfigHashLabel]) > 4 {
+			name = name + "-" + configMap.Labels[v1alpha1.ConfigHashLabel][:4]
+		}
+	}
+
 	ar := &v1alpha1.AppRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: at.TargetNamespace(),
-			Name:      fmt.Sprintf("%s-%s", at.Spec.App, time.Now().Format("20060102-150405")),
+			Name:      name,
 			Labels:    labels,
 		},
 		Spec: v1alpha1.AppReleaseSpec{
@@ -374,7 +391,7 @@ func newAutoscalerForAppTarget(at *v1alpha1.AppTarget, ar *v1alpha1.AppRelease) 
 		metrics = append(metrics, autoscalev2beta2.MetricSpec{
 			Type: autoscalev2beta2.ResourceMetricSourceType,
 			Resource: &autoscalev2beta2.ResourceMetricSource{
-				Name: "cpu",
+				Name: corev1.ResourceCPU,
 				Target: autoscalev2beta2.MetricTarget{
 					Type:               autoscalev2beta2.UtilizationMetricType,
 					AverageUtilization: &at.Spec.Scale.TargetCPUUtilization,

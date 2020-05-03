@@ -71,7 +71,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		}
 	}
 
-	// watch config changes, and watch builds
+	// watch config changes
 	err = c.Watch(&source.Kind{Type: &v1alpha1.AppConfig{}}, &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: handler.ToRequestsFunc(func(configMapObject handler.MapObject) []reconcile.Request {
 			requests := []reconcile.Request{}

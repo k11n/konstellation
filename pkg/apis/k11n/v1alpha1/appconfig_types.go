@@ -17,7 +17,8 @@ var (
 )
 
 const (
-	ConfigFileName = "config.yaml"
+	ConfigFileName  = "config.yaml"
+	ConfigHashLabel = "k11n.dev/configHash"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -78,6 +79,9 @@ func (c *AppConfig) ToConfigMap() *corev1.ConfigMap {
 	cm := corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: c.ConfigHash(),
+			Labels: map[string]string{
+				ConfigHashLabel: c.ConfigHash(),
+			},
 		},
 		Data: make(map[string]string),
 	}

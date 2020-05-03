@@ -50,9 +50,7 @@ spec:
               items:
                 type: string
               type: array
-            buildImage:
-              type: string
-            buildRegistry:
+            build:
               type: string
             command:
               items:
@@ -427,8 +425,7 @@ spec:
               type: string
           required:
           - app
-          - buildImage
-          - buildRegistry
+          - build
           - target
           type: object
         status:

@@ -53,20 +53,7 @@ func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *cor
 	}
 
 	// service still needed, update
-	op, err := resources.UpdateResource(r.client, svc, at, r.scheme)
-	// TODO: test to ensure ports is merged correctly
-	//op, err := controllerutil.CreateOrUpdate(context.TODO(), r.client, svc, func() error {
-	//	svc.Labels = svcTemplate.Labels
-	//	objects.MergeSlice(&svc.Spec.Ports, &svcTemplate.Spec.Ports)
-	//	if svc.CreationTimestamp.IsZero() {
-	//		svc.Spec.Selector = svcTemplate.Spec.Selector
-	//		// Set AppTarget instance as the owner and controller
-	//		if err := controllerutil.SetControllerReference(at, svc, r.scheme); err != nil {
-	//			return err
-	//		}
-	//	}
-	//	return nil
-	//})
+	op, err := resources.UpdateResourceWithMerge(r.client, svc, at, r.scheme)
 	if err != nil {
 		return
 	}

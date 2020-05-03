@@ -110,7 +110,7 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 		)
 	} else {
 		var op controllerutil.OperationResult
-		op, err = resources.UpdateResource(r.client, rs, ar, r.scheme)
+		op, err = resources.UpdateResourceWithMerge(r.client, rs, ar, r.scheme)
 		resources.LogUpdates(reqLogger, op, "Updated ReplicaSet")
 	}
 	if err != nil {
@@ -195,9 +195,14 @@ func newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build, cm *core
 	if ar.Spec.Probes.Startup != nil {
 		container.StartupProbe = ar.Spec.Probes.Startup.ToCoreProbe()
 	}
+	hasConfigFileName := false
 	if cm != nil && len(cm.Data) > 0 {
 		// set env
 		for key, val := range cm.Data {
+			if key == v1alpha1.ConfigFileName {
+				hasConfigFileName = true
+				continue
+			}
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  key,
 				Value: val,
@@ -205,13 +210,11 @@ func newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build, cm *core
 		}
 	}
 	podSpec := corev1.PodSpec{
-		Containers: []corev1.Container{
-			container,
-		},
+		Containers: []corev1.Container{},
 	}
 
 	// append volume if needed
-	if cm != nil && cm.BinaryData != nil && cm.BinaryData[v1alpha1.ConfigFileName] != nil {
+	if cm != nil && hasConfigFileName {
 		podSpec.Volumes = append(podSpec.Volumes, corev1.Volume{
 			Name: "config-volume",
 			VolumeSource: corev1.VolumeSource{
@@ -227,6 +230,7 @@ func newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build, cm *core
 			MountPath: "/etc/config",
 		})
 	}
+	podSpec.Containers = append(podSpec.Containers, container)
 
 	// release name would use build creation timestamp
 	rs := &appsv1.ReplicaSet{

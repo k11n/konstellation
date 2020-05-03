@@ -3,6 +3,7 @@ package objects
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -116,8 +117,22 @@ func TestMergeStructWithMap(t *testing.T) {
 
 	MergeObject(&dst, &src)
 	if !apiequality.Semantic.DeepEqual(src, dst) {
-		//fmt.Printf("src: %v\n", src)
-		//fmt.Printf("dst: %v\n", dst)
 		t.Fatalf("src and dst aren't equal")
 	}
+}
+
+// does not overwrite empty value
+func TestMergeEmptyValue(t *testing.T) {
+	src := port{
+		Name: "source",
+		Port: 0,
+	}
+
+	dst := port{
+		Name: "dest",
+		Port: 100,
+	}
+
+	MergeObject(&dst, &src)
+	assert.Equal(t, 100, dst.Port)
 }

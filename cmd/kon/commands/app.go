@@ -11,6 +11,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/thoas/go-funk"
 	"github.com/urfave/cli/v2"
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
@@ -233,27 +234,16 @@ func appDeploy(c *cli.Context) error {
 	}
 
 	appTarget := funk.Head(targets).(v1alpha1.AppTarget)
-	builds, err := resources.GetBuildsByImage(kclient, appTarget.Spec.BuildRegistry, appTarget.Spec.BuildImage, 0)
-	if err != nil {
+	build, err := resources.GetBuildByName(kclient, appTarget.Spec.Build)
+	if err != nil && !errors.IsNotFound(err) {
 		return err
-	}
-
-	// if already exists, return err
-	var registry, image string
-	for _, build := range builds {
-		registry = build.Spec.Registry
-		image = build.Spec.Image
-		if build.Spec.Tag == tag {
-			return fmt.Errorf("Build %s already exists", build.ShortName())
-		}
-	}
-
-	if image == "" {
-		return fmt.Errorf("Could not find valid build for %s", appTarget.Spec.App)
+	} else if err == nil {
+		return fmt.Errorf("Build %s already exists", build.ShortName())
 	}
 
 	// create new build
-	build := v1alpha1.NewBuild(registry, image, tag)
+	build = v1alpha1.NewBuild(appTarget.Labels[resources.BuildRegistryLabel], appTarget.Labels[resources.BuildImageLabel], tag)
+	build.Labels[resources.BuildTypeLabel] = resources.BuildTypeLatest
 
 	_, err = resources.UpdateResource(kclient, build, nil, nil)
 	return err

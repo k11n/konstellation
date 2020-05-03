@@ -3,7 +3,6 @@ package resources
 import (
 	"context"
 	"sort"
-	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -32,15 +31,13 @@ func GetAppReleases(kclient client.Client, app string, target string, count int)
 
 func SortAppReleasesByLatest(releases []*v1alpha1.AppRelease) {
 	sort.Slice(releases, func(i, j int) bool {
-		return strings.Compare(releases[i].Name, releases[j].Name) > 0
-	})
-}
-
-func FirstAvailableRelease(releases []*v1alpha1.AppRelease) *v1alpha1.AppRelease {
-	for _, ar := range releases {
-		if ar.Status.NumAvailable > 0 {
-			return ar
+		if !releases[i].CreationTimestamp.IsZero() && !releases[j].CreationTimestamp.IsZero() {
+			return releases[i].CreationTimestamp.After(releases[j].CreationTimestamp.Time)
 		}
-	}
-	return nil
+		if releases[i].CreationTimestamp.IsZero() && !releases[j].CreationTimestamp.IsZero() {
+			return true
+		} else {
+			return false
+		}
+	})
 }
