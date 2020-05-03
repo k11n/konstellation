@@ -69,7 +69,6 @@ func updateResource(kclient client.Client, object, owner metav1.Object, scheme *
 	}
 
 	changed := false
-
 	if !apiequality.Semantic.DeepEqual(existingObj.GetAnnotations(), object.GetAnnotations()) {
 		existingObj.SetAnnotations(object.GetAnnotations())
 		changed = true
@@ -93,6 +92,7 @@ func updateResource(kclient client.Client, object, owner metav1.Object, scheme *
 	}
 	copiedSpec := reflect.ValueOf(existingCopy).Elem().FieldByName("Spec")
 	if !apiequality.Semantic.DeepEqual(existingSpec.Addr().Interface(), copiedSpec.Addr().Interface()) {
+		//log.Info("changed detected", "old", copiedSpec.Addr().Interface(), "new", existingSpec.Addr().Interface())
 		changed = true
 	}
 

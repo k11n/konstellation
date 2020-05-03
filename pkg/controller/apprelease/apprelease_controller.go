@@ -2,8 +2,10 @@ package apprelease
 
 import (
 	"context"
+	"sort"
 	"time"
 
+	"github.com/thoas/go-funk"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -111,16 +113,17 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	} else {
 		var op controllerutil.OperationResult
 		op, err = resources.UpdateResourceWithMerge(r.client, rs, ar, r.scheme)
-		resources.LogUpdates(reqLogger, op, "Updated ReplicaSet")
+		resources.LogUpdates(reqLogger, op, "Updated ReplicaSet", "numAvailable", rs.Status.AvailableReplicas)
 	}
 	if err != nil {
+		reqLogger.Error(err, "Could not update replicaset")
 		return res, err
 	}
 
 	// sync status
 	status := v1alpha1.AppReleaseStatus{
 		State:        v1alpha1.ReleaseStateNew,
-		NumDesired:   rs.Status.Replicas,
+		NumDesired:   *rs.Spec.Replicas,
 		NumReady:     rs.Status.ReadyReplicas,
 		NumAvailable: rs.Status.AvailableReplicas,
 	}
@@ -198,14 +201,17 @@ func newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build, cm *core
 	hasConfigFileName := false
 	if cm != nil && len(cm.Data) > 0 {
 		// set env
-		for key, val := range cm.Data {
+		keys := funk.Keys(cm.Data).([]string)
+		sort.Strings(keys)
+		for _, key := range keys {
 			if key == v1alpha1.ConfigFileName {
 				hasConfigFileName = true
 				continue
 			}
+
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  key,
-				Value: val,
+				Value: cm.Data[key],
 			})
 		}
 	}
