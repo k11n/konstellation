@@ -203,6 +203,13 @@ func (r *ReconcileDeployment) Reconcile(request reconcile.Request) (res reconcil
 
 	// update at status
 	if !apiequality.Semantic.DeepEqual(atStatus, at.Status) {
+		// reload apptarget and update status
+		status := at.Status
+		at, err = resources.GetAppTarget(r.client, at.Name)
+		if err != nil {
+			return
+		}
+		at.Status = status
 		err = r.client.Status().Update(context.TODO(), at)
 	}
 	return
