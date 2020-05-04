@@ -204,10 +204,15 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 			res = &reconcile.Result{
 				RequeueAfter: at.Spec.Probes.GetReadinessTimeout(),
 			}
-		} else {
-			// fully deployed, update active roles and we are done
+		} else if targetRelease.Spec.TrafficPercentage == 100 {
+			// traffic at 100%, update active roles and we are done
 			activeRelease = targetRelease
 			logger.Info("Target fully deployed, marking as active", "release", targetRelease.Name)
+		} else {
+			// traffic at 100% but only recently reconciled
+			res = &reconcile.Result{
+				RequeueAfter: at.Spec.Probes.GetReadinessTimeout(),
+			}
 		}
 	}
 
