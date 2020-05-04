@@ -118,6 +118,7 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 	}
 	var targetRelease *v1alpha1.AppRelease
 	var activeRelease *v1alpha1.AppRelease
+	hasChanges := false
 
 	for _, ar := range releases {
 		if ar.Spec.Role == v1alpha1.ReleaseRoleActive {
@@ -148,6 +149,7 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		activeRelease = releases[0]
 		targetRelease = activeRelease
 		logger.Info("Deploying initial release", "release", activeRelease.Name)
+		hasChanges = true
 	} else {
 		// TODO: don't deploy additional builds when outside of schedule
 		// see if there's a new target release (try to deploy latest if possible)
@@ -159,12 +161,14 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 				if targetRelease != nil {
 					previousTarget = targetRelease.Name
 				}
+				hasChanges = true
 				logger.Info("Setting new target release", "target", newTarget.Name, "previousTarget", previousTarget)
 			}
 			targetRelease = newTarget
 		}
 	}
 
+	// TODO: when there are canaries, compute remaining percentage here
 	desiredInstances := at.DesiredInstances()
 	targetTrafficPercentage := targetRelease.Spec.TrafficPercentage
 	if targetRelease == activeRelease {
@@ -184,6 +188,7 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 			logger.Info("Increasing pods", "release", targetRelease.Name,
 				"numDesired", targetRelease.Spec.NumDesired, "newNumDesired", targetInstances)
 			targetRelease.Spec.NumDesired = targetInstances
+			hasChanges = true
 		}
 
 		ratioDeployed := float32(targetRelease.Status.NumAvailable) / float32(desiredInstances)
@@ -198,18 +203,13 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 			targetTrafficPercentage = targetRelease.Spec.TrafficPercentage + rampPercentage
 		}
 
-		if targetTrafficPercentage < 100 || targetTrafficPercentage <= targetRelease.Spec.TrafficPercentage {
-			// before we are fully ramped, requeue to check again
-			// we use <= current traffic ramp since the actual traffic may be less than 100% (due to new canaries/etc)
-			res = &reconcile.Result{
-				RequeueAfter: at.Spec.Probes.GetReadinessTimeout(),
-			}
-		} else if targetRelease.Spec.TrafficPercentage == 100 {
+		if targetRelease.Spec.TrafficPercentage == 100 {
 			// traffic at 100%, update active roles and we are done
 			activeRelease = targetRelease
 			logger.Info("Target fully deployed, marking as active", "release", targetRelease.Name)
+			hasChanges = true
 		} else {
-			// traffic at 100% but only recently reconciled
+			// not fully ramped yet, check again
 			res = &reconcile.Result{
 				RequeueAfter: at.Spec.Probes.GetReadinessTimeout(),
 			}
@@ -269,7 +269,9 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 
 	at.Status.ActiveRelease = activeRelease.Name
 	at.Status.TargetRelease = targetRelease.Name
-	at.Status.DeployUpdatedAt = metav1.Now()
+	if hasChanges {
+		at.Status.DeployUpdatedAt = metav1.Now()
+	}
 
 	if !activeRelease.CreationTimestamp.IsZero() {
 		at.Status.NumDesired = activeRelease.Status.NumDesired

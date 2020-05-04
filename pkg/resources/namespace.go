@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -20,4 +21,8 @@ func GetNamespace(kclient client.Client, namespace string) (*corev1.Namespace, e
 		return nil, err
 	}
 	return &n, nil
+}
+
+func NamespaceForAppTarget(app, target string) string {
+	return fmt.Sprintf("%s-%s", app, target)
 }

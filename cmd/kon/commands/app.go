@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 	"text/template"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/thoas/go-funk"
 	"github.com/urfave/cli/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/davidzhao/konstellation/cmd/kon/utils"
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
@@ -79,6 +81,28 @@ var AppCommands = []*cli.Command{
 				Usage:     "Load app into Kubernetes (same as kube apply -f)",
 				ArgsUsage: "<app.yaml>",
 				Action:    appLoad,
+			},
+			{
+				Name:      "shell",
+				Usage:     "Get shell access into an pod with the app",
+				ArgsUsage: "<app>",
+				Action:    appShell,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "pod",
+						Aliases: []string{"p"},
+						Usage:   "a specific pod to use",
+					},
+					&cli.StringFlag{
+						Name:    "target",
+						Aliases: []string{"t"},
+					},
+					&cli.StringFlag{
+						Name:    "release",
+						Aliases: []string{"r"},
+						Usage:   "release of the app, defaults to the active release",
+					},
+				},
 			},
 		},
 	},
@@ -314,11 +338,107 @@ func appLoad(c *cli.Context) error {
 	return nil
 }
 
+func appShell(c *cli.Context) error {
+	app, err := getAppArg(c)
+	if err != nil {
+		return err
+	}
+
+	// if pod is passed in, go straight to that
+	pod := c.String("pod")
+	target := c.String("target")
+	release := c.String("release")
+
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+	kclient := ac.kubernetesClient()
+
+	if pod == "" {
+		if target == "" {
+			if target, err = selectAppTarget(kclient, app); err != nil {
+				return err
+			}
+		}
+		if release == "" {
+			// find active release
+			ar, err := resources.GetActiveRelease(kclient, app, target)
+			if err != nil {
+				return err
+			}
+			if ar == nil {
+				return fmt.Errorf("Could not find an active release")
+			}
+			release = ar.Name
+		}
+		pod, err = selectAppPod(kclient, app, target, release)
+		if err != nil {
+			return err
+		}
+	}
+
+	namespace := resources.NamespaceForAppTarget(app, target)
+	cmd := exec.Command("kubectl", "exec", "-n", namespace, "-it", pod, "--container", "app", "--", "/bin/sh")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
+
+	return cmd.Run()
+}
+
 func getAppArg(c *cli.Context) (string, error) {
 	if c.NArg() == 0 {
 		return "", fmt.Errorf("Required argument \"app\" was not passed in")
 	}
 	return c.Args().Get(0), nil
+}
+
+func selectAppTarget(kclient client.Client, appName string) (target string, err error) {
+	targets, err := resources.GetAppTargets(kclient, appName)
+	if err != nil {
+		return
+	}
+
+	if len(targets) == 0 {
+		err = fmt.Errorf("The app doesn't have any targets deployed on this cluster")
+		return
+	}
+	if len(targets) == 1 {
+		target = targets[0].Spec.Target
+		return
+	}
+
+	// otherwise prompt
+	targetNames := funk.Map(targets, func(t v1alpha1.AppTarget) string {
+		return t.Name
+	})
+
+	prompt := utils.NewPromptSelect("Select a target", targetNames)
+	idx, _, err := prompt.Run()
+	if err != nil {
+		return
+	}
+
+	target = targets[idx].Spec.Target
+	return
+}
+
+func selectAppPod(kclient client.Client, app, target, release string) (pod string, err error) {
+	pods, err := resources.GetPodsForAppRelease(kclient, resources.NamespaceForAppTarget(app, target), release)
+
+	if len(pods) == 0 {
+		err = fmt.Errorf("No pods found")
+		return
+	}
+	//if len(pods) == 1 {
+	//	pod = pods[0]
+	//	return
+	//}
+
+	prompt := utils.NewPromptSelect("Select a pod", pods)
+	_, pod, err = prompt.Run()
+	return
 }
 
 func promptAppInfo() (ai *appInfo, err error) {

@@ -24,6 +24,7 @@ const (
 
 var (
 	ErrNotFound = fmt.Errorf("The resource is not found")
+	Break       = fmt.Errorf("")
 	log         = logf.Log.WithName("resources")
 )
 
@@ -144,7 +145,7 @@ func ForEach(kclient client.Client, listObj runtime.Object, eachFunc func(item i
 
 		for i := 0; i < itemsField.Len(); i += 1 {
 			item := itemsField.Index(i).Interface()
-			if err = eachFunc(item); err != nil {
+			if err = eachFunc(item); err != nil && err != Break {
 				return err
 			}
 		}
