@@ -102,6 +102,12 @@ var AppCommands = []*cli.Command{
 						Aliases: []string{"r"},
 						Usage:   "release of the app, defaults to the active release",
 					},
+					&cli.StringFlag{
+						Name:    "shell",
+						Aliases: []string{"s"},
+						Usage:   "command to run as the shell",
+						Value:   "/bin/sh",
+					},
 				},
 			},
 		},
@@ -378,8 +384,9 @@ func appShell(c *cli.Context) error {
 		}
 	}
 
+	fmt.Printf("initializing shell to %s\n", pod)
 	namespace := resources.NamespaceForAppTarget(app, target)
-	cmd := exec.Command("kubectl", "exec", "-n", namespace, "-it", pod, "--container", "app", "--", "/bin/sh")
+	cmd := exec.Command("kubectl", "exec", "-n", namespace, "-it", pod, "--container", "app", "--", c.String("shell"))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -431,12 +438,13 @@ func selectAppPod(kclient client.Client, app, target, release string) (pod strin
 		err = fmt.Errorf("No pods found")
 		return
 	}
-	//if len(pods) == 1 {
-	//	pod = pods[0]
-	//	return
-	//}
+	if len(pods) == 1 {
+		pod = pods[0]
+		return
+	}
 
 	prompt := utils.NewPromptSelect("Select a pod", pods)
+	prompt.Size = 10
 	_, pod, err = prompt.Run()
 	return
 }
