@@ -105,6 +105,11 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	rs := newReplicaSetForAR(ar, build, cm)
 
+	if ar.Spec.Role == v1alpha1.ReleaseRoleActive {
+		// TODO: update this with current replicaset replica count
+
+	}
+
 	if ar.Spec.NumDesired == 0 {
 		// delete ReplicaSet
 		err = client.IgnoreNotFound(
@@ -133,11 +138,19 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	} else {
 		if ar.Spec.NumDesired == 0 {
 			status.State = v1alpha1.ReleaseStateRetired
+		} else {
+			status.State = v1alpha1.ReleaseStateRetiring
 		}
+	}
+	// keep existing change time
+	if ar.CreationTimestamp.IsZero() || status.State != ar.Status.State {
+		status.StateChangedAt = metav1.Now()
+	} else if status.State == ar.Status.State {
+		status.StateChangedAt = ar.Status.StateChangedAt
 	}
 
 	// check pod failures and update message/status
-	if ar.Spec.NumDesired >= 0 {
+	if ar.Spec.NumDesired >= 0 && status.NumAvailable < ar.Spec.NumDesired {
 		podList := corev1.PodList{}
 		err = r.client.List(context.TODO(), &podList, client.InNamespace(rs.Namespace),
 			client.MatchingLabels(rs.Spec.Template.Labels))

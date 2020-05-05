@@ -32,11 +32,12 @@ type AppReleaseSpec struct {
 
 // AppReleaseStatus defines the observed state of AppRelease
 type AppReleaseStatus struct {
-	State        ReleaseState `json:"state"`
-	NumDesired   int32        `json:"numDesired"`
-	NumReady     int32        `json:"numReady"`
-	NumAvailable int32        `json:"numAvailable"`
-	Reason       string       `json:"reason"`
+	State          ReleaseState `json:"state"`
+	StateChangedAt metav1.Time  `json:"stateChangedAt"`
+	NumDesired     int32        `json:"numDesired"`
+	NumReady       int32        `json:"numReady"`
+	NumAvailable   int32        `json:"numAvailable"`
+	Reason         string       `json:"reason"`
 }
 
 type ReleaseState string
@@ -50,8 +51,9 @@ const (
 	ReleaseStateCanarying ReleaseState = "canarying"
 	ReleaseStateReleasing ReleaseState = "releasing"
 	ReleaseStateReleased  ReleaseState = "released"
-	ReleaseStateFailed    ReleaseState = "failed"
+	ReleaseStateRetiring  ReleaseState = "retiring"
 	ReleaseStateRetired   ReleaseState = "retired"
+	ReleaseStateFailed    ReleaseState = "failed"
 )
 
 type ReleaseRole string

@@ -405,12 +405,16 @@ spec:
               type: string
             state:
               type: string
+            stateChangedAt:
+              format: date-time
+              type: string
           required:
           - numAvailable
           - numDesired
           - numReady
           - reason
           - state
+          - stateChangedAt
           type: object
       type: object
   version: v1alpha1

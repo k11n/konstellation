@@ -384,7 +384,7 @@ func appShell(c *cli.Context) error {
 		}
 	}
 
-	fmt.Printf("initializing shell to %s\n", pod)
+	fmt.Printf("initializing shell to pod %s\n", pod)
 	namespace := resources.NamespaceForAppTarget(app, target)
 	cmd := exec.Command("kubectl", "exec", "-n", namespace, "-it", pod, "--container", "app", "--", c.String("shell"))
 	cmd.Stdout = os.Stdout

@@ -107,7 +107,7 @@ func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget, confi
 }
 
 /**
- * Determine current releases and flip release switch. TODO: figure out how to signal requeue
+ * Determine current releases and flip release switch
  */
 func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) (res *reconcile.Result, err error) {
 	logger := log.WithValues("appTarget", at.Name)
@@ -217,7 +217,6 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 	}
 
 	// now update state on releases
-	earlierThanActive := false
 	// all traffic percentage so far, active should get what remains
 	var totalTraffic int32
 	for _, ar := range releases {
@@ -226,7 +225,6 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 				logger.Info("setting release role to active", "release", ar.Name, "oldRole", ar.Spec.Role)
 			}
 			ar.Spec.Role = v1alpha1.ReleaseRoleActive
-			earlierThanActive = true
 			if ar == targetRelease {
 				ar.Spec.TrafficPercentage = targetTrafficPercentage
 			} else {
@@ -247,15 +245,18 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 			ar.Spec.TrafficPercentage = targetTrafficPercentage
 
 		} else {
+			prevRole := ar.Spec.Role
 			// TODO: update traffic for canaries
 			ar.Spec.Role = v1alpha1.ReleaseRoleNone
 			ar.Spec.TrafficPercentage = 0
 
-			// other releases should run at 0 or minimal
-			if earlierThanActive {
+			// ramp down to zero if traffic has been shifted away for awhile
+			timeSinceChange := time.Now().Sub(ar.Status.StateChangedAt.Time)
+			if prevRole != v1alpha1.ReleaseRoleActive && timeSinceChange > at.Spec.Probes.GetReadinessTimeout() {
+				if ar.Spec.NumDesired != 0 {
+					log.Info("Scaling down instances to zero", "release", ar.Name)
+				}
 				ar.Spec.NumDesired = 0
-			} else {
-				ar.Spec.NumDesired = 1
 			}
 		}
 		totalTraffic += ar.Spec.TrafficPercentage
