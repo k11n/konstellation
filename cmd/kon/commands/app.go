@@ -21,41 +21,23 @@ import (
 	cliutils "github.com/davidzhao/konstellation/pkg/utils/cli"
 )
 
-var targetFlag = &cli.StringFlag{
-	Name:    "target",
-	Aliases: []string{"t"},
-	Usage:   "filter results by target",
-}
-
-var mirroredCommands = []*cli.Command{
-	{
-		Name:      "status",
-		Usage:     "Information about the app and its targets",
-		Action:    appStatus,
-		ArgsUsage: "<app>",
-		Flags: []cli.Flag{
-			targetFlag,
-		},
-	},
-	{
-		Name:      "deploy",
-		Usage:     "Deploy a new version of an app",
-		Action:    appDeploy,
-		ArgsUsage: "<app>",
-		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:     "tag",
-				Usage:    "image tag to use",
-				Required: true,
-			},
-			&cli.StringFlag{
-				Name:     "app",
-				Usage:    "app to deploy",
-				Required: true,
-			},
-		},
-	},
-}
+var (
+	targetFlag = &cli.StringFlag{
+		Name:    "target",
+		Aliases: []string{"t"},
+		Usage:   "limit results by target",
+	}
+	releaseFlag = &cli.StringFlag{
+		Name:    "release",
+		Aliases: []string{"r"},
+		Usage:   "release of the app, defaults to the active release",
+	}
+	podFlag = &cli.StringFlag{
+		Name:    "pod",
+		Aliases: []string{"p"},
+		Usage:   "a specific pod to use",
+	}
+)
 
 var AppCommands = []*cli.Command{
 	{
@@ -63,6 +45,24 @@ var AppCommands = []*cli.Command{
 		Usage:    "App management",
 		Category: "App",
 		Subcommands: []*cli.Command{
+			{
+				Name:      "deploy",
+				Usage:     "Deploy a new version of an app",
+				Action:    appDeploy,
+				ArgsUsage: "<app>",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "tag",
+						Usage:    "image tag to use",
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:     "app",
+						Usage:    "app to deploy",
+						Required: true,
+					},
+				},
+			},
 			{
 				Name:   "list",
 				Usage:  "List apps on this cluster",
@@ -72,36 +72,51 @@ var AppCommands = []*cli.Command{
 				},
 			},
 			{
-				Name:   "new",
-				Usage:  "Create a new app.yaml from template",
-				Action: appNew,
-			},
-			{
 				Name:      "load",
 				Usage:     "Load app into Kubernetes (same as kube apply -f)",
 				ArgsUsage: "<app.yaml>",
 				Action:    appLoad,
 			},
 			{
+				Name:      "logs",
+				Usage:     "Print logs from a pod for the app",
+				ArgsUsage: "<app>",
+				Action:    appLogs,
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "follow",
+						Aliases: []string{"f"},
+						Usage:   "follow logs",
+					},
+					podFlag,
+					targetFlag,
+					releaseFlag,
+				},
+			},
+			{
+				Name:   "new",
+				Usage:  "Create a new app.yaml from template",
+				Action: appNew,
+			},
+			{
+				Name:      "pods",
+				Usage:     "List pods for this app",
+				ArgsUsage: "<app>",
+				Action:    appPods,
+				Flags: []cli.Flag{
+					targetFlag,
+					releaseFlag,
+				},
+			},
+			{
 				Name:      "shell",
-				Usage:     "Get shell access into an pod with the app",
+				Usage:     "Get shell access into a pod with the app",
 				ArgsUsage: "<app>",
 				Action:    appShell,
 				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "pod",
-						Aliases: []string{"p"},
-						Usage:   "a specific pod to use",
-					},
-					&cli.StringFlag{
-						Name:    "target",
-						Aliases: []string{"t"},
-					},
-					&cli.StringFlag{
-						Name:    "release",
-						Aliases: []string{"r"},
-						Usage:   "release of the app, defaults to the active release",
-					},
+					podFlag,
+					targetFlag,
+					releaseFlag,
 					&cli.StringFlag{
 						Name:    "shell",
 						Aliases: []string{"s"},
@@ -110,17 +125,17 @@ var AppCommands = []*cli.Command{
 					},
 				},
 			},
+			{
+				Name:      "status",
+				Usage:     "Information about the app and its targets",
+				Action:    appStatus,
+				ArgsUsage: "<app>",
+				Flags: []cli.Flag{
+					targetFlag,
+				},
+			},
 		},
 	},
-}
-
-func init() {
-	for _, cmd := range mirroredCommands {
-		cmdCopy := *cmd
-		cmdCopy.Category = "App"
-		AppCommands = append(AppCommands, &cmdCopy)
-	}
-	AppCommands[0].Subcommands = append(AppCommands[0].Subcommands, mirroredCommands...)
 }
 
 func appList(c *cli.Context) error {
@@ -344,49 +359,78 @@ func appLoad(c *cli.Context) error {
 	return nil
 }
 
-func appShell(c *cli.Context) error {
-	app, err := getAppArg(c)
-	if err != nil {
-		return err
-	}
-
-	// if pod is passed in, go straight to that
-	pod := c.String("pod")
-	target := c.String("target")
-	release := c.String("release")
-
+func appLogs(c *cli.Context) error {
 	ac, err := getActiveCluster()
 	if err != nil {
 		return err
 	}
 	kclient := ac.kubernetesClient()
 
-	if pod == "" {
-		if target == "" {
-			if target, err = selectAppTarget(kclient, app); err != nil {
-				return err
-			}
-		}
-		if release == "" {
-			// find active release
-			ar, err := resources.GetActiveRelease(kclient, app, target)
-			if err != nil {
-				return err
-			}
-			if ar == nil {
-				return fmt.Errorf("Could not find an active release")
-			}
-			release = ar.Name
-		}
-		pod, err = selectAppPod(kclient, app, target, release)
-		if err != nil {
-			return err
-		}
+	pc, err := choosePodHelper(kclient, c)
+	if err != nil {
+		return err
 	}
 
-	fmt.Printf("initializing shell to pod %s\n", pod)
-	namespace := resources.NamespaceForAppTarget(app, target)
-	cmd := exec.Command("kubectl", "exec", "-n", namespace, "-it", pod, "--container", "app", "--", c.String("shell"))
+	follow := c.Bool("follow")
+	verb := "getting"
+	if follow {
+		verb = "following"
+	}
+	fmt.Printf("%s logs for pod %s\n", verb, pc.pod)
+	namespace := resources.NamespaceForAppTarget(pc.app, pc.target)
+	args := []string{
+		"logs", pc.pod, "-n", namespace, "-c", "app",
+	}
+	if c.Bool("follow") {
+		args = append(args, "-f")
+	}
+	cmd := exec.Command("kubectl", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd.Run()
+}
+
+func appPods(c *cli.Context) error {
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+
+	kclient := ac.kubernetesClient()
+	pc, err := chooseReleaseHelper(kclient, c)
+	if err != nil {
+		return err
+	}
+
+	pods, err := resources.GetPodsForAppRelease(kclient, resources.NamespaceForAppTarget(pc.app, pc.target), pc.release)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Total pods: %d\n", len(pods))
+	for _, p := range pods {
+		fmt.Println(p)
+	}
+
+	return nil
+}
+
+func appShell(c *cli.Context) error {
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+	kclient := ac.kubernetesClient()
+
+	pc, err := choosePodHelper(kclient, c)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("initializing shell to pod %s\n", pc.pod)
+	namespace := resources.NamespaceForAppTarget(pc.app, pc.target)
+	cmd := exec.Command("kubectl", "exec", "-n", namespace, "-it", pc.pod, "--container", "app", "--", c.String("shell"))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -396,9 +440,71 @@ func appShell(c *cli.Context) error {
 
 func getAppArg(c *cli.Context) (string, error) {
 	if c.NArg() == 0 {
-		return "", fmt.Errorf("Required argument \"app\" was not passed in")
+		return "", fmt.Errorf("Required argument \"<app>\" was not passed in")
 	}
 	return c.Args().Get(0), nil
+}
+
+type podContext struct {
+	app     string
+	target  string
+	release string
+	pod     string
+}
+
+func chooseReleaseHelper(kclient client.Client, c *cli.Context) (pc *podContext, err error) {
+	app, err := getAppArg(c)
+	if err != nil {
+		return
+	}
+
+	// if pod is passed in, go straight to that
+	target := c.String("target")
+	release := c.String("release")
+	if target == "" {
+		if target, err = selectAppTarget(kclient, app); err != nil {
+			return
+		}
+	}
+	if release == "" {
+		// find active release
+		ar, err := resources.GetActiveRelease(kclient, app, target)
+		if err != nil {
+			return nil, err
+		}
+		if ar == nil {
+			return nil, fmt.Errorf("Could not find an active release")
+		}
+		release = ar.Name
+	}
+
+	pc = &podContext{
+		app:     app,
+		target:  target,
+		release: release,
+	}
+	return
+}
+
+// helper function to select a pod based on user input
+func choosePodHelper(kclient client.Client, c *cli.Context) (pc *podContext, err error) {
+	pod := c.String("pod")
+	// TODO: if exact pod name is passed in, we could perform a search to find it in any namespace
+
+	pc, err = chooseReleaseHelper(kclient, c)
+	if err != nil {
+		return
+	}
+
+	if pod == "" {
+		pod, err = selectAppPod(kclient, pc.app, pc.target, pc.release)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	pc.pod = pod
+	return
 }
 
 func selectAppTarget(kclient client.Client, appName string) (target string, err error) {
