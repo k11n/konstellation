@@ -257,6 +257,11 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 					log.Info("Scaling down instances to zero", "release", ar.Name)
 				}
 				ar.Spec.NumDesired = 0
+			} else {
+				// not completely scaled down, reconcile again
+				res = &reconcile.Result{
+					RequeueAfter: at.Spec.Probes.GetReadinessTimeout(),
+				}
 			}
 		}
 		totalTraffic += ar.Spec.TrafficPercentage
@@ -300,7 +305,9 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 
 	ctx := context.TODO()
 
-	needsScaler := activeRelease != nil && targetRelease == nil
+	// only autoscale when not in the middle of a deploy
+	needsScaler := at.NeedsAutoscaler() && activeRelease != nil && targetRelease == nil
+
 	// find all existing scalers
 	scalerList := autoscalev2beta2.HorizontalPodAutoscalerList{}
 	err := r.client.List(ctx, &scalerList, client.MatchingLabels(labelsForAppTarget(at)))
@@ -333,7 +340,7 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 		}
 	}
 
-	op, err := resources.UpdateResource(r.client, scaler, at, r.scheme)
+	op, err := resources.UpdateResourceWithMerge(r.client, scaler, at, r.scheme)
 	if err != nil {
 		return err
 	}

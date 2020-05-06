@@ -5,6 +5,7 @@ import (
 
 	"github.com/thoas/go-funk"
 	istio "istio.io/client-go/pkg/apis/networking/v1beta1"
+	autoscalev2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -61,8 +62,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		&v1alpha1.IngressRequest{},
 		&corev1.Service{},
 		&istio.VirtualService{},
-		// TODO: when this is added, stuff becomes messed up
-		//&autoscalev2beta2.HorizontalPodAutoscaler{},
+		&autoscalev2beta2.HorizontalPodAutoscaler{},
 	}
 	for _, t := range secondaryTypes {
 		err = c.Watch(&source.Kind{Type: t}, ownerHandler)

@@ -54,6 +54,7 @@ const (
 	ReleaseStateRetiring  ReleaseState = "retiring"
 	ReleaseStateRetired   ReleaseState = "retired"
 	ReleaseStateFailed    ReleaseState = "failed"
+	ReleaseStateBad       ReleaseState = "bad"
 )
 
 type ReleaseRole string
@@ -69,6 +70,7 @@ const (
 	ReleaseRoleActive = "active"
 	// indicates the release we are moving towards
 	ReleaseRoleTarget = "target"
+	ReleaseRoleBad    = "bad"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

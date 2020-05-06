@@ -109,3 +109,14 @@ func (at *AppTarget) NeedsIngress() bool {
 	}
 	return len(at.Spec.Ingress.Hosts) > 0
 }
+
+func (at *AppTarget) NeedsAutoscaler() bool {
+	cpu := at.Spec.Resources.Requests.Cpu()
+	if cpu == nil {
+		return false
+	}
+	if at.Spec.Scale.TargetCPUUtilization == 0 {
+		return false
+	}
+	return true
+}

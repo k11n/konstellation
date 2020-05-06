@@ -109,6 +109,16 @@ var AppCommands = []*cli.Command{
 				},
 			},
 			{
+				Name:      "rollback",
+				Usage:     "Rolls back a bad release and deploys a previous one",
+				ArgsUsage: "<app>",
+				Action:    appRollback,
+				Flags: []cli.Flag{
+					targetFlag,
+					releaseFlag,
+				},
+			},
+			{
 				Name:      "shell",
 				Usage:     "Get shell access into a pod with the app",
 				ArgsUsage: "<app>",
@@ -292,6 +302,10 @@ func appDeploy(c *cli.Context) error {
 
 	_, err = resources.UpdateResource(kclient, build, nil, nil)
 	return err
+}
+
+func appRollback(c *cli.Context) error {
+	return nil
 }
 
 type appInfo struct {
