@@ -28,22 +28,14 @@ var ConfigCommands = []*cli.Command{
 		Category: "App",
 		Subcommands: []*cli.Command{
 			{
-				Name:   "list",
-				Usage:  "List config files on this cluster",
-				Action: configList,
-				Flags: []cli.Flag{
-					appFilterFlag,
-				},
-			},
-			{
-				Name:      "show",
-				Usage:     "Show config for an app",
-				Action:    configShow,
+				Name:      "delete",
+				Usage:     "Delete config for an app",
+				Action:    configDelete,
 				ArgsUsage: "<app>",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "target",
-						Usage: "when target is set, shows the merged config with target overrides",
+						Usage: "delete only this target's config",
 					},
 				},
 			},
@@ -60,14 +52,22 @@ var ConfigCommands = []*cli.Command{
 				},
 			},
 			{
-				Name:      "delete",
-				Usage:     "Delete config for an app",
-				Action:    configDelete,
+				Name:   "list",
+				Usage:  "List config files on this cluster",
+				Action: configList,
+				Flags: []cli.Flag{
+					appFilterFlag,
+				},
+			},
+			{
+				Name:      "show",
+				Usage:     "Show config for an app",
+				Action:    configShow,
 				ArgsUsage: "<app>",
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:  "target",
-						Usage: "delete only this target's config",
+						Usage: "when target is set, shows the merged config with target overrides",
 					},
 				},
 			},

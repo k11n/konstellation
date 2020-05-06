@@ -52,21 +52,6 @@ var ClusterCommands = []*cli.Command{
 		Category: "Cluster",
 		Subcommands: []*cli.Command{
 			{
-				Name:   "list",
-				Usage:  "list clusters",
-				Action: clusterList,
-			},
-			{
-				Name:  "select",
-				Usage: "select an active cluster to work with",
-				Action: func(c *cli.Context) error {
-					return clusterSelect(c.String("cluster"))
-				},
-				Flags: []cli.Flag{
-					clusterNameFlag,
-				},
-			},
-			{
 				Name:   "configure",
 				Usage:  "configure cluster settings",
 				Action: clusterConfigure,
@@ -85,9 +70,24 @@ var ClusterCommands = []*cli.Command{
 				},
 			},
 			{
+				Name:   "list",
+				Usage:  "list clusters",
+				Action: clusterList,
+			},
+			{
 				Name:   "reset",
 				Usage:  "resets current active cluster",
 				Action: clusterReset,
+			},
+			{
+				Name:  "select",
+				Usage: "select an active cluster to work with",
+				Action: func(c *cli.Context) error {
+					return clusterSelect(c.String("cluster"))
+				},
+				Flags: []cli.Flag{
+					clusterNameFlag,
+				},
 			},
 			{
 				Name:   "get-token",
