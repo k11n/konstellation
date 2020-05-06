@@ -118,5 +118,8 @@ func (at *AppTarget) NeedsAutoscaler() bool {
 	if at.Spec.Scale.TargetCPUUtilization == 0 {
 		return false
 	}
+	if at.Spec.Scale.Min == at.Spec.Scale.Max {
+		return false
+	}
 	return true
 }

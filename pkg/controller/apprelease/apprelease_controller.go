@@ -135,6 +135,8 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 		status.State = v1alpha1.ReleaseStateReleased
 	} else if ar.Spec.Role == v1alpha1.ReleaseRoleTarget {
 		status.State = v1alpha1.ReleaseStateReleasing
+	} else if ar.Spec.Role == v1alpha1.ReleaseRoleBad {
+		status.State = v1alpha1.ReleaseStateBad
 	} else {
 		if ar.Spec.NumDesired == 0 {
 			status.State = v1alpha1.ReleaseStateRetired

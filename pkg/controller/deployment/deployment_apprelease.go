@@ -144,9 +144,15 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		}
 	}
 
+	firstDeployableRelease := resources.GetFirstDeployableRelease(releases)
+	if firstDeployableRelease == nil {
+		// can't be deployed
+		return
+	}
+
 	// first deploy, turn on immediately
 	if activeRelease == nil {
-		activeRelease = releases[0]
+		activeRelease = firstDeployableRelease
 		targetRelease = activeRelease
 		logger.Info("Deploying initial release", "release", activeRelease.Name)
 		hasChanges = true
@@ -154,7 +160,7 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		// TODO: don't deploy additional builds when outside of schedule
 		// see if there's a new target release (try to deploy latest if possible)
 		// TODO: check if autorelease is enabled for this target..
-		newTarget := releases[0]
+		newTarget := firstDeployableRelease
 		if newTarget != nil {
 			if targetRelease != newTarget {
 				var previousTarget string
@@ -244,6 +250,9 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 			}
 			ar.Spec.TrafficPercentage = targetTrafficPercentage
 
+		} else if ar.Spec.Role == v1alpha1.ReleaseRoleBad {
+			ar.Spec.TrafficPercentage = 0
+			ar.Spec.NumDesired = 0
 		} else {
 			prevRole := ar.Spec.Role
 			// TODO: update traffic for canaries

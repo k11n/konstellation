@@ -304,10 +304,6 @@ func appDeploy(c *cli.Context) error {
 	return err
 }
 
-func appRollback(c *cli.Context) error {
-	return nil
-}
-
 type appInfo struct {
 	AppName     string
 	DockerImage string
@@ -427,6 +423,64 @@ func appPods(c *cli.Context) error {
 		fmt.Println(p)
 	}
 
+	return nil
+}
+
+func appRollback(c *cli.Context) error {
+	app, err := getAppArg(c)
+	if err != nil {
+		return err
+	}
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+
+	kclient := ac.kubernetesClient()
+
+	target := c.String("target")
+	release := c.String("release")
+	if target == "" {
+		if target, err = selectAppTarget(kclient, app); err != nil {
+			return err
+		}
+	}
+
+	if release == "" {
+		releases, err := resources.GetAppReleases(kclient, app, target, 10)
+		if err != nil {
+			return err
+		}
+
+		names := funk.Map(releases, func(ar *v1alpha1.AppRelease) string {
+			return ar.Name
+		})
+		prompt := utils.NewPromptSelect("Select a release to mark as bad", names)
+		prompt.Size = 10
+		_, release, err = prompt.Run()
+		if err != nil {
+			return err
+		}
+	}
+
+	ar, err := resources.GetAppRelease(kclient, app, target, release)
+	if err != nil {
+		return err
+	}
+
+	// explicit confirmation
+	err = utils.ExplicitConfirmationPrompt(fmt.Sprintf("Do you want to roll back %s?", ar.Name))
+	if err != nil {
+		return err
+	}
+
+	ar.Spec.Role = v1alpha1.ReleaseRoleBad
+	_, err = resources.UpdateResource(kclient, ar, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Successfully rolled back release")
 	return nil
 }
 
