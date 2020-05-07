@@ -63,14 +63,10 @@ var ConfigCommands = []*cli.Command{
 			},
 			{
 				Name:      "show",
-				Usage:     "Show config for an app",
+				Usage:     "Show config for a release of an app",
 				Action:    configShow,
-				ArgsUsage: "<app>",
+				ArgsUsage: "<release>",
 				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:  "target",
-						Usage: "when target is set, shows the merged config with target overrides",
-					},
 					&cli.BoolFlag{
 						Name:  "env",
 						Usage: "when set, displays the environment variables that your app would receive",
@@ -86,30 +82,35 @@ func configList(c *cli.Context) error {
 }
 
 func configShow(c *cli.Context) error {
-	app, err := getAppArg(c)
-	if err != nil {
-		return err
+	if c.NArg() == 0 {
+		return fmt.Errorf("Required argument <release> was not passed in")
 	}
+	release := c.Args().Get(0)
 
 	ac, err := getActiveCluster()
 	if err != nil {
 		return err
 	}
 
-	target := c.String("target")
 	showEnv := c.Bool("env")
 
 	kclient := ac.kubernetesClient()
+	// find valid targets for the app
+	ar, err := resources.GetAppReleaseByName(kclient, release, "")
+	if err != nil {
+		return err
+	}
 
-	appConfig, err := resources.GetMergedAppConfig(kclient, app, target)
-	if err == resources.ErrNotFound {
-		return fmt.Errorf("Config does not exist")
-	} else if err != nil {
+	if ar.Spec.Config == "" {
+		return fmt.Errorf("Release %s does not have a config", release)
+	}
+
+	cm, err := resources.GetConfigMap(kclient, resources.NamespaceForAppTarget(ar.Spec.App, ar.Spec.Target), ar.Spec.Config)
+	if err != nil {
 		return err
 	}
 
 	if showEnv {
-		cm := appConfig.ToConfigMap()
 		keys := funk.Keys(cm.Data).([]string)
 		sort.Strings(keys)
 		for _, key := range keys {
@@ -119,7 +120,7 @@ func configShow(c *cli.Context) error {
 			fmt.Printf("%s=%s\n", key, cm.Data[key])
 		}
 	} else {
-		fmt.Println(string(appConfig.ConfigYaml))
+		fmt.Println(cm.Data[v1alpha1.ConfigFileName])
 	}
 
 	return nil

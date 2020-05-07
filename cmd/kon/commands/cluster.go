@@ -538,7 +538,7 @@ func (c *activeCluster) installComponents() error {
 		}
 		compInstaller := components.GetComponentByName(comp.Name)
 		if compInstaller == nil {
-			return fmt.Errorf("Cluster requires %s, which is no longer available")
+			return fmt.Errorf("Cluster requires %s, which is no longer available", comp.Name)
 		}
 
 		fmt.Printf("Installing Kubernetes components for %s\n", compInstaller.Name())

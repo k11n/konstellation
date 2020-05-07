@@ -2,12 +2,18 @@ package resources
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 	"sort"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
+)
+
+var (
+	releasePattern = regexp.MustCompile(`^([\w-]+)-\d{8}-\d{4}-\w{4}$`)
 )
 
 func GetAppReleases(kclient client.Client, app string, target string, count int) ([]*v1alpha1.AppRelease, error) {
@@ -29,6 +35,28 @@ func GetAppReleases(kclient client.Client, app string, target string, count int)
 
 	SortAppReleasesByLatest(releases)
 	return releases, nil
+}
+
+func GetAppReleaseByName(kclient client.Client, release string, target string) (ar *v1alpha1.AppRelease, err error) {
+	matches := releasePattern.FindStringSubmatch(release)
+	if len(matches) != 2 {
+		err = fmt.Errorf("Not a valid release name: %s", release)
+		return
+	}
+	app := matches[1]
+	// figure out app name from this
+	if target == "" {
+		targets, err := GetAppTargets(kclient, app)
+		if err != nil {
+			return nil, err
+		}
+		if len(targets) == 0 {
+			return nil, fmt.Errorf("Could not find targets for app %s", app)
+		}
+		target = targets[0].Spec.Target
+	}
+
+	return GetAppRelease(kclient, app, target, release)
 }
 
 func GetActiveRelease(kclient client.Client, app, target string) (*v1alpha1.AppRelease, error) {

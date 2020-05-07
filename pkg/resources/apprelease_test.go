@@ -38,3 +38,17 @@ func TestSortAppReleasesByLatest(t *testing.T) {
 	assert.Equal(t, "second", releases[1].Name)
 	assert.Equal(t, "third", releases[2].Name)
 }
+
+func TestReleasePattern(t *testing.T) {
+	release := "app2048-20200423-1531-c495"
+	assert.True(t, releasePattern.MatchString(release))
+	matches := releasePattern.FindStringSubmatch(release)
+	assert.Len(t, matches, 2)
+	assert.Equal(t, "app2048", matches[1])
+
+	release2 := "app-with-dashes-20200423-1531-c495"
+	assert.True(t, releasePattern.MatchString(release2))
+	matches = releasePattern.FindStringSubmatch(release2)
+	assert.Len(t, matches, 2)
+	assert.Equal(t, "app-with-dashes", matches[1])
+}
