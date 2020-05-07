@@ -51,3 +51,36 @@ func GetConfigMap(kclient client.Client, namespace string, name string) (cm *cor
 	err = kclient.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: name}, cm)
 	return
 }
+
+func GetMergedAppConfig(kclient client.Client, app, target string) (ac *v1alpha1.AppConfig, err error) {
+	// grab app release for this app
+	baseConfig, err := GetAppConfig(kclient, app, "")
+	if err == ErrNotFound {
+		baseConfig = nil
+	} else if err != nil {
+		return
+	}
+
+	targetConfig, err := GetAppConfig(kclient, app, target)
+	if err == ErrNotFound {
+		targetConfig = nil
+	} else if err != nil {
+		return
+	}
+
+	if baseConfig == nil {
+		baseConfig = targetConfig
+		targetConfig = nil
+	}
+
+	if baseConfig == nil {
+		return
+	}
+
+	// merge if needed
+	if targetConfig != nil {
+		baseConfig.MergeWith(targetConfig)
+	}
+
+	return baseConfig, nil
+}

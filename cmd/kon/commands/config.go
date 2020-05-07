@@ -3,7 +3,9 @@ package commands
 import (
 	"context"
 	"fmt"
+	"sort"
 
+	"github.com/thoas/go-funk"
 	"github.com/urfave/cli/v2"
 
 	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
@@ -69,6 +71,10 @@ var ConfigCommands = []*cli.Command{
 						Name:  "target",
 						Usage: "when target is set, shows the merged config with target overrides",
 					},
+					&cli.BoolFlag{
+						Name:  "env",
+						Usage: "when set, displays the environment variables that your app would receive",
+					},
 				},
 			},
 		},
@@ -91,16 +97,30 @@ func configShow(c *cli.Context) error {
 	}
 
 	target := c.String("target")
+	showEnv := c.Bool("env")
 
 	kclient := ac.kubernetesClient()
-	appConfig, err := resources.GetAppConfig(kclient, app, target)
+
+	appConfig, err := resources.GetMergedAppConfig(kclient, app, target)
 	if err == resources.ErrNotFound {
 		return fmt.Errorf("Config does not exist")
 	} else if err != nil {
 		return err
 	}
 
-	fmt.Println(string(appConfig.ConfigYaml))
+	if showEnv {
+		cm := appConfig.ToConfigMap()
+		keys := funk.Keys(cm.Data).([]string)
+		sort.Strings(keys)
+		for _, key := range keys {
+			if key == v1alpha1.ConfigFileName {
+				continue
+			}
+			fmt.Printf("%s=%s\n", key, cm.Data[key])
+		}
+	} else {
+		fmt.Println(string(appConfig.ConfigYaml))
+	}
 
 	return nil
 }

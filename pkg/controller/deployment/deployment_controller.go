@@ -245,40 +245,17 @@ func (r *ReconcileDeployment) ensureNamespaceCreated(at *v1alpha1.AppTarget) err
 
 func (r *ReconcileDeployment) reconcileConfigMap(at *v1alpha1.AppTarget) (configMap *corev1.ConfigMap, err error) {
 	// grab app release for this app
-	baseConfig, err := resources.GetAppConfig(r.client, at.Spec.App, "")
-	if err == resources.ErrNotFound {
-		baseConfig = nil
-	} else if err != nil {
+	ac, err := resources.GetMergedAppConfig(r.client, at.Spec.App, at.Spec.Target)
+	if err != nil {
 		return
-	}
-
-	targetConfig, err := resources.GetAppConfig(r.client, at.Spec.App, at.Spec.Target)
-	if err == resources.ErrNotFound {
-		targetConfig = nil
-	} else if err != nil {
-		return
-	}
-
-	if baseConfig == nil {
-		baseConfig = targetConfig
-		targetConfig = nil
-	}
-
-	if baseConfig == nil {
-		return
-	}
-
-	// merge if needed
-	if targetConfig != nil {
-		baseConfig.MergeWith(targetConfig)
 	}
 
 	// check if existing configmap with the hash
-	configMap, err = resources.GetConfigMap(r.client, at.ScopedName(), baseConfig.ConfigHash())
+	configMap, err = resources.GetConfigMap(r.client, at.ScopedName(), ac.ConfigHash())
 	if errors.IsNotFound(err) {
 		log.Info("Creating ConfigMap", "app", at.Spec.App, "target", at.Spec.Target)
 		// create new
-		configMap = baseConfig.ToConfigMap()
+		configMap = ac.ToConfigMap()
 		configMap.Namespace = at.ScopedName()
 		err = r.client.Create(context.Background(), configMap)
 	}
