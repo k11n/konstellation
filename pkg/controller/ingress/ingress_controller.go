@@ -136,6 +136,18 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 	// create gateway, shared across all domains
 	gw := gatewayForRequests(requestList.Items)
 
+	if len(requestList.Items) == 0 {
+		// kill everything
+		r.client.Delete(context.TODO(), gw)
+		r.client.Delete(context.TODO(), &netv1beta1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: resources.IstioNamespace,
+				Name:      resources.IngressName,
+			},
+		})
+		return reconcile.Result{}, nil
+	}
+
 	_, err = resources.UpdateResource(r.client, gw, nil, nil)
 	if err != nil {
 		return res, err

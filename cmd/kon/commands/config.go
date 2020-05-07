@@ -63,7 +63,7 @@ var ConfigCommands = []*cli.Command{
 			},
 			{
 				Name:      "show",
-				Usage:     "Show config for a release of an app",
+				Usage:     "Show config for a release of the app",
 				Action:    configShow,
 				ArgsUsage: "<release>",
 				Flags: []cli.Flag{
