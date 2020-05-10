@@ -20,14 +20,14 @@ import (
 	"github.com/thoas/go-funk"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/davidzhao/konstellation/cmd/kon/config"
-	"github.com/davidzhao/konstellation/cmd/kon/kube"
-	"github.com/davidzhao/konstellation/cmd/kon/utils"
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
-	"github.com/davidzhao/konstellation/pkg/components/ingress"
-	"github.com/davidzhao/konstellation/pkg/resources"
-	"github.com/davidzhao/konstellation/version"
+	"github.com/k11n/konstellation/cmd/kon/config"
+	"github.com/k11n/konstellation/cmd/kon/kube"
+	"github.com/k11n/konstellation/cmd/kon/utils"
+	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
+	kaws "github.com/k11n/konstellation/pkg/cloud/aws"
+	"github.com/k11n/konstellation/pkg/components/ingress"
+	"github.com/k11n/konstellation/pkg/resources"
+	"github.com/k11n/konstellation/version"
 )
 
 // generates AWS cluster & nodepool based on prompts to the user

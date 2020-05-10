@@ -7,7 +7,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/davidzhao/konstellation/pkg/utils/files"
+	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
 const (

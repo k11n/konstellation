@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/davidzhao/konstellation/pkg/utils/objects"
+	"github.com/k11n/konstellation/pkg/utils/objects"
 )
 
 const (

@@ -3,8 +3,8 @@ package prometheus
 import (
 	"fmt"
 
-	"github.com/davidzhao/konstellation/pkg/components"
-	"github.com/davidzhao/konstellation/pkg/utils/cli"
+	"github.com/k11n/konstellation/pkg/components"
+	"github.com/k11n/konstellation/pkg/utils/cli"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

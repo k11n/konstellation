@@ -5,7 +5,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/davidzhao/konstellation/pkg/utils/cli"
+	"github.com/k11n/konstellation/pkg/utils/cli"
 )
 
 type NginxIngress struct {

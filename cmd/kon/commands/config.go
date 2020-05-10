@@ -8,9 +8,9 @@ import (
 	"github.com/thoas/go-funk"
 	"github.com/urfave/cli/v2"
 
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-	"github.com/davidzhao/konstellation/pkg/resources"
-	utilcli "github.com/davidzhao/konstellation/pkg/utils/cli"
+	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/k11n/konstellation/pkg/resources"
+	utilcli "github.com/k11n/konstellation/pkg/utils/cli"
 )
 
 // app configs

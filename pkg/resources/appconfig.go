@@ -8,7 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 )
 
 func GetAppConfig(kclient client.Client, app, target string) (ac *v1alpha1.AppConfig, err error) {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"io"
 
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-	"github.com/davidzhao/konstellation/pkg/cloud/types"
+	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/k11n/konstellation/pkg/cloud/types"
 )
 
 type KubernetesProvider interface {

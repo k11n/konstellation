@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/davidzhao/konstellation/pkg/utils/cli"
+	"github.com/k11n/konstellation/pkg/utils/cli"
 )
 
 func TestInstallIstio(t *testing.T) {

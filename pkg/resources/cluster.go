@@ -5,7 +5,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 )
 
 func GetClusterConfig(kclient client.Client) (cc *v1alpha1.ClusterConfig, err error) {

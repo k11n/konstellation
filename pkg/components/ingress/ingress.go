@@ -3,8 +3,8 @@ package ingress
 import (
 	"log"
 
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-	"github.com/davidzhao/konstellation/pkg/components"
+	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/k11n/konstellation/pkg/components"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 

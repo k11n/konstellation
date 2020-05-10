@@ -16,10 +16,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/davidzhao/konstellation/pkg/components"
-	"github.com/davidzhao/konstellation/pkg/resources"
-	"github.com/davidzhao/konstellation/pkg/utils/cli"
-	"github.com/davidzhao/konstellation/pkg/utils/files"
+	"github.com/k11n/konstellation/pkg/components"
+	"github.com/k11n/konstellation/pkg/resources"
+	"github.com/k11n/konstellation/pkg/utils/cli"
+	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
 func init() {

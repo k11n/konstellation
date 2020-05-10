@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/davidzhao/konstellation/cmd/kon/config"
-	"github.com/davidzhao/konstellation/cmd/kon/terraform"
-	"github.com/davidzhao/konstellation/cmd/kon/utils"
+	"github.com/k11n/konstellation/cmd/kon/config"
+	"github.com/k11n/konstellation/cmd/kon/terraform"
+	"github.com/k11n/konstellation/cmd/kon/utils"
 )
 
 var (

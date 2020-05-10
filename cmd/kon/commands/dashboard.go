@@ -8,9 +8,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 
-	"github.com/davidzhao/konstellation/pkg/components/kubedash"
-	"github.com/davidzhao/konstellation/pkg/resources"
-	koncli "github.com/davidzhao/konstellation/pkg/utils/cli"
+	"github.com/k11n/konstellation/pkg/components/kubedash"
+	"github.com/k11n/konstellation/pkg/resources"
+	koncli "github.com/k11n/konstellation/pkg/utils/cli"
 )
 
 var DashboardCommands = []*cli.Command{

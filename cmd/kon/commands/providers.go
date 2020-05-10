@@ -3,10 +3,10 @@ package commands
 import (
 	"fmt"
 
-	"github.com/davidzhao/konstellation/cmd/kon/config"
-	"github.com/davidzhao/konstellation/cmd/kon/providers"
-	"github.com/davidzhao/konstellation/cmd/kon/providers/aws"
-	"github.com/davidzhao/konstellation/cmd/kon/utils"
+	"github.com/k11n/konstellation/cmd/kon/config"
+	"github.com/k11n/konstellation/cmd/kon/providers"
+	"github.com/k11n/konstellation/cmd/kon/providers/aws"
+	"github.com/k11n/konstellation/cmd/kon/utils"
 )
 
 var (

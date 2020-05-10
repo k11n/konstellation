@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/davidzhao/konstellation/cmd/kon/config"
+	"github.com/k11n/konstellation/cmd/kon/config"
 )
 
 func TestAWSCredentials(t *testing.T) {

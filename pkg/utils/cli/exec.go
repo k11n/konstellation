@@ -7,7 +7,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/davidzhao/konstellation/pkg/utils/files"
+	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
 func RunBufferedCommand(name string, args ...string) ([]byte, error) {

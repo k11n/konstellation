@@ -8,7 +8,7 @@ import (
 	rice "github.com/GeertJohan/go.rice"
 	"github.com/pkg/errors"
 
-	"github.com/davidzhao/konstellation/pkg/utils/files"
+	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
 func DeployResourcesBox() *rice.Box {

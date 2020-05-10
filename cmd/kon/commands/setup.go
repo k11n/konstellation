@@ -7,8 +7,8 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/urfave/cli/v2"
 
-	"github.com/davidzhao/konstellation/cmd/kon/kube"
-	"github.com/davidzhao/konstellation/pkg/components"
+	"github.com/k11n/konstellation/cmd/kon/kube"
+	"github.com/k11n/konstellation/pkg/components"
 )
 
 var SetupCommands = []*cli.Command{

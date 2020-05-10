@@ -6,8 +6,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/davidzhao/konstellation/cmd/kon/commands"
-	"github.com/davidzhao/konstellation/version"
+	"github.com/k11n/konstellation/cmd/kon/commands"
+	"github.com/k11n/konstellation/version"
 )
 
 func main() {

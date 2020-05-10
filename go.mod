@@ -1,4 +1,4 @@
-module github.com/davidzhao/konstellation
+module github.com/k11n/konstellation
 
 go 1.13
 

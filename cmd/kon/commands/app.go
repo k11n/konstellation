@@ -15,10 +15,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/davidzhao/konstellation/cmd/kon/utils"
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-	"github.com/davidzhao/konstellation/pkg/resources"
-	cliutils "github.com/davidzhao/konstellation/pkg/utils/cli"
+	"github.com/k11n/konstellation/cmd/kon/utils"
+	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/k11n/konstellation/pkg/resources"
+	cliutils "github.com/k11n/konstellation/pkg/utils/cli"
 )
 
 var (

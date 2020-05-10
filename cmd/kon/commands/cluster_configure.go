@@ -7,9 +7,9 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/thoas/go-funk"
 
-	"github.com/davidzhao/konstellation/cmd/kon/utils"
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-	"github.com/davidzhao/konstellation/pkg/resources"
+	"github.com/k11n/konstellation/cmd/kon/utils"
+	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/k11n/konstellation/pkg/resources"
 )
 
 func (c *activeCluster) configureCluster() error {

@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/davidzhao/konstellation/pkg/controller/build"
+	"github.com/k11n/konstellation/pkg/controller/build"
 )
 
 func init() {

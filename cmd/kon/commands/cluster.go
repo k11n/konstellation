@@ -19,16 +19,16 @@ import (
 	k8sJson "k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/davidzhao/konstellation/cmd/kon/config"
-	"github.com/davidzhao/konstellation/cmd/kon/kube"
-	"github.com/davidzhao/konstellation/cmd/kon/providers"
-	"github.com/davidzhao/konstellation/cmd/kon/utils"
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-	"github.com/davidzhao/konstellation/pkg/cloud/types"
-	"github.com/davidzhao/konstellation/pkg/components"
-	"github.com/davidzhao/konstellation/pkg/resources"
-	"github.com/davidzhao/konstellation/pkg/utils/files"
-	"github.com/davidzhao/konstellation/version"
+	"github.com/k11n/konstellation/cmd/kon/config"
+	"github.com/k11n/konstellation/cmd/kon/kube"
+	"github.com/k11n/konstellation/cmd/kon/providers"
+	"github.com/k11n/konstellation/cmd/kon/utils"
+	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/k11n/konstellation/pkg/cloud/types"
+	"github.com/k11n/konstellation/pkg/components"
+	"github.com/k11n/konstellation/pkg/resources"
+	"github.com/k11n/konstellation/pkg/utils/files"
+	"github.com/k11n/konstellation/version"
 )
 
 var (

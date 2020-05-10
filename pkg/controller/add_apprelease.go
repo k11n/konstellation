@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/davidzhao/konstellation/pkg/controller/apprelease"
+	"github.com/k11n/konstellation/pkg/controller/apprelease"
 )
 
 func init() {

@@ -7,7 +7,7 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/davidzhao/konstellation/pkg/utils/files"
+	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
 var (

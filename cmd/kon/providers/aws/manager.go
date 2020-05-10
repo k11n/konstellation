@@ -14,13 +14,13 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/manifoldco/promptui"
 
-	"github.com/davidzhao/konstellation/cmd/kon/config"
-	"github.com/davidzhao/konstellation/cmd/kon/terraform"
-	"github.com/davidzhao/konstellation/cmd/kon/utils"
-	"github.com/davidzhao/konstellation/pkg/apis/k11n/v1alpha1"
-	"github.com/davidzhao/konstellation/pkg/cloud"
-	kaws "github.com/davidzhao/konstellation/pkg/cloud/aws"
-	"github.com/davidzhao/konstellation/pkg/utils/tls"
+	"github.com/k11n/konstellation/cmd/kon/config"
+	"github.com/k11n/konstellation/cmd/kon/terraform"
+	"github.com/k11n/konstellation/cmd/kon/utils"
+	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/k11n/konstellation/pkg/cloud"
+	kaws "github.com/k11n/konstellation/pkg/cloud/aws"
+	"github.com/k11n/konstellation/pkg/utils/tls"
 )
 
 type AWSManager struct {

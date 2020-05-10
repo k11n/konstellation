@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
 
-	"github.com/davidzhao/konstellation/pkg/cloud/types"
+	"github.com/k11n/konstellation/pkg/cloud/types"
 )
 
 type ACMService struct {

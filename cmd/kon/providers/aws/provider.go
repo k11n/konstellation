@@ -14,9 +14,9 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 
-	"github.com/davidzhao/konstellation/cmd/kon/config"
-	"github.com/davidzhao/konstellation/cmd/kon/utils"
-	"github.com/davidzhao/konstellation/pkg/utils/cli"
+	"github.com/k11n/konstellation/cmd/kon/config"
+	"github.com/k11n/konstellation/cmd/kon/utils"
+	"github.com/k11n/konstellation/pkg/utils/cli"
 )
 
 type AWSProvider struct {

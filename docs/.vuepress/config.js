@@ -1,29 +1,15 @@
 module.exports = {
-  title: "Konstellation Docs",
+  title: "Konstellation",
   themeConfig: {
     nav: [
-      { text: 'Home', link: '/' },
       { text: 'Guide', link: '/guide/' },
-      { text: 'Reference', link: '/reference/' },
+      // { text: 'Reference', link: '/reference/' },
+      { text: 'Github', link: 'https://github.com/k11n/konstellation' },
     ],
-    // sidebar: [
-    //   {
-    //     title: 'Guide',
-    //     path: '/guide/',
-    //     collapsable: false,
-    //     sidebarDepth: 2,
-    //   },
-    //   {
-    //     title: 'Reference',
-    //     path: '/reference/',
-    //     collapsable: false,
-    //     sidebarDepth: 2,
-    //   }
-    // ]
     sidebar: {
       '/guide/': [
         '',
-        'one'
+        'architecture'
       ],
       '/reference/': [
         '',

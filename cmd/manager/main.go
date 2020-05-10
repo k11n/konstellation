@@ -18,9 +18,9 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 
-	"github.com/davidzhao/konstellation/pkg/apis"
-	"github.com/davidzhao/konstellation/pkg/controller"
-	"github.com/davidzhao/konstellation/version"
+	"github.com/k11n/konstellation/pkg/apis"
+	"github.com/k11n/konstellation/pkg/controller"
+	"github.com/k11n/konstellation/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"

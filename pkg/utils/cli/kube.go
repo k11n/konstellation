@@ -12,7 +12,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/davidzhao/konstellation/pkg/resources"
+	"github.com/k11n/konstellation/pkg/resources"
 )
 
 func KubeCtl(args ...string) error {

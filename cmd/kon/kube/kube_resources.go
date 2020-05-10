@@ -7,12 +7,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	kconf "sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"github.com/davidzhao/konstellation/pkg/apis"
-	"github.com/davidzhao/konstellation/pkg/components"
-	"github.com/davidzhao/konstellation/pkg/components/istio"
-	"github.com/davidzhao/konstellation/pkg/components/kubedash"
-	"github.com/davidzhao/konstellation/pkg/components/metricsserver"
-	"github.com/davidzhao/konstellation/pkg/components/prometheus"
+	"github.com/k11n/konstellation/pkg/apis"
+	"github.com/k11n/konstellation/pkg/components"
+	"github.com/k11n/konstellation/pkg/components/istio"
+	"github.com/k11n/konstellation/pkg/components/kubedash"
+	"github.com/k11n/konstellation/pkg/components/metricsserver"
+	"github.com/k11n/konstellation/pkg/components/prometheus"
 )
 
 var (
