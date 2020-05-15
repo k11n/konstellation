@@ -245,17 +245,30 @@ func (r *ReconcileDeployment) ensureNamespaceCreated(at *v1alpha1.AppTarget) err
 
 func (r *ReconcileDeployment) reconcileConfigMap(at *v1alpha1.AppTarget) (configMap *corev1.ConfigMap, err error) {
 	// grab app release for this app
-	ac, err := resources.GetMergedAppConfig(r.client, at.Spec.App, at.Spec.Target)
+	ac, err := resources.GetMergedConfigForType(r.client, v1alpha1.ConfigTypeApp, at.Spec.App, at.Spec.Target)
 	if err != nil {
 		return
 	}
 
+	// find other configmaps
+	sharedConfigs := make([]*v1alpha1.AppConfig, 0, len(at.Spec.Configs))
+	for _, config := range at.Spec.Configs {
+		sc, cErr := resources.GetMergedConfigForType(r.client, v1alpha1.ConfigTypeShared, config, at.Spec.Target)
+		if cErr != nil {
+			// skip this config and continue
+			log.Error(cErr, "Could not find shared config", "app", at.Spec.App,
+				"target", at.Spec.Target, "config", config)
+			continue
+		}
+		sharedConfigs = append(sharedConfigs, sc)
+	}
+
 	// check if existing configmap with the hash
-	configMap, err = resources.GetConfigMap(r.client, at.ScopedName(), ac.ConfigHash())
+	configMap = resources.CreateConfigMap(ac, sharedConfigs)
+	_, err = resources.GetConfigMap(r.client, at.ScopedName(), configMap.Name)
 	if errors.IsNotFound(err) {
 		log.Info("Creating ConfigMap", "app", at.Spec.App, "target", at.Spec.Target)
 		// create new
-		configMap = ac.ToConfigMap()
 		configMap.Namespace = at.ScopedName()
 		err = r.client.Create(context.Background(), configMap)
 	}

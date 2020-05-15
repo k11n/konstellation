@@ -39,6 +39,10 @@ spec:
               items:
                 type: string
               type: array
+            configs:
+              items:
+                type: string
+              type: array
             image:
               type: string
             image_tag:

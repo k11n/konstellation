@@ -1,15 +1,13 @@
 package v1alpha1
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/spf13/cast"
 	"gopkg.in/yaml.v2"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
 var (
@@ -17,8 +15,12 @@ var (
 )
 
 const (
-	ConfigFileName  = "config.yaml"
-	ConfigHashLabel = "k11n.dev/configHash"
+	ConfigFileName    = "config.yaml"
+	ConfigHashLabel   = "k11n.dev/configHash"
+	SharedConfigLabel = "k11n.dev/sharedConfig"
+
+	ConfigTypeApp    ConfigType = "app"
+	ConfigTypeShared ConfigType = "shared"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -29,8 +31,11 @@ type AppConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	ConfigYaml []byte `json:"config"`
+	Type       ConfigType `json:"type"`
+	ConfigYaml []byte     `json:"config"`
 }
+
+type ConfigType string
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -43,6 +48,14 @@ type AppConfigList struct {
 
 func init() {
 	SchemeBuilder.Register(&AppConfig{}, &AppConfigList{})
+}
+
+func (c *AppConfig) GetSharedName() string {
+	return c.Labels[SharedConfigLabel]
+}
+
+func (c *AppConfig) GetAppName() string {
+	return c.Labels[AppLabel]
 }
 
 func (c *AppConfig) GetConfig() map[string]interface{} {
@@ -75,16 +88,8 @@ func (c *AppConfig) MergeWith(other *AppConfig) {
 	c.SetConfig(config)
 }
 
-func (c *AppConfig) ToConfigMap() *corev1.ConfigMap {
-	cm := corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: c.ConfigHash(),
-			Labels: map[string]string{
-				ConfigHashLabel: c.ConfigHash(),
-			},
-		},
-		Data: make(map[string]string),
-	}
+func (c *AppConfig) ToEnvMap() map[string]string {
+	data := make(map[string]string)
 	for key, val := range c.GetConfig() {
 		var strVal string
 		switch val.(type) {
@@ -99,23 +104,20 @@ func (c *AppConfig) ToConfigMap() *corev1.ConfigMap {
 
 		// ensure key is valid env chars
 		key = strings.ToUpper(key)
+		key = strings.ReplaceAll(key, "-", "_")
 		if allowedEnvVar.MatchString(key) {
-			cm.Data[key] = strVal
+			data[key] = strVal
 		}
 	}
 
 	// include config.yaml as a file
-	cm.Data[ConfigFileName] = string(c.ConfigYaml)
+	data[ConfigFileName] = string(c.ConfigYaml)
 
-	return &cm
-}
-
-func (c *AppConfig) ConfigHash() string {
-	return files.Sha1ChecksumString(string(c.ConfigYaml))
+	return data
 }
 
 func NewAppConfig(app, target string) *AppConfig {
-	name := app
+	name := fmt.Sprintf("app-%s", app)
 	if target != "" {
 		name += "-" + target
 	}
@@ -127,5 +129,20 @@ func NewAppConfig(app, target string) *AppConfig {
 				TargetLabel: target,
 			},
 		},
+		Type: ConfigTypeApp,
+	}
+}
+
+func NewSharedConfig(name, target string) *AppConfig {
+	resName := "shared-" + name
+	return &AppConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: resName,
+			Labels: map[string]string{
+				SharedConfigLabel: name,
+				TargetLabel:       target,
+			},
+		},
+		Type: ConfigTypeShared,
 	}
 }

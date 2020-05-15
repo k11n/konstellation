@@ -55,7 +55,11 @@ func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget, confi
 
 	// create releases for new builds
 	if existingRelease == nil {
-		log.Info("config changed, creating new release", "configMap", configMap.Name,
+		configName := ""
+		if configMap != nil {
+			configName = configMap.Name
+		}
+		log.Info("config changed, creating new release", "configMap", configName,
 			"build", build.Name)
 		ar := appReleaseForTarget(at, build, configMap)
 		releases = append(releases, ar)
@@ -363,14 +367,14 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 
 func appReleaseForTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build, configMap *corev1.ConfigMap) *v1alpha1.AppRelease {
 	labels := labelsForAppTarget(at)
-	labels[v1alpha1.ConfigHashLabel] = configMap.Name
 	for k, v := range resources.LabelsForBuild(build) {
 		labels[k] = v
 	}
 	name := fmt.Sprintf("%s-%s", at.Spec.App, build.CreationTimestamp.Format("20060102-1504"))
 	if configMap != nil {
-		if len(configMap.Labels[v1alpha1.ConfigHashLabel]) > 4 {
-			name = name + "-" + configMap.Labels[v1alpha1.ConfigHashLabel][:4]
+		labels[v1alpha1.ConfigHashLabel] = configMap.Name
+		if len(configMap.Name) > 4 {
+			name = name + "-" + configMap.Name[:4]
 		}
 	}
 

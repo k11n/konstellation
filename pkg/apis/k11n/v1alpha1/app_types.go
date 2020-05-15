@@ -29,8 +29,12 @@ type AppSpec struct {
 
 	// +optional
 	Command []string `json:"command,omitempty"`
+
 	// +optional
 	Args []string `json:"args,omitempty"`
+
+	// +optional
+	Configs []string `json:"configs,omitempty"`
 
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`

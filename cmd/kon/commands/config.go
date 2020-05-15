@@ -3,11 +3,15 @@ package commands
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/thoas/go-funk"
 	"github.com/urfave/cli/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/k11n/konstellation/cmd/kon/utils"
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/resources"
 	utilcli "github.com/k11n/konstellation/pkg/utils/cli"
@@ -21,6 +25,14 @@ var (
 		Aliases: []string{"a"},
 		Usage:   "filter results by app",
 	}
+	nameFlag = &cli.StringFlag{
+		Name:  "name",
+		Usage: "name of a shared config (must pass in either --name or --app)",
+	}
+	appFlag = &cli.StringFlag{
+		Name:  "app",
+		Usage: "app name (must pass in either --name or --app)",
+	}
 )
 
 var ConfigCommands = []*cli.Command{
@@ -30,26 +42,28 @@ var ConfigCommands = []*cli.Command{
 		Category: "App",
 		Subcommands: []*cli.Command{
 			{
-				Name:      "delete",
-				Usage:     "Delete config for an app",
-				Action:    configDelete,
-				ArgsUsage: "<app>",
+				Name:   "delete",
+				Usage:  "Delete a config",
+				Action: configDelete,
 				Flags: []cli.Flag{
+					nameFlag,
+					appFlag,
 					&cli.StringFlag{
 						Name:  "target",
-						Usage: "delete only this target's config",
+						Usage: "delete config for a single target",
 					},
 				},
 			},
 			{
-				Name:      "edit",
-				Usage:     "Edit an app config, creating it if it doesn't exist",
-				Action:    configEdit,
-				ArgsUsage: "<app>",
+				Name:   "edit",
+				Usage:  "Create or edit a config. Use --app to edit an app config, or --name to edit a shared config",
+				Action: configEdit,
 				Flags: []cli.Flag{
+					nameFlag,
+					appFlag,
 					&cli.StringFlag{
 						Name:  "target",
-						Usage: "edit config only for a specific target (merged with app config)",
+						Usage: "edit config only for a specific target (target values will override the base config)",
 					},
 				},
 			},
@@ -78,6 +92,49 @@ var ConfigCommands = []*cli.Command{
 }
 
 func configList(c *cli.Context) error {
+	labels := client.MatchingLabels{}
+	app := c.String("app")
+	if app != "" {
+		labels[resources.AppLabel] = app
+	}
+
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+
+	kclient := ac.kubernetesClient()
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{
+		"Type",
+		"App",
+		"Name (shared config)",
+		"Target",
+	})
+	resources.ForEach(kclient, &v1alpha1.AppConfigList{}, func(item interface{}) error {
+		ac := item.(v1alpha1.AppConfig)
+		app := ""
+		name := ""
+
+		if ac.Type == v1alpha1.ConfigTypeShared {
+			name = ac.GetSharedName()
+		} else {
+			app = ac.GetAppName()
+		}
+
+		table.Append([]string{
+			string(ac.Type),
+			app,
+			name,
+			ac.Labels[v1alpha1.TargetLabel],
+		})
+		return nil
+	}, labels)
+
+	utils.FormatTable(table)
+	table.Render()
+
 	return nil
 }
 
@@ -127,7 +184,7 @@ func configShow(c *cli.Context) error {
 }
 
 func configEdit(c *cli.Context) error {
-	app, err := getAppArg(c)
+	confType, name, err := getAppOrShared(c)
 	if err != nil {
 		return err
 	}
@@ -140,14 +197,13 @@ func configEdit(c *cli.Context) error {
 	target := c.String("target")
 	kclient := ac.kubernetesClient()
 
-	_, err = resources.GetAppByName(kclient, app)
-	if err != nil {
-		return err
-	}
-
-	appConfig, err := resources.GetAppConfig(kclient, app, target)
+	appConfig, err := resources.GetConfigForType(kclient, confType, name, target)
 	if err == resources.ErrNotFound {
-		appConfig = v1alpha1.NewAppConfig(app, target)
+		if confType == v1alpha1.ConfigTypeApp {
+			appConfig = v1alpha1.NewAppConfig(name, target)
+		} else {
+			appConfig = v1alpha1.NewSharedConfig(name, target)
+		}
 	} else if err != nil {
 		return err
 	}
@@ -156,6 +212,10 @@ func configEdit(c *cli.Context) error {
 	data, err := utilcli.ExecuteUserEditor(appConfig.ConfigYaml, fmt.Sprintf("%s.yaml", appConfig.Name))
 	if err != nil {
 		return err
+	}
+
+	if len(data) == 0 {
+		return fmt.Errorf("config not saved, file is empty")
 	}
 
 	// persist
@@ -169,12 +229,12 @@ func configEdit(c *cli.Context) error {
 	if target != "" {
 		targetStr = fmt.Sprintf(", target %s", target)
 	}
-	fmt.Printf("Saved config for %s%s.\n", app, targetStr)
+	fmt.Printf("Saved %s config for %s%s.\n", confType, name, targetStr)
 	return nil
 }
 
 func configDelete(c *cli.Context) error {
-	app, err := getAppArg(c)
+	confType, name, err := getAppOrShared(c)
 	if err != nil {
 		return err
 	}
@@ -186,7 +246,7 @@ func configDelete(c *cli.Context) error {
 
 	target := c.String("target")
 	kclient := ac.kubernetesClient()
-	appConfig, err := resources.GetAppConfig(kclient, app, target)
+	appConfig, err := resources.GetConfigForType(kclient, confType, name, target)
 	if err == resources.ErrNotFound {
 		return fmt.Errorf("Config does not exist")
 	} else if err != nil {
@@ -198,7 +258,32 @@ func configDelete(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Printf("Deleted app config")
+	fmt.Printf("Deleted %s config: %s.\n", confType, name)
 
 	return nil
+}
+
+func getAppOrShared(c *cli.Context) (t v1alpha1.ConfigType, n string, err error) {
+	app := c.String("app")
+	name := c.String("name")
+
+	if app == "" && name == "" {
+		err = fmt.Errorf("Either --app or --name is required")
+		return
+	}
+	if app != "" && name != "" {
+		err = fmt.Errorf("Both --app and --name cannot be used at the same time")
+		return
+	}
+
+	if app != "" {
+		t = v1alpha1.ConfigTypeApp
+		n = app
+	} else {
+		t = v1alpha1.ConfigTypeShared
+		n = name
+	}
+
+	err = utils.ValidateKubeName(n)
+	return
 }

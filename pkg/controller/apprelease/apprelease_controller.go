@@ -212,17 +212,11 @@ func newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build, cm *core
 	if ar.Spec.Probes.Startup != nil {
 		container.StartupProbe = ar.Spec.Probes.Startup.ToCoreProbe()
 	}
-	hasConfigFileName := false
 	if cm != nil && len(cm.Data) > 0 {
 		// set env
 		keys := funk.Keys(cm.Data).([]string)
 		sort.Strings(keys)
 		for _, key := range keys {
-			if key == v1alpha1.ConfigFileName {
-				hasConfigFileName = true
-				continue
-			}
-
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  key,
 				Value: cm.Data[key],
@@ -230,27 +224,10 @@ func newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build, cm *core
 		}
 	}
 	podSpec := corev1.PodSpec{
-		Containers: []corev1.Container{},
+		Containers: []corev1.Container{
+			container,
+		},
 	}
-
-	// append volume if needed
-	if cm != nil && hasConfigFileName {
-		podSpec.Volumes = append(podSpec.Volumes, corev1.Volume{
-			Name: "config-volume",
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: cm.Name,
-					},
-				},
-			},
-		})
-		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
-			Name:      "config-volume",
-			MountPath: "/etc/config",
-		})
-	}
-	podSpec.Containers = append(podSpec.Containers, container)
 
 	// release name would use build creation timestamp
 	rs := &appsv1.ReplicaSet{

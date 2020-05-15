@@ -22,6 +22,8 @@ type AppTargetSpec struct {
 	Args []string `json:"args,omitempty"`
 
 	// +optional
+	Configs []string `json:"configs,omitempty"`
+	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// +optional
 	Scale ScaleSpec `json:"scale,omitempty"`

@@ -252,6 +252,7 @@ func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Build)
 			Ports:     app.Spec.Ports,
 			Command:   app.Spec.Command,
 			Args:      app.Spec.Args,
+			Configs:   app.Spec.Configs,
 			Resources: *app.Spec.ResourcesForTarget(target),
 			Scale:     *app.Spec.ScaleSpecForTarget(target),
 			Probes:    *app.Spec.ProbesForTarget(target),

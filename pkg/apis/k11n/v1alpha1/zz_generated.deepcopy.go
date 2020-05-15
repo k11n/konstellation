@@ -327,6 +327,11 @@ func (in *AppSpec) DeepCopyInto(out *AppSpec) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Configs != nil {
+		in, out := &in.Configs, &out.Configs
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	in.Resources.DeepCopyInto(&out.Resources)
 	in.Scale.DeepCopyInto(&out.Scale)
 	in.Probes.DeepCopyInto(&out.Probes)
@@ -447,6 +452,11 @@ func (in *AppTargetSpec) DeepCopyInto(out *AppTargetSpec) {
 	}
 	if in.Args != nil {
 		in, out := &in.Args, &out.Args
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
+	if in.Configs != nil {
+		in, out := &in.Configs, &out.Configs
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}

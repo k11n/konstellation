@@ -29,8 +29,11 @@ spec:
           type: string
         metadata:
           type: object
+        type:
+          type: string
       required:
       - config
+      - type
       type: object
   version: v1alpha1
   versions:
