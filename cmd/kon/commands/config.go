@@ -14,7 +14,7 @@ import (
 	"github.com/k11n/konstellation/cmd/kon/utils"
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/resources"
-	utilcli "github.com/k11n/konstellation/pkg/utils/cli"
+	utilscli "github.com/k11n/konstellation/pkg/utils/cli"
 )
 
 // app configs
@@ -80,12 +80,6 @@ var ConfigCommands = []*cli.Command{
 				Usage:     "Show config for a release of the app",
 				Action:    configShow,
 				ArgsUsage: "<release>",
-				Flags: []cli.Flag{
-					&cli.BoolFlag{
-						Name:  "env",
-						Usage: "when set, displays the environment variables that your app would receive",
-					},
-				},
 			},
 		},
 	},
@@ -149,8 +143,6 @@ func configShow(c *cli.Context) error {
 		return err
 	}
 
-	showEnv := c.Bool("env")
-
 	kclient := ac.kubernetesClient()
 	// find valid targets for the app
 	ar, err := resources.GetAppReleaseByName(kclient, release, "")
@@ -167,18 +159,20 @@ func configShow(c *cli.Context) error {
 		return err
 	}
 
-	if showEnv {
-		keys := funk.Keys(cm.Data).([]string)
-		sort.Strings(keys)
-		for _, key := range keys {
-			if key == v1alpha1.ConfigFileName {
-				continue
-			}
-			fmt.Printf("%s=%s\n", key, cm.Data[key])
-		}
-	} else {
-		fmt.Println(cm.Data[v1alpha1.ConfigFileName])
+	keys := funk.Keys(cm.Data).([]string)
+	sort.Strings(keys)
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Env", "Value"})
+	table.SetRowLine(true)
+	table.SetAlignment(tablewriter.ALIGN_LEFT)
+	for _, key := range keys {
+		table.Append([]string{
+			key,
+			cm.Data[key],
+		})
 	}
+	table.Render()
 
 	return nil
 }
@@ -209,7 +203,7 @@ func configEdit(c *cli.Context) error {
 	}
 
 	// launch editor
-	data, err := utilcli.ExecuteUserEditor(appConfig.ConfigYaml, fmt.Sprintf("%s.yaml", appConfig.Name))
+	data, err := utilscli.ExecuteUserEditor(appConfig.ConfigYaml, fmt.Sprintf("%s.yaml", appConfig.Name))
 	if err != nil {
 		return err
 	}

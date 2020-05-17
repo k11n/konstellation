@@ -15,7 +15,7 @@ var (
 )
 
 const (
-	ConfigFileName    = "config.yaml"
+	ConfigEnvVar      = "APP_CONFIG"
 	ConfigHashLabel   = "k11n.dev/configHash"
 	SharedConfigLabel = "k11n.dev/sharedConfig"
 
@@ -111,7 +111,7 @@ func (c *AppConfig) ToEnvMap() map[string]string {
 	}
 
 	// include config.yaml as a file
-	data[ConfigFileName] = string(c.ConfigYaml)
+	data[ConfigEnvVar] = string(c.ConfigYaml)
 
 	return data
 }

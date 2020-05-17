@@ -77,22 +77,42 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			requests := []reconcile.Request{}
 			// check which apps
 			appConfig := configMapObject.Object.(*v1alpha1.AppConfig)
-			targets, err := resources.GetAppTargets(mgr.GetClient(), appConfig.Labels[v1alpha1.AppLabel])
-			if err != nil {
-				return requests
-			}
-			desiredTarget := appConfig.Labels[v1alpha1.TargetLabel]
 
-			for _, target := range targets {
-				if desiredTarget != "" && desiredTarget != target.Spec.Target {
-					// skip if it's a target specific config change
-					continue
+			if appConfig.Type == v1alpha1.ConfigTypeApp {
+				targets, err := resources.GetAppTargets(mgr.GetClient(), appConfig.GetAppName())
+				if err != nil {
+					return requests
 				}
-				requests = append(requests, reconcile.Request{
-					types.NamespacedName{
-						Namespace: target.Namespace,
-						Name:      target.Name,
-					},
+				desiredTarget := appConfig.Labels[v1alpha1.TargetLabel]
+
+				for _, target := range targets {
+					if desiredTarget != "" && desiredTarget != target.Spec.Target {
+						// skip if it's a target specific config change
+						continue
+					}
+					requests = append(requests, reconcile.Request{
+						types.NamespacedName{
+							Namespace: target.Namespace,
+							Name:      target.Name,
+						},
+					})
+				}
+			} else if appConfig.Type == v1alpha1.ConfigTypeShared {
+				// load all app targets and see which ones use this config
+				resources.ForEach(mgr.GetClient(), &v1alpha1.AppTarget{}, func(item interface{}) error {
+					at := item.(*v1alpha1.AppTarget)
+					for _, conf := range at.Spec.Configs {
+						if conf == appConfig.GetSharedName() {
+							requests = append(requests, reconcile.Request{
+								NamespacedName: types.NamespacedName{
+									Namespace: at.Namespace,
+									Name:      at.Name,
+								},
+							})
+							break
+						}
+					}
+					return nil
 				})
 			}
 

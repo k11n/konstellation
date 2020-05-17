@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -14,11 +15,13 @@ import (
 	"github.com/urfave/cli/v2"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	"github.com/k11n/konstellation/cmd/kon/kube"
 	"github.com/k11n/konstellation/cmd/kon/utils"
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/resources"
-	cliutils "github.com/k11n/konstellation/pkg/utils/cli"
+	utilscli "github.com/k11n/konstellation/pkg/utils/cli"
 )
 
 var (
@@ -62,6 +65,12 @@ var AppCommands = []*cli.Command{
 						Required: true,
 					},
 				},
+			},
+			{
+				Name:      "edit",
+				Usage:     "Edit an app's configuration",
+				Action:    appEdit,
+				ArgsUsage: "<app>",
 			},
 			{
 				Name:   "list",
@@ -270,7 +279,11 @@ func appStatus(c *cli.Context) error {
 }
 
 func appDeploy(c *cli.Context) error {
-	appName := c.String("app")
+	appName, err := getAppArg(c)
+	if err != nil {
+		return err
+	}
+
 	tag := c.String("tag")
 
 	ac, err := getActiveCluster()
@@ -360,12 +373,60 @@ func appLoad(c *cli.Context) error {
 		return err
 	}
 
-	err = cliutils.KubeApply(app)
+	err = utilscli.KubeApply(app)
 	if err != nil {
 		return err
 	}
 
 	fmt.Printf("Successfully loaded %s\n", app)
+	return nil
+}
+
+func appEdit(c *cli.Context) error {
+	appName, err := getAppArg(c)
+	if err != nil {
+		return err
+	}
+
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+	kclient := ac.kubernetesClient()
+
+	app, err := resources.GetAppByName(kclient, appName)
+	if err != nil {
+		return err
+	}
+
+	buf := bytes.NewBuffer(nil)
+	err = kube.GetKubeEncoder().Encode(app, buf)
+	if err != nil {
+		return err
+	}
+
+	// now edit the thing
+	data, err := utilscli.ExecuteUserEditor(buf.Bytes(), fmt.Sprintf("%s.yaml", appName))
+	if err != nil {
+		return err
+	}
+
+	obj, _, err := kube.GetKubeDecoder().Decode(data, nil, app)
+	if err != nil {
+		return err
+	}
+
+	app = obj.(*v1alpha1.App)
+	op, err := resources.UpdateResource(kclient, app, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	if op == controllerutil.OperationResultNone {
+		fmt.Println("App was not changed")
+	} else {
+		fmt.Println("App updated")
+	}
 	return nil
 }
 
