@@ -442,7 +442,7 @@ func appEdit(c *cli.Context) error {
 
 func appLocal(c *cli.Context) error {
 	if c.NArg() < 2 {
-		return fmt.Errorf("You must pass in the command to run locally")
+		return cli.ShowSubcommandHelp(c)
 	}
 	ac, err := getActiveCluster()
 	if err != nil {
@@ -628,7 +628,8 @@ func appShell(c *cli.Context) error {
 
 func getAppArg(c *cli.Context) (string, error) {
 	if c.NArg() == 0 {
-		return "", fmt.Errorf("Required argument \"<app>\" was not passed in")
+		cli.ShowSubcommandHelp(c)
+		return "", fmt.Errorf("required arg <app> was not passed in")
 	}
 	return c.Args().Get(0), nil
 }
