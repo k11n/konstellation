@@ -64,3 +64,10 @@ func ExecuteUserEditor(original []byte, name string) (edited []byte, err error) 
 
 	return ioutil.ReadFile(target)
 }
+
+func EscapeEnvVar(val string) string {
+	val = strings.ReplaceAll(val, `"`, `\"`)
+	val = strings.ReplaceAll(val, `''`, `\'`)
+	val = strings.ReplaceAll(val, "`", "\\`")
+	return val
+}

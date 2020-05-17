@@ -13,6 +13,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/thoas/go-funk"
 	"github.com/urfave/cli/v2"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -28,7 +29,7 @@ var (
 	targetFlag = &cli.StringFlag{
 		Name:    "target",
 		Aliases: []string{"t"},
-		Usage:   "limit results by target",
+		Usage:   "a specific target",
 	}
 	releaseFlag = &cli.StringFlag{
 		Name:    "release",
@@ -85,6 +86,15 @@ var AppCommands = []*cli.Command{
 				Usage:     "Load app into Kubernetes (same as kube apply -f)",
 				ArgsUsage: "<app.yaml>",
 				Action:    appLoad,
+			},
+			{
+				Name:      "local",
+				Usage:     "Run app locally with config environment",
+				ArgsUsage: "<appName> <executable> [args...]",
+				Action:    appLocal,
+				Flags: []cli.Flag{
+					targetFlag,
+				},
 			},
 			{
 				Name:      "logs",
@@ -428,6 +438,55 @@ func appEdit(c *cli.Context) error {
 		fmt.Println("App updated")
 	}
 	return nil
+}
+
+func appLocal(c *cli.Context) error {
+	if c.NArg() < 2 {
+		return fmt.Errorf("You must pass in the command to run locally")
+	}
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+
+	kclient := ac.kubernetesClient()
+
+	pc, err := chooseReleaseHelper(kclient, c)
+	if err != nil {
+		return err
+	}
+
+	release, err := resources.GetAppRelease(kclient, pc.app, pc.target, pc.release)
+	if err != nil {
+		return err
+	}
+
+	// find the config map
+	var cm *corev1.ConfigMap
+	if release.Spec.Config != "" {
+		cm, err = resources.GetConfigMap(kclient, release.Namespace, release.Spec.Config)
+		if err != nil {
+			return err
+		}
+	}
+
+	args := c.Args().Slice()[1:]
+	fmt.Printf("Running %s...\n", strings.Join(args, " "))
+	var cmdArgs []string
+	if len(args) > 1 {
+		cmdArgs = args[1:]
+	}
+	cmd := exec.Command(args[0], cmdArgs...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if cm != nil {
+		for key, val := range cm.Data {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, utilscli.EscapeEnvVar(val)))
+		}
+	}
+
+	return cmd.Run()
 }
 
 func appLogs(c *cli.Context) error {
