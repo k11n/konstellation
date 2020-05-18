@@ -21,12 +21,11 @@ spec:
     - name: http
       port: 3000
 
-  # Set any environment variables that your app might need
-#  env:
-#    - name: MYVAR
-#      value: value
+  # Any named configs your app requires
+#  configs:
+#    - name
 
-  # Define resources that your apps need
+  # Define resources that your app requires
   # with CPU, 1000m equals to a single core
 #  resources:
 #    requests:
@@ -74,7 +73,6 @@ spec:
 #        hosts:
 #          - www.yourhost.com
 #        port: 3000
-#      env:
 #      resources:
 #      probes:
 #
