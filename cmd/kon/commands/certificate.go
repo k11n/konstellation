@@ -24,6 +24,9 @@ var CertificateCommands = []*cli.Command{
 		Name:     "certificate",
 		Category: "Cluster",
 		Usage:    "Manage SSL certificates on this cluster",
+		Aliases: []string{
+			"cert",
+		},
 		Action: func(c *cli.Context) error {
 			return cli.ShowAppHelp(c)
 		},

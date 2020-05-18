@@ -134,6 +134,7 @@ func configList(c *cli.Context) error {
 
 func configShow(c *cli.Context) error {
 	if c.NArg() == 0 {
+		cli.ShowSubcommandHelp(c)
 		return fmt.Errorf("Required argument <release> was not passed in")
 	}
 	release := c.Args().Get(0)
@@ -262,6 +263,7 @@ func getAppOrShared(c *cli.Context) (t v1alpha1.ConfigType, n string, err error)
 	name := c.String("name")
 
 	if app == "" && name == "" {
+		cli.ShowSubcommandHelp(c)
 		err = fmt.Errorf("Either --app or --name is required")
 		return
 	}
