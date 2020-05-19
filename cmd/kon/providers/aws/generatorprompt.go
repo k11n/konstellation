@@ -33,11 +33,11 @@ import (
 // generates AWS cluster & nodepool based on prompts to the user
 type PromptConfigGenerator struct {
 	region      string
-	credentials *config.AWSCredentials
+	credentials config.AWSCredentials
 	session     *session.Session
 }
 
-func NewPromptConfigGenerator(region string, credentials *config.AWSCredentials) (*PromptConfigGenerator, error) {
+func NewPromptConfigGenerator(region string, credentials config.AWSCredentials) (*PromptConfigGenerator, error) {
 	g := &PromptConfigGenerator{
 		region:      region,
 		credentials: credentials,

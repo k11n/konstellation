@@ -49,6 +49,7 @@ var ClusterCommands = []*cli.Command{
 	{
 		Name:     "cluster",
 		Usage:    "Kubernetes cluster management",
+		Before:   ensureSetup,
 		Category: "Cluster",
 		Subcommands: []*cli.Command{
 			{
@@ -80,13 +81,15 @@ var ClusterCommands = []*cli.Command{
 				Action: clusterReset,
 			},
 			{
-				Name:  "select",
-				Usage: "select an active cluster to work with",
+				Name:      "select",
+				Usage:     "select an active cluster to work with",
+				ArgsUsage: "<cluster>",
 				Action: func(c *cli.Context) error {
-					return clusterSelect(c.String("cluster"))
-				},
-				Flags: []cli.Flag{
-					clusterNameFlag,
+					if c.NArg() == 0 {
+						cli.ShowSubcommandHelp(c)
+						return nil
+					}
+					return clusterSelect(c.Args().Get(0))
 				},
 			},
 			{
@@ -417,11 +420,11 @@ func clusterGetToken(c *cli.Context) error {
 }
 
 func getActiveCluster() (*activeCluster, error) {
-	conf := config.GetConfig()
-	if conf.SelectedCluster == "" {
-		return nil, fmt.Errorf("Cluster not selected yet. Select one with 'kon cluster select ...'")
+	if err := ensureClusterSelected(); err != nil {
+		return nil, err
 	}
 
+	conf := config.GetConfig()
 	cm, err := ClusterManagerForCluster(conf.SelectedCluster)
 	if err != nil {
 		return nil, err
@@ -677,6 +680,14 @@ func (c *activeCluster) initClient() error {
 		return errors.Wrap(err, "Unable to create Kubernetes Client")
 	}
 	c.kclient = kclient
+	return nil
+}
+
+func ensureClusterSelected() error {
+	conf := config.GetConfig()
+	if conf.SelectedCluster == "" {
+		return fmt.Errorf("Cluster not selected yet. Select one with 'kon cluster select ...'")
+	}
 	return nil
 }
 

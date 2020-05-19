@@ -18,6 +18,9 @@ var DashboardCommands = []*cli.Command{
 		Name:     "dashboard",
 		Usage:    "Launch various dashboards",
 		Category: "Cluster",
+		Before: func(c *cli.Context) error {
+			return ensureClusterSelected()
+		},
 		Action: func(c *cli.Context) error {
 			return cli.ShowAppHelp(c)
 		},

@@ -16,7 +16,6 @@ import (
 
 	"github.com/k11n/konstellation/cmd/kon/config"
 	"github.com/k11n/konstellation/cmd/kon/utils"
-	"github.com/k11n/konstellation/pkg/utils/cli"
 )
 
 type AWSProvider struct {
@@ -46,21 +45,43 @@ func (a *AWSProvider) IsSetup() bool {
 func (a *AWSProvider) Setup() error {
 	conf := config.GetConfig()
 	awsConf := &conf.Clouds.AWS
-	_, err := awsConf.GetDefaultCredentials()
-	if err != nil {
-		genericErr := fmt.Errorf("Could not find AWS credentials, run \"aws configure\" to set it")
-		// configure aws credentials
-		err = cli.RunCommandWithStd("aws", "configure")
-		if err != nil {
-			return genericErr
-		}
-		_, err = awsConf.GetDefaultCredentials()
-		if err != nil {
-			return genericErr
-		}
-	} else {
-		fmt.Println("Found credentials under ~/.aws/credentials. Konstellation will use these credentials to connect to AWS.")
+	creds := awsConf.GetDefaultCredentials()
+	//if err != nil {
+	//	genericErr := fmt.Errorf("Could not find AWS credentials, run \"aws configure\" to set it")
+	//	// configure aws credentials
+	//	err = cli.RunCommandWithStd("aws", "configure")
+	//	if err != nil {
+	//		return genericErr
+	//	}
+	//	_, err = awsConf.GetDefaultCredentials()
+	//	if err != nil {
+	//		return genericErr
+	//	}
+	//} else {
+	//	fmt.Println("Found credentials under ~/.aws/credentials. Konstellation will use these credentials to connect to AWS.")
+	//}
+	prompt := promptui.Prompt{
+		Label:     "AWS Access Key ID",
+		Default:   creds.AccessKeyID,
+		AllowEdit: true,
+		Validate:  utils.ValidateMinLength(10),
 	}
+	utils.FixPromptBell(&prompt)
+
+	val, err := prompt.Run()
+	if err != nil {
+		return err
+	}
+	creds.AccessKeyID = val
+
+	prompt.Label = "AWS Secret Access Key"
+	prompt.Default = creds.SecretAccessKey
+	val, err = prompt.Run()
+	if err != nil {
+		return err
+	}
+	creds.SecretAccessKey = val
+	awsConf.Credentials = creds
 
 	// prompt for regions
 	regions := awsConf.Regions
@@ -128,7 +149,7 @@ func (a *AWSProvider) Setup() error {
 
 	// ask for a bucket to store state
 	s3Svc := s3.New(session)
-	awsConf.StateS3Bucket, err = a.createStateBucket(s3Svc)
+	awsConf.StateS3Bucket, err = a.createStateBucket(s3Svc, awsConf.StateS3Bucket)
 	if err != nil {
 		return err
 	}
@@ -138,10 +159,11 @@ func (a *AWSProvider) Setup() error {
 	return conf.Persist()
 }
 
-func (a *AWSProvider) createStateBucket(s3Svc *s3.S3) (bucketName string, err error) {
+func (a *AWSProvider) createStateBucket(s3Svc *s3.S3, defaultBucket string) (bucketName string, err error) {
 	fmt.Println("Konstellation needs to store configuration in a S3 bucket, enter name of an existing or new bucket.")
 	bucketPrompt := promptui.Prompt{
-		Label: "Bucket name",
+		Label:   "Bucket name",
+		Default: defaultBucket,
 	}
 	utils.FixPromptBell(&bucketPrompt)
 
@@ -174,10 +196,11 @@ func (a *AWSProvider) createStateBucket(s3Svc *s3.S3) (bucketName string, err er
 	for {
 		bucketName, err = bucketPromptFunc()
 		if err != nil {
-			fmt.Println("Bucket name already in use, please try another name")
-		} else {
-			break
+			if err != promptui.ErrAbort && err != promptui.ErrInterrupt {
+				fmt.Println("Bucket name already in use, please try another name")
+			}
 		}
+		break
 	}
 
 	_, err = s3Svc.HeadBucket(&s3.HeadBucketInput{

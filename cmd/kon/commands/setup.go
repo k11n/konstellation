@@ -7,6 +7,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/urfave/cli/v2"
 
+	"github.com/k11n/konstellation/cmd/kon/config"
 	"github.com/k11n/konstellation/cmd/kon/kube"
 	"github.com/k11n/konstellation/pkg/components"
 )
@@ -21,7 +22,6 @@ var SetupCommands = []*cli.Command{
 }
 
 var neededExes = []string{
-	"aws",
 	"kubectl",
 	"terraform",
 }
@@ -67,6 +67,14 @@ func setupStart(c *cli.Context) error {
 		return err
 	}
 	return cloud.Setup()
+}
+
+func ensureSetup(c *cli.Context) error {
+	conf := config.GetConfig()
+	if !conf.IsSetup() {
+		return fmt.Errorf("Konstellation is not yet setup. Run `kon setup` to continue.")
+	}
+	return nil
 }
 
 func checkDependencies() error {

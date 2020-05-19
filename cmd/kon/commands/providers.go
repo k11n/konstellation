@@ -100,11 +100,7 @@ func PromptClusterGenerator(cloud providers.CloudProvider, region string) (provi
 		return nil, fmt.Errorf("Provider: %s has not been set up yet", cloud.ID())
 	}
 	if cloud.ID() == "aws" {
-		creds, err := config.GetConfig().Clouds.AWS.GetDefaultCredentials()
-		if err != nil {
-			return nil, err
-		}
-
+		creds := config.GetConfig().Clouds.AWS.GetDefaultCredentials()
 		return aws.NewPromptConfigGenerator(region, creds)
 	}
 	return nil, fmt.Errorf("Unsupported cloud %s", cloud.ID())

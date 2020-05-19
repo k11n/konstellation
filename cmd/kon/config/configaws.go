@@ -9,13 +9,10 @@ import (
 	"gopkg.in/ini.v1"
 )
 
-const (
-	defaultProfile = "default"
-)
-
 type AWSConfig struct {
 	Regions       []string
 	StateS3Bucket string
+	Credentials   AWSCredentials `yaml:"credentials"`
 }
 
 type AWSCredentials struct {
@@ -27,21 +24,18 @@ func (c *AWSConfig) IsSetup() bool {
 	if c.StateS3Bucket == "" {
 		return false
 	}
-	creds, err := c.GetDefaultCredentials()
-	if err != nil {
-		return false
-	}
+	creds := c.GetDefaultCredentials()
 	if creds.AccessKeyID != "" && creds.SecretAccessKey != "" && len(c.Regions) > 0 {
 		return true
 	}
 	return false
 }
 
-func (c *AWSConfig) GetDefaultCredentials() (creds *AWSCredentials, err error) {
-	return c.GetCredentials(defaultProfile)
+func (c *AWSConfig) GetDefaultCredentials() AWSCredentials {
+	return c.Credentials
 }
 
-func (c *AWSConfig) GetCredentials(profile string) (creds *AWSCredentials, err error) {
+func (c *AWSConfig) GetCredentials(profile string) (creds AWSCredentials, err error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		errors.Wrap(err, "unable to load credentials")
@@ -61,7 +55,7 @@ func (c *AWSConfig) GetCredentials(profile string) (creds *AWSCredentials, err e
 		return
 	}
 
-	creds = &AWSCredentials{}
+	creds = AWSCredentials{}
 	key, err := section.GetKey("aws_access_key_id")
 	if err != nil {
 		return

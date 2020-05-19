@@ -7,7 +7,7 @@ actionText: Get Started →
 actionLink: /guide/
 features:
 - title: Apps, not resources
-  details: Resources are for machines; Developers focus on apps. A single app.yaml captures everything that's needed to host your app. Konstellation takes care of all the rest.
+  details: Resources are for machines; Developers should focus on apps. A single app.yaml captures everything that's needed to host your app. Konstellation takes care of all the rest.
 - title: Code to deploy in minutes
   details: Konstellation manages the entire lifecycles of Kubernetes, giving you a heroku-like experience on your own infrastructure. New apps are deployed in minutes with minimal configuration.
 - title: Production ready
@@ -41,7 +41,7 @@ myapp-20200421-1102-b723    registry/myapp:1     2020-04-21 11:02:03    0       
 ```
 
 ### One YAML to rule them all
-Running apps isn't about copying and pasting templates that you don't understand. Konstellation provides high level custom resources and then in turn translates them into native Kubernetes resources.
+No one should be copying and pasting templates that they don't understand. Konstellation provides high level custom resources and then manages native Kubernetes resources behind the scenes.
 ```yaml
 apiVersion: k11n.dev/v1alpha1
 kind: App

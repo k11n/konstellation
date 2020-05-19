@@ -37,8 +37,11 @@ var (
 
 var ConfigCommands = []*cli.Command{
 	{
-		Name:     "config",
-		Usage:    "Config for apps",
+		Name:  "config",
+		Usage: "Config for apps",
+		Before: func(c *cli.Context) error {
+			return ensureClusterSelected()
+		},
 		Category: "App",
 		Subcommands: []*cli.Command{
 			{

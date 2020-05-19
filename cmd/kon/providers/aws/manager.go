@@ -439,10 +439,7 @@ func (a *AWSManager) addCAThumbprintToProvider(cluster string) error {
 
 func sessionForRegion(region string) (*session.Session, error) {
 	conf := config.GetConfig().Clouds.AWS
-	creds, err := conf.GetDefaultCredentials()
-	if err != nil {
-		return nil, err
-	}
+	creds := conf.GetDefaultCredentials()
 	return session.NewSession(&aws.Config{
 		Region:      aws.String(region),
 		Credentials: credentials.NewStaticCredentials(creds.AccessKeyID, creds.SecretAccessKey, ""),

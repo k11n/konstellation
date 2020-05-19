@@ -102,7 +102,8 @@ func (c *ClientConfig) Persist() error {
 			return err
 		}
 	}
-	file, err := os.Create(c.ConfigFile())
+	// restrictive perms since it contains sensitive data
+	file, err := os.OpenFile(c.ConfigFile(), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
