@@ -205,44 +205,20 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 		nps.AWS.ConnectFromAnywhere = idx == 0
 	}
 
-	// TODO: do this after cluster creation
-	//if !nps.AWS.ConnectFromAnywhere {
-	//	// list security groups
-	//	var securityGroups []*ec2.SecurityGroup
-	//	securityGroups, err = kaws.ListSecurityGroups(ec2Svc, awsConf.Vpc)
-	//	if err != nil {
-	//		return
-	//	}
-	//	sgNames := make([]string, 0, len(securityGroups))
-	//	for _, sg := range securityGroups {
-	//		sgNames = append(sgNames, *sg.GroupName)
-	//	}
-	//	sgPrompt := utils.NewPromptSelect(
-	//		"Security group for connection",
-	//		sgNames,
-	//	)
-	//	idx, _, err = sgPrompt.Run()
-	//	if err != nil {
-	//		return
-	//	}
-	//	nps.AWS.SecurityGroupId = *securityGroups[idx].GroupId
-	//	nps.AWS.SecurityGroupName = *securityGroups[idx].GroupName
-	//}
-
 	instanceConfirmed := false
 	for !instanceConfirmed {
-		// node instance config
-		gpuPrompt := utils.NewPromptSelect(
-			"Requires GPU instances",
-			[]string{"no", "require GPU"},
-		)
-		idx, _, err = gpuPrompt.Run()
-		if err != nil {
-			return
-		}
-		if idx == 1 {
-			nps.RequiresGPU = true
-		}
+		//// node instance config
+		//gpuPrompt := utils.NewPromptSelect(
+		//	"Requires GPU instances",
+		//	[]string{"no", "require GPU"},
+		//)
+		//idx, _, err = gpuPrompt.Run()
+		//if err != nil {
+		//	return
+		//}
+		//if idx == 1 {
+		//	nps.RequiresGPU = true
+		//}
 		var instance *kaws.EC2InstancePricing
 		instance, err = promptInstanceType(g.session, g.region, nps.RequiresGPU)
 		if err != nil {

@@ -24,6 +24,7 @@ type NodePoolAWS struct {
 	// set only after cluster is created
 	SecurityGroupId string   `json:"securityGroupId,omitempty"`
 	SubnetIds       []string `json:"subnetIds"`
+	ASGID           string   `json:"asgId"`
 }
 
 // NodepoolStatus defines the observed state of Nodepool

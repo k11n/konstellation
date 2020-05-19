@@ -3,7 +3,6 @@ package aws
 import (
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 )
@@ -19,23 +18,12 @@ func NewIAMService(s *session.Session) *IAMService {
 }
 
 func (s *IAMService) ListRoles() (roles []*iam.Role, err error) {
-	input := &iam.ListRolesInput{
-		MaxItems: aws.Int64(DefaultPageSize),
-	}
-	var out *iam.ListRolesOutput
-	for input != nil {
-		out, err = s.IAM.ListRoles(input)
-		if err != nil {
-			return
-		}
-		for _, r := range out.Roles {
+	err = s.IAM.ListRolesPages(&iam.ListRolesInput{}, func(output *iam.ListRolesOutput, last bool) bool {
+		for _, r := range output.Roles {
 			roles = append(roles, r)
 		}
-		if !*out.IsTruncated {
-			break
-		}
-		input.Marker = out.Marker
-	}
+		return true
+	})
 	return
 }
 
@@ -43,12 +31,12 @@ func (s *IAMService) ListRoles() (roles []*iam.Role, err error) {
  * Lists roles that are not service linked
  */
 func (s *IAMService) ListStandardRoles() ([]*iam.Role, error) {
-	roleObjs, err := s.IAM.ListRoles(&iam.ListRolesInput{})
+	roleObjs, err := s.ListRoles()
 	if err != nil {
 		return nil, err
 	}
-	roles := make([]*iam.Role, 0, len(roleObjs.Roles))
-	for _, r := range roleObjs.Roles {
+	roles := make([]*iam.Role, 0, len(roleObjs))
+	for _, r := range roleObjs {
 		if r.Path == nil || strings.HasPrefix(*r.Path, "/aws-service-role") {
 			continue
 		}

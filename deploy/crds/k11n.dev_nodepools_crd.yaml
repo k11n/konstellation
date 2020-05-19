@@ -53,6 +53,8 @@ spec:
               properties:
                 amiType:
                   type: string
+                asgId:
+                  type: string
                 connectFromAnywhere:
                   type: boolean
                 roleArn:
@@ -68,6 +70,7 @@ spec:
                   type: array
               required:
               - amiType
+              - asgId
               - connectFromAnywhere
               - roleArn
               - sshKeypair

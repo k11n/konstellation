@@ -48,15 +48,19 @@ func NewEKSService(s *session.Session) *EKSService {
 }
 
 func (s *EKSService) ListClusters(ctx context.Context) (clusters []*types.Cluster, err error) {
-	max := int64(100)
-	output, err := s.EKS.ListClustersWithContext(ctx, &eks.ListClustersInput{
-		MaxResults: &max,
+	var clusterNames []*string
+	err = s.EKS.ListClustersPagesWithContext(ctx, &eks.ListClustersInput{}, func(output *eks.ListClustersOutput, b bool) bool {
+		for _, clusterName := range output.Clusters {
+			clusterNames = append(clusterNames, clusterName)
+		}
+		return true
+
 	})
 	if err != nil {
 		return
 	}
 	// describe each cluster
-	for _, clusterName := range output.Clusters {
+	for _, clusterName := range clusterNames {
 		descOut, err := s.EKS.DescribeClusterWithContext(ctx, &eks.DescribeClusterInput{
 			Name: clusterName,
 		})

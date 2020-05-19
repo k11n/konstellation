@@ -9,6 +9,7 @@ import (
 
 	"github.com/k11n/konstellation/pkg/apis"
 	"github.com/k11n/konstellation/pkg/components"
+	"github.com/k11n/konstellation/pkg/components/autoscaler"
 	"github.com/k11n/konstellation/pkg/components/istio"
 	"github.com/k11n/konstellation/pkg/components/kubedash"
 	"github.com/k11n/konstellation/pkg/components/metricsserver"
@@ -34,6 +35,7 @@ var (
 	}
 
 	KubeComponents = []components.ComponentInstaller{
+		&autoscaler.ClusterAutoScaler{},
 		&istio.IstioInstaller{},
 		&kubedash.KubeDash{},
 		&prometheus.PrometheusOperator{},

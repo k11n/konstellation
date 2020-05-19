@@ -7,6 +7,7 @@ require (
 	github.com/Azure/go-autorest/autorest v0.10.0 // indirect
 	github.com/Azure/go-autorest/autorest/adal v0.8.3 // indirect
 	github.com/GeertJohan/go.rice v1.0.0
+	github.com/akavel/rsrc v0.9.0 // indirect
 	github.com/apparentlymart/go-cidr v1.0.1
 	github.com/aws/aws-sdk-go v1.30.9
 	github.com/coreos/prometheus-operator v0.38.1 // indirect
@@ -23,6 +24,7 @@ require (
 	github.com/manifoldco/promptui v0.7.0
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
+	github.com/nkovacs/streamquote v1.0.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/operator-framework/operator-sdk v0.17.0
 	github.com/pkg/browser v0.0.0-20180916011732-0a3d74bf9ce4
@@ -33,6 +35,7 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/thoas/go-funk v0.6.0
 	github.com/urfave/cli/v2 v2.2.0
+	github.com/valyala/fasttemplate v1.1.0 // indirect
 	golang.org/x/crypto v0.0.0-20200414173820-0848c9571904 // indirect
 	golang.org/x/sys v0.0.0-20200413165638-669c56c373c4 // indirect
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect

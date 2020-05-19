@@ -346,8 +346,7 @@ func clusterSelect(clusterName string) error {
 		return err
 	}
 
-	// TODO: in release versions don't reload resources
-	//// still load the resources
+	// TODO: still load the resources in testing
 	//err = ac.loadResourcesIntoKube()
 	//if err != nil {
 	//	return err

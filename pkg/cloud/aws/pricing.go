@@ -89,9 +89,6 @@ func ListEC2Instances(svc *pricing.Pricing, region string, currentOnly bool) (in
 					instance.OnDemandPriceUSD > minSeriesPrice[instance.InstanceSeries] {
 					minSeriesPrice[instance.InstanceSeries] = instance.OnDemandPriceUSD
 				}
-				// if instance.InstanceType == "r5.2xlarge" {
-				// 	utils.PrintJSON(entry)
-				// }
 			}
 		}
 		return true

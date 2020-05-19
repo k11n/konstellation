@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -178,7 +179,36 @@ func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nod
 			return err
 		}
 	}
-	return nil
+
+	// now grab the autoscaling group for this
+	sess, err := a.awsSession()
+	if err != nil {
+		return err
+	}
+	asSvc := autoscaling.New(sess)
+	err = asSvc.DescribeAutoScalingGroupsPagesWithContext(context.Background(), &autoscaling.DescribeAutoScalingGroupsInput{},
+		func(res *autoscaling.DescribeAutoScalingGroupsOutput, lastPage bool) bool {
+			for _, asg := range res.AutoScalingGroups {
+				var cluster, nodeGroup string
+				for _, tag := range asg.Tags {
+					switch *tag.Key {
+					case "eks:cluster-name":
+						cluster = *tag.Value
+					case "eks:nodegroup-name":
+						nodeGroup = *tag.Value
+					}
+				}
+				if cluster == cc.Name && nodeGroup == np.Name {
+					// found the cluster, update nodegroup
+					np.Spec.AWS.ASGID = *asg.AutoScalingGroupName
+					return false
+				}
+			}
+			return true
+		},
+	)
+
+	return err
 }
 
 func (a *AWSManager) DeleteCluster(cluster string) error {
@@ -297,47 +327,49 @@ func (a *AWSManager) updateVPCInfo(awsConf *v1alpha1.AWSClusterSpec) error {
 	}
 
 	// get subnet info
-	subnetRes, err := ec2Svc.DescribeSubnets(&ec2.DescribeSubnetsInput{
+	err := ec2Svc.DescribeSubnetsPages(&ec2.DescribeSubnetsInput{
 		Filters: vpcFilter,
+	}, func(output *ec2.DescribeSubnetsOutput, last bool) bool {
+		// iterate through subnets and assign
+		for _, subnet := range output.Subnets {
+			awsSubnet := &v1alpha1.AWSSubnet{
+				SubnetId:         *subnet.SubnetId,
+				Ipv4Cidr:         *subnet.CidrBlock,
+				AvailabilityZone: *subnet.AvailabilityZone,
+			}
+			for _, tag := range subnet.Tags {
+				if *tag.Key == kaws.TagSubnetScope {
+					// this is our subnet
+					if *tag.Value == kaws.TagValuePublic {
+						awsSubnet.IsPublic = true
+						awsConf.PublicSubnets = append(awsConf.PublicSubnets, awsSubnet)
+					} else if *tag.Value == kaws.TagValuePrivate {
+						awsSubnet.IsPublic = false
+						awsConf.PublicSubnets = append(awsConf.PublicSubnets, awsSubnet)
+					}
+					break
+				}
+			}
+		}
+		return true
 	})
 	if err != nil {
 		return err
-	}
-
-	// iterate through subnets and assign
-	for _, subnet := range subnetRes.Subnets {
-		awsSubnet := &v1alpha1.AWSSubnet{
-			SubnetId:         *subnet.SubnetId,
-			Ipv4Cidr:         *subnet.CidrBlock,
-			AvailabilityZone: *subnet.AvailabilityZone,
-		}
-		for _, tag := range subnet.Tags {
-			if *tag.Key == kaws.TagSubnetScope {
-				// this is our subnet
-				if *tag.Value == kaws.TagValuePublic {
-					awsSubnet.IsPublic = true
-					awsConf.PublicSubnets = append(awsConf.PublicSubnets, awsSubnet)
-				} else if *tag.Value == kaws.TagValuePrivate {
-					awsSubnet.IsPublic = false
-					awsConf.PublicSubnets = append(awsConf.PublicSubnets, awsSubnet)
-				}
-				break
-			}
-		}
 	}
 
 	// get security groups info, pick default for VPC
-	sgRes, err := ec2Svc.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
+	err = ec2Svc.DescribeSecurityGroupsPages(&ec2.DescribeSecurityGroupsInput{
 		Filters: vpcFilter,
+	}, func(output *ec2.DescribeSecurityGroupsOutput, last bool) bool {
+		for _, sg := range output.SecurityGroups {
+			if *sg.GroupName == "default" {
+				awsConf.SecurityGroups = append(awsConf.SecurityGroups, *sg.GroupId)
+			}
+		}
+		return true
 	})
 	if err != nil {
 		return err
-	}
-
-	for _, sg := range sgRes.SecurityGroups {
-		if *sg.GroupName == "default" {
-			awsConf.SecurityGroups = append(awsConf.SecurityGroups, *sg.GroupId)
-		}
 	}
 
 	return nil
