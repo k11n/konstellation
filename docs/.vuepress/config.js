@@ -10,7 +10,9 @@ module.exports = {
       '/guide/': [
         'why',
         '',
-        'networking'
+        'clusters',
+        'apps',
+        'networking',
       ],
       '/reference/': [
         '',

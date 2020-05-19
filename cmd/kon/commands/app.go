@@ -11,6 +11,7 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/olekukonko/tablewriter"
+	"github.com/spf13/cast"
 	"github.com/thoas/go-funk"
 	"github.com/urfave/cli/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -335,6 +336,7 @@ type appInfo struct {
 	DockerImage string
 	DockerTag   string
 	Target      string
+	Port        int
 }
 
 func appNew(c *cli.Context) error {
@@ -780,6 +782,16 @@ func promptAppInfo() (ai *appInfo, err error) {
 		ai.DockerImage = val
 		ai.DockerTag = "latest"
 	}
+
+	prompt = promptui.Prompt{
+		Label:    "Port (that your app runs on)",
+		Validate: utils.ValidateInt,
+	}
+	if val, err = prompt.Run(); err != nil {
+		return
+	}
+
+	ai.Port = cast.ToInt(val)
 
 	// if connected to kube, load the first target
 	ac, err := getActiveCluster()

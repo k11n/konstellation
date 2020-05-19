@@ -19,7 +19,7 @@ spec:
   # This could be any port, and is not related to the ultimate port your website will run on
   ports:
     - name: http
-      port: 3000
+      port: {{.Port}}
 
   # Any named configs your app requires
 #  configs:
@@ -53,12 +53,12 @@ spec:
 #      liveness:
 #        httpGet:
 #          path: /running
-#          port: 3000
+#          port: {{.Port}}
 #        failureThreshold: 3
 #      readiness:
 #        httpGet:
 #          path: /ready
-#          port: 3000
+#          port: {{.Port}}
 #        failureThreshold: 6
 
   # One or more targets to deploy your app to
@@ -72,7 +72,7 @@ spec:
 #      ingress:
 #        hosts:
 #          - www.yourhost.com
-#        port: 3000
+#        port: {{.Port}}
 #      resources:
 #      probes:
 #
