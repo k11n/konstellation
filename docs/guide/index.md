@@ -99,8 +99,34 @@ yourapp-20200423-1531-7800    yourrepo/image     2020-05-16 23:01:23     1/1    
 
 ### Routing your domain
 
-What remains is creating a CNAME record that links your domain and the load balancer.
+What remains is linking your domain to the load balancer. You'll need to create a CNAME record, and in the field, specify the `Load Balancer` address shown in the status output.
 
-### Configuring SSL
+### Setting up SSL
+
+On EKS, Konstellation uses an [Application Load Balancer (ALB)](https://aws.amazon.com/elasticloadbalancing/features/) for your ingress. ALB is a layer 7 load balancer and is capable of terminating SSL/TLS requests.
+
+With this, SSL certificates are handled securely that they never leave ACM. Konstellation needs only a reference to the certificates in order to configure them.
+
+To use SSL with Konstellation, first ensure your certificate is uploaded into [ACM](https://us-west-2.console.aws.amazon.com/acm/home), then sync certificate references into Kubernetes with:
+
+```
+% kon certificate sync
+```
+
+After this, your app should be automatically available via https
+
+### Configuring your app
+
+For most non-trivial apps, you'd likely want to pass in configuration. Konstellation lets you manage both app and shared configs. See [Configuration](apps.md#Configuration) for details.
 
 ## Cleaning it all up
+
+When Konstellation creates VPC and cluster resources, it keeps track of the state to make it possible to delete those resources at a later point.
+
+### Removing your cluster
+
+Clusters are removed with the `cluster destroy` subcommand. Remove the cluster you've created with `kon cluster destroy --cluster <yourcluster>`.
+
+This process could take up to 10-15 minutes. So just hang tight and grab a drink. :sunglasses:
+
+### Destroy VPC & networking resources

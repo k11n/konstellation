@@ -14,7 +14,7 @@ features:
   details: Built on years of experience with running production Kubernetes clusters. Konstellation uses the best of breed components to provide an integrated stack
 - title: Autoscales
   details: Konstellation scales your app and your cluster automatically depends on traffic. Define your desired resource utilization and the rest is taken care of automatically.
-- title: Microservices observability
+- title: Designed for Microservices
   details: Built on top of the excellent istio service mesh, Konstellation gives you advanced controls over different versions of your apps. It lets you peek into the traffic flow and troubleshoot issues early on.
 - title: Optimized for AWS
   details: Konstellation is initially optimized to work with AWS EKS. It utilizes native ALB load balancers to automatically terminate SSL traffic
