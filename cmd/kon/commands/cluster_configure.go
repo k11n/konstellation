@@ -48,7 +48,9 @@ func (c *activeCluster) configureCluster() error {
 
 func (c *activeCluster) addTargetPrompt(cc *v1alpha1.ClusterConfig) error {
 	prompt := promptui.Prompt{
-		Label: "Target name (enter multiple targets separated by comma)",
+		Label:     "Target name (enter multiple targets separated by comma)",
+		Default:   "production",
+		AllowEdit: true,
 		Validate: func(val string) error {
 			parts := strings.Split(val, ",")
 			for _, p := range parts {

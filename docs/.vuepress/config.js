@@ -8,8 +8,9 @@ module.exports = {
     ],
     sidebar: {
       '/guide/': [
+        'why',
         '',
-        'architecture'
+        'networking'
       ],
       '/reference/': [
         '',
