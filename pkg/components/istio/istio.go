@@ -71,9 +71,14 @@ func (i *IstioInstaller) InstallCLI() error {
 		return err
 	}
 
+	parentDir := path.Dir(i.installRoot())
+	if err = os.MkdirAll(parentDir, files.DefaultDirectoryMode); err != nil {
+		return err
+	}
+
 	// run download script
 	cmd := exec.Command(installCmd)
-	cmd.Dir = path.Dir(i.installRoot())
+	cmd.Dir = parentDir
 	cmd.Env = []string{
 		fmt.Sprintf("ISTIO_VERSION=%s", i.Version()),
 	}

@@ -2,7 +2,7 @@
 home: true
 # heroImage: /hero.png
 heroText: Konstellation
-tagline: Kubernetes for humans
+tagline: A full stack apps framework on Kubernetes
 actionText: Get Started →
 actionLink: /guide/
 features:

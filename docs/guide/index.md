@@ -11,7 +11,7 @@ Before you start, ensure that you have [kubectl](https://kubernetes.io/docs/task
 
 ## Installation
 
-Konstellation CLI has been tested thoroughly MacOS.
+Konstellation CLI has been tested thoroughly on MacOS.
 
 ### Mac
 
