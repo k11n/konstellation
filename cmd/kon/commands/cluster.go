@@ -255,7 +255,7 @@ func clusterCreate(c *cli.Context) error {
 	os.Remove(nodepoolConfigFile)
 
 	fmt.Println()
-	fmt.Printf("Cluster %s has been successfully created. Run `kon cluster select --cluster %s` to use it\n", cc.Name, cc.Name)
+	fmt.Printf("Cluster %s has been successfully created. Run `kon cluster select %s` to use it\n", cc.Name, cc.Name)
 	return nil
 }
 
