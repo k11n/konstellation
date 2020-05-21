@@ -58,6 +58,14 @@ If a Konstellation-compatible VPC is already available, it would be available as
 This creates AWS resources that will incur costs that you will be responsible for.
 :::
 
+## Selecting an active cluster
+
+Konstellation supports working with multiple clusters. You will need to choose an active one in order to interact with it, including managing apps on that cluster.
+
+```bash
+% kon cluster select <yourcluster>
+```
+
 ## Deploying your first app
 
 First, create an app template with the CLI.
