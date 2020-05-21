@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 
@@ -52,14 +51,7 @@ func NewEC2Service(s *session.Session) *EC2Service {
 }
 
 func (s *EC2Service) ListVPCs(ctx context.Context) (vpcs []*types.VPC, err error) {
-	vpcResp, err := s.svc.DescribeVpcsWithContext(ctx, &ec2.DescribeVpcsInput{
-		Filters: []*ec2.Filter{
-			{
-				Name:   aws.String("tag:" + TagKonstellation),
-				Values: []*string{aws.String(TagValue1)},
-			},
-		},
-	})
+	vpcResp, err := s.svc.DescribeVpcsWithContext(ctx, &ec2.DescribeVpcsInput{})
 	if err != nil {
 		return
 	}
@@ -87,10 +79,18 @@ func (s *EC2Service) GetVPC(ctx context.Context, vpcId string) (vpc *types.VPC, 
 }
 
 func (s *EC2Service) toVpcType(vpc *ec2.Vpc) *types.VPC {
-	// TODO: find tags representing topology
-	return &types.VPC{
+	tVpc := &types.VPC{
 		ID:            *vpc.VpcId,
 		CloudProvider: "aws",
 		CIDRBlock:     *vpc.CidrBlock,
 	}
+	for _, tag := range vpc.Tags {
+		switch *tag.Key {
+		case TagVPCTopology:
+			tVpc.Topology = *tag.Value
+		case TagKonstellation:
+			tVpc.SupportsKonstellation = *tag.Value == TagValue1
+		}
+	}
+	return tVpc
 }

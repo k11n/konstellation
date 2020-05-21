@@ -84,8 +84,8 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 
 	if awsConf.Vpc == "" {
 		// run terraform for VPC
-		tfVpc, err := NewNetworkingTFAction(a.stateBucket, a.region, awsConf.VpcCidr, awsConf.AvailabilityZones,
-			awsConf.Topology == v1alpha1.AWSTopologyPublicPrivate, terraform.OptionDisplayOutput)
+		tfVpc, err := NewCreateVPCTFAction(a.stateBucket, a.region, awsConf.VpcCidr, awsConf.AvailabilityZones,
+			string(awsConf.Topology), terraform.OptionDisplayOutput)
 		if err != nil {
 			return err
 		}
@@ -266,16 +266,25 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 
 	// done, load cluster config and delete cluster
 	tf, err := NewDestroyEKSClusterTFAction(a.stateBucket, a.region, cluster, terraform.OptionDisplayOutput)
+	if err != nil {
+		return err
+	}
 
 	return tf.Destroy()
 }
 
 func (a *AWSManager) DestroyVPC(vpcId string) error {
-	_, err := a.VPCProvider().GetVPC(context.TODO(), vpcId)
+	vpc, err := a.VPCProvider().GetVPC(context.TODO(), vpcId)
 	if err != nil {
 		return err
 	}
-	return nil
+
+	tf, err := NewDestroyVPCTFAction(a.stateBucket, a.region, vpc.CIDRBlock, vpc.Topology, terraform.OptionDisplayOutput)
+	if err != nil {
+		return err
+	}
+
+	return tf.Destroy()
 }
 
 func (a *AWSManager) getAlbRole(cluster string) (*iam.Role, error) {

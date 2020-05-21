@@ -8,6 +8,7 @@ const (
 	TagAutoscalerEnabled = "k8s.io/cluster-autoscaler/enabled"
 	TagKonstellation     = "Konstellation"
 	TagEKSNodeGroupName  = "eks:nodegroup-name"
+	TagVPCTopology       = "k11n.dev/topology"
 	//TagIngressELBRole         = "kubernetes.io/role/elb"
 	//TagIngressInternalELBRole = "kubernetes.io/role/internal-elb"
 

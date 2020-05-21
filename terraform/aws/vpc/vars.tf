@@ -27,3 +27,8 @@ variable "az_number" {
     f = 6
   }
 }
+
+variable "topology" {
+  type = string
+  default = "public"
+}

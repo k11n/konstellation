@@ -1,6 +1,7 @@
 package aws
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -83,12 +84,12 @@ func (g *PromptConfigGenerator) CreateClusterConfig() (cc *v1alpha1.ClusterConfi
 	}
 
 	// VPC
-	ec2Svc := ec2.New(g.session)
-	as.Vpc, as.VpcCidr, err = promptChooseVPC(ec2Svc)
+	as.Vpc, as.VpcCidr, err = promptChooseVPC(g.session)
 	if err != nil {
 		return
 	}
 
+	ec2Svc := ec2.New(g.session)
 	if as.Vpc == "" {
 		// creating a new VPC
 		as.AvailabilityZones, err = promptAZs(ec2Svc)
@@ -267,22 +268,18 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 	return
 }
 
-func promptChooseVPC(ec2Svc *ec2.EC2) (vpcId string, cidrBlock string, err error) {
-	vpcResp, err := ec2Svc.DescribeVpcs(&ec2.DescribeVpcsInput{
-		Filters: []*ec2.Filter{
-			{
-				Name:   aws.String("tag:Konstellation"),
-				Values: []*string{aws.String("1")},
-			},
-		},
-	})
+func promptChooseVPC(sess *session.Session) (vpcId string, cidrBlock string, err error) {
+	vpcProvider := kaws.NewEC2Service(sess)
+	vpcs, err := vpcProvider.ListVPCs(context.TODO())
 	if err != nil {
 		return
 	}
-	vpcs := vpcResp.Vpcs
+
 	vpcItems := make([]string, 0)
 	for _, vpc := range vpcs {
-		vpcItems = append(vpcItems, fmt.Sprintf("%s - %s", *vpc.VpcId, *vpc.CidrBlock))
+		if vpc.SupportsKonstellation {
+			vpcItems = append(vpcItems, fmt.Sprintf("%s - %s", vpc.ID, vpc.CIDRBlock))
+		}
 	}
 	vpcSelect := promptui.SelectWithAdd{
 		Label:    "Choose a VPC (to use for your EKS Cluster resources)",
@@ -300,7 +297,7 @@ func promptChooseVPC(ec2Svc *ec2.EC2) (vpcId string, cidrBlock string, err error
 			}
 			firstIp, lastIp := cidr.AddressRange(newCidr)
 			for _, vpc := range vpcs {
-				_, vpcCidr, err := net.ParseCIDR(*vpc.CidrBlock)
+				_, vpcCidr, err := net.ParseCIDR(vpc.CIDRBlock)
 				if err != nil {
 					return err
 				}
@@ -316,8 +313,8 @@ func promptChooseVPC(ec2Svc *ec2.EC2) (vpcId string, cidrBlock string, err error
 		return
 	}
 	if idx != -1 {
-		cidrBlock = *vpcs[idx].CidrBlock
-		vpcId = *vpcs[idx].VpcId
+		cidrBlock = vpcs[idx].CIDRBlock
+		vpcId = vpcs[idx].ID
 	}
 	return
 }

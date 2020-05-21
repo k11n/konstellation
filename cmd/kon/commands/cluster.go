@@ -692,7 +692,7 @@ func ensureClusterSelected() error {
 }
 
 func printClusterSection(section providers.ClusterManager, clusters []*clusterInfo) {
-	fmt.Printf("\nCloud: %v\n", section)
+	fmt.Printf("\n%s (%s)\n", section.Cloud(), section.Region())
 
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"Cluster", "Version", "Status", "Konstellation", "Targets", "Provider ID"})

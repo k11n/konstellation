@@ -58,11 +58,11 @@ type TFClusterOutput struct {
 	AlbIngressRoleArn string `json:"cluster_alb_role_arn"`
 }
 
-func NewNetworkingTFAction(bucket, region, vpcCidr string, zones []string, usePrivateSubnet bool, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+func NewCreateVPCTFAction(bucket, region, vpcCidr string, zones []string, topology string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
 	targetDir := path.Join(config.TerraformDir(), "aws", "vpc")
 	tfFiles := make([]string, 0, len(vpcFiles))
 	tfFiles = append(tfFiles, vpcFiles...)
-	if usePrivateSubnet {
+	if topology == "public_private" {
 		tfFiles = append(tfFiles, "aws/vpc/vpc_private_subnet.tf")
 	}
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, tfFiles...)
@@ -81,6 +81,31 @@ func NewNetworkingTFAction(bucket, region, vpcCidr string, zones []string, usePr
 			"region":      region,
 			"vpc_cidr":    vpcCidr,
 			"az_suffixes": zoneSuffixes,
+			"topology":    topology,
+		},
+		terraform.TerraformTemplateVars{
+			"state_bucket": bucket,
+		})
+	a = terraform.NewTerraformAction(targetDir, opts...)
+	return
+}
+
+func NewDestroyVPCTFAction(bucket, region, vpcCidr string, topology string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+	targetDir := path.Join(config.TerraformDir(), "aws", "vpc")
+	tfFiles := make([]string, 0, len(vpcFiles))
+	tfFiles = append(tfFiles, vpcFiles...)
+	if topology == "public_private" {
+		tfFiles = append(tfFiles, "aws/vpc/vpc_private_subnet.tf")
+	}
+	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, tfFiles...)
+	if err != nil {
+		return
+	}
+	opts = append(opts,
+		terraform.TerraformVars{
+			"region":   region,
+			"vpc_cidr": vpcCidr,
+			"topology": topology,
 		},
 		terraform.TerraformTemplateVars{
 			"state_bucket": bucket,
