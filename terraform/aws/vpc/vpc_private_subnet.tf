@@ -53,7 +53,7 @@ resource "aws_nat_gateway" "private_gw" {
     local.common_tags,
     {
       "k11n.dev/publicSubnet" = each.value.tags["k11n.dev/publicSubnet"],
-      "k11n.dev/privateSubnet" = aws_subnet.public[each.key].id
+      "k11n.dev/privateSubnet" = aws_subnet.private[each.key].id
     }
   )
   depends_on = [aws_eip.nat, aws_subnet.private]
