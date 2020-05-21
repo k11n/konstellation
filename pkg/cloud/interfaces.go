@@ -25,3 +25,8 @@ type StorageProvider interface {
 	GetObject(ctx context.Context, key string) (io.ReadCloser, error)
 	PutObject(ctx context.Context, key string, obj io.ReadCloser) error
 }
+
+type VPCProvider interface {
+	GetVPC(ctx context.Context, vpcId string) (vpc *types.VPC, err error)
+	ListVPCs(ctx context.Context) ([]*types.VPC, error)
+}

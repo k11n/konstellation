@@ -140,6 +140,11 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) error {
 	fmt.Println("Creating nodepool...")
 
+	sess, err := a.awsSession()
+	if err != nil {
+		return err
+	}
+
 	// set nodepool config from VPC
 	nps := &np.Spec
 	awsConf := cc.Spec.AWS
@@ -156,6 +161,16 @@ func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nod
 	for _, subnet := range subnetSrc {
 		nps.AWS.SubnetIds = append(nps.AWS.SubnetIds, subnet.SubnetId)
 	}
+
+	iamSvc := kaws.NewIAMService(sess)
+	// node role
+	roleRes, err := iamSvc.IAM.GetRole(&iam.GetRoleInput{
+		RoleName: aws.String(kaws.EKSNodeRole),
+	})
+	if err != nil {
+		return err
+	}
+	nps.AWS.RoleARN = *roleRes.Role.Arn
 
 	// check aws nodepool status. if it doesn't exist, then create it
 	kubeProvider := a.KubernetesProvider()
@@ -181,10 +196,6 @@ func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nod
 	}
 
 	// now grab the autoscaling group for this
-	sess, err := a.awsSession()
-	if err != nil {
-		return err
-	}
 	asSvc := autoscaling.New(sess)
 	err = asSvc.DescribeAutoScalingGroupsPagesWithContext(context.Background(), &autoscaling.DescribeAutoScalingGroupsInput{},
 		func(res *autoscaling.DescribeAutoScalingGroupsOutput, lastPage bool) bool {
@@ -259,6 +270,14 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 	return tf.Destroy()
 }
 
+func (a *AWSManager) DestroyVPC(vpcId string) error {
+	_, err := a.VPCProvider().GetVPC(context.TODO(), vpcId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (a *AWSManager) getAlbRole(cluster string) (*iam.Role, error) {
 	sess := session.Must(a.awsSession())
 	iamSvc := kaws.NewIAMService(sess)
@@ -311,6 +330,10 @@ func (a *AWSManager) CertificateProvider() cloud.CertificateProvider {
 		a.acmSvc = kaws.NewACMService(session)
 	}
 	return a.acmSvc
+}
+
+func (a *AWSManager) VPCProvider() cloud.VPCProvider {
+	return kaws.NewEC2Service(session.Must(a.awsSession()))
 }
 
 func (a *AWSManager) awsSession() (*session.Session, error) {

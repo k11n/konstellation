@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/pricing"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cast"
@@ -137,17 +136,7 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 	nps := v1alpha1.NodepoolSpec{
 		AWS: &v1alpha1.NodePoolAWS{},
 	}
-	iamSvc := kaws.NewIAMService(g.session)
 	ec2Svc := ec2.New(g.session)
-
-	// node role
-	roleRes, err := iamSvc.IAM.GetRole(&iam.GetRoleInput{
-		RoleName: aws.String(kaws.EKSNodeRole),
-	})
-	if err != nil {
-		return
-	}
-	nps.AWS.RoleARN = *roleRes.Role.Arn
 
 	//// subnet ids
 	// TODO: set subnet ids during creation

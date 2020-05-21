@@ -24,7 +24,10 @@ type ClusterManager interface {
 	CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) error
 	DeleteCluster(name string) error
 
+	DestroyVPC(vpcId string) error
+
 	// utils
 	KubernetesProvider() cloud.KubernetesProvider
 	CertificateProvider() cloud.CertificateProvider
+	VPCProvider() cloud.VPCProvider
 }
