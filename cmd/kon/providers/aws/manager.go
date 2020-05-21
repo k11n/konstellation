@@ -48,11 +48,14 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 		// create new VPC
 		inventory = append(inventory,
 			fmt.Sprintf("VPC with CIDR (%s)", awsConf.VpcCidr),
-			"subnets for each availability zone",
-			"internet gateway/NAT gateways",
+			"Subnets for each availability zone",
+			"Internet gateway/NAT gateways",
 			"IAM roles for EKS",
+			" * kon-eks-node-role",
+			" * kon-eks-service-role",
 		)
 	}
+	inventory = append(inventory, fmt.Sprintf(" * kon-alb-role-%s", cc.Name))
 	inventory = append(inventory, fmt.Sprintf("EKS Cluster %s", cc.Name))
 
 	// explicit confirmation about confirmation, or look at terraform file
@@ -359,6 +362,8 @@ func (a *AWSManager) updateVPCInfo(awsConf *v1alpha1.AWSClusterSpec) error {
 	}
 
 	// get subnet info
+	awsConf.PublicSubnets = nil
+	awsConf.PrivateSubnets = nil
 	err := ec2Svc.DescribeSubnetsPages(&ec2.DescribeSubnetsInput{
 		Filters: vpcFilter,
 	}, func(output *ec2.DescribeSubnetsOutput, last bool) bool {
@@ -377,7 +382,7 @@ func (a *AWSManager) updateVPCInfo(awsConf *v1alpha1.AWSClusterSpec) error {
 						awsConf.PublicSubnets = append(awsConf.PublicSubnets, awsSubnet)
 					} else if *tag.Value == kaws.TagValuePrivate {
 						awsSubnet.IsPublic = false
-						awsConf.PublicSubnets = append(awsConf.PublicSubnets, awsSubnet)
+						awsConf.PrivateSubnets = append(awsConf.PrivateSubnets, awsSubnet)
 					}
 					break
 				}
@@ -390,6 +395,7 @@ func (a *AWSManager) updateVPCInfo(awsConf *v1alpha1.AWSClusterSpec) error {
 	}
 
 	// get security groups info, pick default for VPC
+	awsConf.SecurityGroups = nil
 	err = ec2Svc.DescribeSecurityGroupsPages(&ec2.DescribeSecurityGroupsInput{
 		Filters: vpcFilter,
 	}, func(output *ec2.DescribeSecurityGroupsOutput, last bool) bool {

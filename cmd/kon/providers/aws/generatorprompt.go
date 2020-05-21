@@ -328,14 +328,14 @@ func promptAZs(ec2Svc *ec2.EC2) (zones []string, err error) {
 	zonePrompt := promptui.SelectWithAdd{
 		Label:    "How many availability zones would you use?",
 		Items:    []string{fmt.Sprintf("All %d zones", len(zoneRes.AvailabilityZones))},
-		AddLabel: "Custom (at least two)",
+		AddLabel: "Custom (enter a number)",
 		Validate: func(s string) error {
 			num, err := strconv.Atoi(s)
 			if err != nil {
 				return err
 			}
 			if num < 2 || num > len(zoneRes.AvailabilityZones) {
-				return fmt.Errorf("invalid number")
+				return fmt.Errorf("needs to be between 2-4")
 			}
 			return nil
 		},
