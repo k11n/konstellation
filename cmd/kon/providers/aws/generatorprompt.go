@@ -8,6 +8,7 @@ import (
 	"path"
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/aws/aws-sdk-go/aws"
@@ -286,9 +287,13 @@ func promptChooseVPC(ec2Svc *ec2.EC2) (vpcId string, cidrBlock string, err error
 	vpcSelect := promptui.SelectWithAdd{
 		Label:    "Choose a VPC (to use for your EKS Cluster resources)",
 		Items:    vpcItems,
-		AddLabel: "New VPC (enter CIDR Block, i.e. 10.0.0.0/16)",
+		AddLabel: "New VPC (enter CIDR Block, i.e. 10.1.0.0/16)",
 
 		Validate: func(v string) error {
+			if strings.HasPrefix(v, "172.17.") {
+				return fmt.Errorf("172.17. is reserved for internal EKS communications")
+			}
+
 			_, newCidr, err := net.ParseCIDR(v)
 			if err != nil {
 				return err
