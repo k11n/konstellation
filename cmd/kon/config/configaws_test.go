@@ -13,9 +13,13 @@ func TestAWSCredentials(t *testing.T) {
 		t.SkipNow()
 	}
 
-	c := &config.AWSConfig{}
-	creds, err := c.GetDefaultCredentials()
-	assert.NoError(t, err)
+	c := &config.AWSConfig{
+		Credentials: config.AWSCredentials{
+			AccessKeyID:     "hello",
+			SecretAccessKey: "world",
+		},
+	}
+	creds := c.GetDefaultCredentials()
 	assert.NotEmpty(t, creds.AccessKeyID)
 	assert.NotEmpty(t, creds.SecretAccessKey)
 }

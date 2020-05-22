@@ -73,13 +73,17 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 	return err
 }
 
-func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, requests []v1alpha1.IngressRequest) (annotations map[string]string, err error) {
+func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, tlsHosts []string) (annotations map[string]string, err error) {
 	// https://kubernetes-sigs.github.io/aws-alb-ingress-controller/guide/ingress/annotation/
 	// ingress could perform autodiscovery
+	listeners := `[{"HTTP": 80}]`
+	if len(tlsHosts) > 0 {
+		listeners = `[{"HTTP": 80}, {"HTTPS": 443}]`
+	}
 	annotations = map[string]string{
 		"kubernetes.io/ingress.class":            "alb",
 		"alb.ingress.kubernetes.io/scheme":       "internet-facing",
-		"alb.ingress.kubernetes.io/listen-ports": `[{"HTTP": 80}, {"HTTPS": 443}]`,
+		"alb.ingress.kubernetes.io/listen-ports": listeners,
 	}
 	return
 }

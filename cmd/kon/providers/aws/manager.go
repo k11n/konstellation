@@ -16,11 +16,13 @@ import (
 	"github.com/manifoldco/promptui"
 
 	"github.com/k11n/konstellation/cmd/kon/config"
+	"github.com/k11n/konstellation/cmd/kon/kube"
 	"github.com/k11n/konstellation/cmd/kon/terraform"
 	"github.com/k11n/konstellation/cmd/kon/utils"
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/cloud"
 	kaws "github.com/k11n/konstellation/pkg/cloud/aws"
+	"github.com/k11n/konstellation/pkg/resources"
 	"github.com/k11n/konstellation/pkg/utils/tls"
 )
 
@@ -135,6 +137,24 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	}
 
 	awsConf.AlbRoleArn = clusterTfOut.AlbIngressRoleArn
+
+	// tag subnets
+	sess, err := a.awsSession()
+	if err != nil {
+		return err
+	}
+	eksSvc := kaws.NewEKSService(sess)
+	subnetIds := make([]string, 0)
+	for _, sub := range awsConf.PublicSubnets {
+		subnetIds = append(subnetIds, sub.SubnetId)
+	}
+	for _, sub := range awsConf.PrivateSubnets {
+		subnetIds = append(subnetIds, sub.SubnetId)
+	}
+	err = eksSvc.TagSubnetsForCluster(context.Background(), cc.Name, subnetIds)
+	if err != nil {
+		return err
+	}
 
 	// at last add thumbprint so the provider we created could work
 	return a.addCAThumbprintToProvider(cc.Name)
@@ -263,6 +283,28 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 		}
 		return
 	})
+	if err != nil {
+		return err
+	}
+
+	// find config and untag resources
+	contextName := resources.ContextNameForCluster(a.Cloud(), cluster)
+	kclient, err := kube.KubernetesClientWithContext(contextName)
+	if err != nil {
+		return err
+	}
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return err
+	}
+	subnetIds := make([]string, 0)
+	for _, sub := range cc.Spec.AWS.PublicSubnets {
+		subnetIds = append(subnetIds, sub.SubnetId)
+	}
+	for _, sub := range cc.Spec.AWS.PrivateSubnets {
+		subnetIds = append(subnetIds, sub.SubnetId)
+	}
+	err = eksSvc.TagSubnetsForCluster(context.Background(), cc.Name, subnetIds)
 	if err != nil {
 		return err
 	}

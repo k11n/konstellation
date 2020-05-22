@@ -233,13 +233,11 @@ func (r *ReconcileIngressRequest) ingressForRequests(requests []v1alpha1.Ingress
 		return nil, err
 	}
 	ingressComponent := ingress.NewIngressForCluster(cc.Spec.Cloud, cc.Name)
-	annotations, err := ingressComponent.GetIngressAnnotations(r.client, requests)
+
 	ingress := netv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: resources.IstioNamespace,
 			Name:      resources.IngressName,
-			// https://medium.com/@cy.chiang/how-to-integrate-aws-alb-with-istio-v1-0-b17e07cae156
-			Annotations: annotations,
 		},
 		Spec: netv1beta1.IngressSpec{
 			Rules: []netv1beta1.IngressRule{},
@@ -285,6 +283,12 @@ func (r *ReconcileIngressRequest) ingressForRequests(requests []v1alpha1.Ingress
 			tlsHosts = append(tlsHosts, host)
 		}
 	}
+	annotations, err := ingressComponent.GetIngressAnnotations(r.client, tlsHosts)
+	if err != nil {
+		return nil, err
+	}
+	// https://medium.com/@cy.chiang/how-to-integrate-aws-alb-with-istio-v1-0-b17e07cae156
+	ingress.Annotations = annotations
 
 	if len(tlsHosts) != 0 {
 		ingress.Spec.TLS = []netv1beta1.IngressTLS{

@@ -9,6 +9,7 @@ const (
 	TagKonstellation     = "Konstellation"
 	TagEKSNodeGroupName  = "eks:nodegroup-name"
 	TagVPCTopology       = "k11n.dev/topology"
+	TagKubeClusterPrefix = "kubernetes.io/cluster/"
 	//TagIngressELBRole         = "kubernetes.io/role/elb"
 	//TagIngressInternalELBRole = "kubernetes.io/role/internal-elb"
 
@@ -22,4 +23,8 @@ const (
 
 func AutoscalerClusterNameTag(cluster string) string {
 	return fmt.Sprintf("k8s.io/cluster-autoscaler/%s", cluster)
+}
+
+func KubeClusterTag(cluster string) string {
+	return fmt.Sprintf("%s%s", TagKubeClusterPrefix, cluster)
 }

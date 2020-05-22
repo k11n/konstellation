@@ -201,43 +201,8 @@ func (s *EKSService) DeleteNodeGroupNetworkingResources(ctx context.Context, nod
 }
 
 func (s *EKSService) CreateNodepool(ctx context.Context, clusterName string, np *v1alpha1.Nodepool) error {
-	// tag VPC subnets if needed
-	ec2Svc := ec2.New(s.session)
-	subnetIds := []*string{}
-	for _, sId := range np.Spec.AWS.SubnetIds {
-		subnetIds = append(subnetIds, aws.String(sId))
-	}
-	subnetRes, err := ec2Svc.DescribeSubnets(&ec2.DescribeSubnetsInput{SubnetIds: subnetIds})
-	if err != nil {
-		return err
-	}
-
-	clusterTag := "kubernetes.io/cluster/" + clusterName
-	resourcesToTag := []*string{}
-	for _, subnet := range subnetRes.Subnets {
-		tag := GetEC2Tag(subnet.Tags, clusterTag)
-		if tag == nil {
-			resourcesToTag = append(resourcesToTag, subnet.SubnetId)
-		}
-	}
-
-	if len(resourcesToTag) > 0 {
-		_, err = ec2Svc.CreateTags(&ec2.CreateTagsInput{
-			Resources: resourcesToTag,
-			Tags: []*ec2.Tag{
-				{
-					Key:   &clusterTag,
-					Value: aws.String(TagValueShared),
-				},
-			},
-		})
-		if err != nil {
-			return err
-		}
-	}
-
 	createInput := nodepoolSpecToCreateInput(clusterName, np)
-	_, err = s.EKS.CreateNodegroupWithContext(ctx, createInput)
+	_, err := s.EKS.CreateNodegroupWithContext(ctx, createInput)
 	return err
 }
 
@@ -246,6 +211,86 @@ func (s *EKSService) DeleteNodepool(ctx context.Context, clusterName string, nod
 		ClusterName:   &clusterName,
 		NodegroupName: &nodePool,
 	})
+	return err
+}
+
+func (s *EKSService) TagSubnetsForCluster(ctx context.Context, clusterName string, subnetIds []string) error {
+	// tag VPC subnets if needed
+	ec2Svc := ec2.New(s.session)
+	//subnetIds := []*string{}
+	//for _, sId := range np.Spec.AWS.SubnetIds {
+	//	subnetIds = append(subnetIds, aws.String(sId))
+	//}
+	//subnetRes, err := ec2Svc.DescribeSubnets(&ec2.DescribeSubnetsInput{SubnetIds: subnetIds})
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//resourcesToTag := []*string{}
+	//for _, subnet := range subnetRes.Subnets {
+	//	tag := GetEC2Tag(subnet.Tags, clusterTag)
+	//	if tag == nil {
+	//		resourcesToTag = append(resourcesToTag, subnet.SubnetId)
+	//	}
+	//}
+	//
+	//if len(resourcesToTag) > 0 {
+	//	_, err = ec2Svc.CreateTags(&ec2.CreateTagsInput{
+	//		Resources: resourcesToTag,
+	//		Tags: []*ec2.Tag{
+	//			{
+	//				Key:   &clusterTag,
+	//				Value: aws.String(TagValueShared),
+	//			},
+	//		},
+	//	})
+	//	if err != nil {
+	//		return err
+	//	}
+	//}
+	resourcesToTag := make([]*string, 0, len(subnetIds))
+	for _, subnet := range subnetIds {
+		resourcesToTag = append(resourcesToTag, &subnet)
+	}
+
+	if len(resourcesToTag) == 0 {
+		return nil
+	}
+
+	_, err := ec2Svc.CreateTags(&ec2.CreateTagsInput{
+		Resources: resourcesToTag,
+		Tags: []*ec2.Tag{
+			{
+				Key:   aws.String(KubeClusterTag(clusterName)),
+				Value: aws.String(TagValueShared),
+			},
+		},
+	})
+
+	return err
+}
+
+func (s *EKSService) UnTagSubnetsForCluster(ctx context.Context, clusterName string, subnetIds []string) error {
+	// untag VPC subnets if needed
+	ec2Svc := ec2.New(s.session)
+	resourcesToTag := make([]*string, 0, len(subnetIds))
+	for _, subnet := range subnetIds {
+		resourcesToTag = append(resourcesToTag, &subnet)
+	}
+
+	if len(resourcesToTag) == 0 {
+		return nil
+	}
+
+	_, err := ec2Svc.DeleteTags(&ec2.DeleteTagsInput{
+		Resources: resourcesToTag,
+		Tags: []*ec2.Tag{
+			{
+				Key: aws.String(KubeClusterTag(clusterName)),
+			},
+		},
+	})
+
 	return err
 }
 
