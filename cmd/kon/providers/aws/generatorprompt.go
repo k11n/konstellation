@@ -140,18 +140,6 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 	}
 	ec2Svc := ec2.New(g.session)
 
-	//// subnet ids
-	// TODO: set subnet ids during creation
-	//var targetSubnets []*v1alpha1.AWSSubnet
-	//if len(awsConf.PrivateSubnets) > 0 {
-	//	targetSubnets = awsConf.PrivateSubnets
-	//} else {
-	//	targetSubnets = awsConf.PublicSubnets
-	//}
-	//for _, subnet := range targetSubnets {
-	//	nps.AWS.SubnetIds = append(nps.AWS.SubnetIds, subnet.SubnetId)
-	//}
-
 	// keypairs for access
 	kpRes, err := ec2Svc.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{})
 	if err != nil {

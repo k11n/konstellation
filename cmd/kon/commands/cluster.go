@@ -295,24 +295,24 @@ func clusterDestroy(c *cli.Context) error {
 	}
 
 	// remove all apps and then ingress
-	kclient, err := kube.KubernetesClientWithContext(resources.ContextNameForCluster(cm.Cloud(), clusterName))
-	if err != nil {
-		return err
-	}
-	apps, err := resources.ListApps(kclient)
-	if err != nil {
-		return err
+	// cluster might already be destroyed by then, so ignore these errors
+	if kclient, err := kube.KubernetesClientWithContext(resources.ContextNameForCluster(cm.Cloud(), clusterName)); err == nil {
+		apps, err := resources.ListApps(kclient)
+		if err != nil {
+			return err
+		}
+
+		for _, app := range apps {
+			kclient.Delete(context.TODO(), &app)
+		}
+
+		// delete all ingresses
+		ingress, err := resources.GetKonIngress(kclient)
+		if err == nil {
+			kclient.Delete(context.TODO(), ingress)
+		}
 	}
 
-	for _, app := range apps {
-		kclient.Delete(context.TODO(), &app)
-	}
-
-	// delete all ingresses
-	ingress, err := resources.GetKonIngress(kclient)
-	if err == nil {
-		kclient.Delete(context.TODO(), ingress)
-	}
 	return cm.DeleteCluster(clusterName)
 }
 

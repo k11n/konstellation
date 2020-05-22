@@ -250,6 +250,24 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 	sess := session.Must(a.awsSession())
 	eksSvc := kaws.NewEKSService(sess)
 
+	// find config and untag resources
+	contextName := resources.ContextNameForCluster(a.Cloud(), cluster)
+	if kclient, err := kube.KubernetesClientWithContext(contextName); err == nil {
+		if cc, err := resources.GetClusterConfig(kclient); err == nil {
+			subnetIds := make([]string, 0)
+			for _, sub := range cc.Spec.AWS.PublicSubnets {
+				subnetIds = append(subnetIds, sub.SubnetId)
+			}
+			for _, sub := range cc.Spec.AWS.PrivateSubnets {
+				subnetIds = append(subnetIds, sub.SubnetId)
+			}
+			err = eksSvc.TagSubnetsForCluster(context.Background(), cc.Name, subnetIds)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	listRes, err := eksSvc.EKS.ListNodegroups(&eks.ListNodegroupsInput{
 		ClusterName: &cluster,
 	})
@@ -283,28 +301,6 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 		}
 		return
 	})
-	if err != nil {
-		return err
-	}
-
-	// find config and untag resources
-	contextName := resources.ContextNameForCluster(a.Cloud(), cluster)
-	kclient, err := kube.KubernetesClientWithContext(contextName)
-	if err != nil {
-		return err
-	}
-	cc, err := resources.GetClusterConfig(kclient)
-	if err != nil {
-		return err
-	}
-	subnetIds := make([]string, 0)
-	for _, sub := range cc.Spec.AWS.PublicSubnets {
-		subnetIds = append(subnetIds, sub.SubnetId)
-	}
-	for _, sub := range cc.Spec.AWS.PrivateSubnets {
-		subnetIds = append(subnetIds, sub.SubnetId)
-	}
-	err = eksSvc.TagSubnetsForCluster(context.Background(), cc.Name, subnetIds)
 	if err != nil {
 		return err
 	}
