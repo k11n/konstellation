@@ -53,11 +53,11 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 			"Subnets for each availability zone",
 			"Internet gateway/NAT gateways",
 			"IAM roles for EKS",
-			" * kon-eks-node-role",
-			" * kon-eks-service-role",
+			" - kon-eks-node-role",
+			" - kon-eks-service-role",
 		)
 	}
-	inventory = append(inventory, fmt.Sprintf(" * kon-alb-role-%s", cc.Name))
+	inventory = append(inventory, fmt.Sprintf("IAM role for ALB: kon-alb-role-%s", cc.Name))
 	inventory = append(inventory, fmt.Sprintf("EKS Cluster %s", cc.Name))
 
 	// explicit confirmation about confirmation, or look at terraform file
