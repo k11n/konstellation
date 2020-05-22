@@ -128,10 +128,31 @@ For most non-trivial apps, you'd likely want to pass in configuration. Konstella
 
 When Konstellation creates VPC and cluster resources, it keeps track of the state to make it possible to delete those resources at a later point.
 
-### Removing your cluster
+### Deleting your cluster
 
 Clusters are removed with the `cluster destroy` subcommand. Remove the cluster you've created with `kon cluster destroy --cluster <yourcluster>`.
 
 This process could take up to 10-15 minutes. So just hang tight and grab a drink. :sunglasses:
 
 ### Destroy VPC & networking resources
+
+If you no longer want the VPC, or want to change your network topology, it's simple to destroy it and start over.
+
+First check the ID of the VPC:
+
+```text
+% kon vpc list
+
+aws (us-west-2)
+------------------------------------------------------------------------
+  VPC                     CIDR BLOCK    KONSTELLATION   TOPOLOGY
+------------------------------------------------------------------------
+  vpc-00a63c9cb05d5320f   10.1.0.0/16   yes             public_private
+------------------------------------------------------------------------
+```
+
+Then use the `vpc destroy command`
+
+```text
+% kon vpc destroy --vpc <yourvpc>
+```

@@ -22,7 +22,15 @@ With infrastructure changes in the cloud, it can be easy to create a lot of reso
 
 It should also be easy to replicate a cluster, with no manual steps. Konstellation creates cluster manifests and stores them in Kubernetes itself, making it easy to recreate the same setup.
 
-## Apps, not databases
+## Optimized for services, not databases
+
+A application typically involves a combination services and databases. While it's possible to run databases inside of Kubernetes, it's preferable to run them externally. This is because:
+
+* Databases benefit from having close to the metal access
+* Operating databases is very different from operating services, and there are managed services that solve that problem very well. ([RDS](https://aws.amazon.com/rds/), [ElastiCache](https://aws.amazon.com/elasticache/), [ScyllaCloud](https://www.scylladb.com/product/scylla-cloud/) to name a few)
+* Scaling databases is tricky, due to the amount of data on disk. The policies used for scaling homogenous services (increasing # of instances) may not work for DBs.
+
+Konstellation focuses on services (used synonymously as apps), and tries to solve this problem really well.
 
 ## Upgrading software
 
