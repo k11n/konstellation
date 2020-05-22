@@ -2,22 +2,16 @@
 home: true
 # heroImage: /hero.png
 heroText: Konstellation
-tagline: A full stack apps framework on Kubernetes
+tagline: An application stack for Kubernetes
 actionText: Get Started →
 actionLink: /guide/
 features:
-- title: Apps, not resources
-  details: Resources are for machines; Developers should focus on apps. A single app.yaml captures everything that's needed to host your app. Konstellation takes care of all the rest.
-- title: Code to deploy in minutes
-  details: Konstellation manages the entire lifecycles of Kubernetes, giving you a heroku-like experience on your own infrastructure. New apps are deployed in minutes with minimal configuration.
+- title: Simple to use
+  details: Konstellation gives you a Heroku-like experience on top of Kubernetes. A fully featured CLI that allows you to manage every aspect of your app deployment. New apps are deployed in minutes with minimal configuration.
 - title: Production ready
-  details: Built on years of experience with running production Kubernetes clusters. Konstellation uses the best of breed components to provide an integrated stack
-- title: Autoscales
-  details: Konstellation scales your app and your cluster automatically depends on traffic. Define your desired resource utilization and the rest is taken care of automatically.
-- title: Designed for Microservices
-  details: Built on top of the excellent istio service mesh, Konstellation gives you advanced controls over different versions of your apps. It lets you peek into the traffic flow and troubleshoot issues early on.
+  details: Built on years of experience with running production Kubernetes clusters. Konstellation provides an integrated stack including load balancing, autoscaling, and release management.
 - title: Optimized for AWS
-  details: Konstellation is initially optimized to work with AWS EKS. It utilizes native ALB load balancers to automatically terminate SSL traffic
+  details: Konstellation is initially optimized to work with AWS EKS. It helps you to set up and manage secure EKS clusters, nodepools, VPCs, and load balancers.
 footer: MIT Licensed | Copyright © 2019-2020 David Zhao
 ---
 ### App to deployment in minutes
@@ -40,8 +34,9 @@ myapp-20200421-1228-c495    registry/myapp:2     2020-04-21 12:28:11    0       
 myapp-20200421-1102-b723    registry/myapp:1     2020-04-21 11:02:03    0       retired   0%
 ```
 
-### One YAML to rule them all
-No one should be copying and pasting templates that they don't understand. Konstellation provides high level custom resources and then manages native Kubernetes resources behind the scenes.
+### One configuration to rule them all
+No one should be copying and pasting resource templates that they don't understand. Konstellation provides high level custom resources and then manages native Kubernetes resources behind the scenes.
+
 ```yaml
 apiVersion: k11n.dev/v1alpha1
 kind: App
