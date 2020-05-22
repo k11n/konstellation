@@ -1,4 +1,4 @@
-version = 0.1.0
+version = $(shell sed -n 's/.*Version = "\(.*\)"/\1/p' < version/version.go)
 
 deps:
 	go get github.com/GeertJohan/go.rice/rice
@@ -17,4 +17,4 @@ run-operator:
 
 all: cli operator
 
-.PHONEY: deps release-operator run-operator
+.PHONEY: deps release-operator run-operator vs
