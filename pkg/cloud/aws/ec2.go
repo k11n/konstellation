@@ -40,18 +40,18 @@ func VPCFilter(vpcId string) *ec2.Filter {
 
 type EC2Service struct {
 	session *session.Session
-	svc     *ec2.EC2
+	EC2     *ec2.EC2
 }
 
 func NewEC2Service(s *session.Session) *EC2Service {
 	return &EC2Service{
 		session: s,
-		svc:     ec2.New(s),
+		EC2:     ec2.New(s),
 	}
 }
 
 func (s *EC2Service) ListVPCs(ctx context.Context) (vpcs []*types.VPC, err error) {
-	vpcResp, err := s.svc.DescribeVpcsWithContext(ctx, &ec2.DescribeVpcsInput{})
+	vpcResp, err := s.EC2.DescribeVpcsWithContext(ctx, &ec2.DescribeVpcsInput{})
 	if err != nil {
 		return
 	}
@@ -62,7 +62,7 @@ func (s *EC2Service) ListVPCs(ctx context.Context) (vpcs []*types.VPC, err error
 }
 
 func (s *EC2Service) GetVPC(ctx context.Context, vpcId string) (vpc *types.VPC, err error) {
-	resp, err := s.svc.DescribeVpcsWithContext(ctx, &ec2.DescribeVpcsInput{
+	resp, err := s.EC2.DescribeVpcsWithContext(ctx, &ec2.DescribeVpcsInput{
 		VpcIds: []*string{&vpcId},
 	})
 	if err != nil {

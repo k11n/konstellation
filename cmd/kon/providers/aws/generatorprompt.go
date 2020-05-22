@@ -138,10 +138,10 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 	nps := v1alpha1.NodepoolSpec{
 		AWS: &v1alpha1.NodePoolAWS{},
 	}
-	ec2Svc := ec2.New(g.session)
+	ec2Svc := kaws.NewEC2Service(g.session)
 
 	// keypairs for access
-	kpRes, err := ec2Svc.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{})
+	kpRes, err := ec2Svc.EC2.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{})
 	if err != nil {
 		return
 	}
@@ -162,7 +162,7 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 	}
 	if idx == -1 {
 		// create new keypair and save it to ~/.ssh
-		nps.AWS.SSHKeypair, err = promptCreateKeypair(ec2Svc, keypairName)
+		nps.AWS.SSHKeypair, err = promptCreateKeypair(ec2Svc.EC2, keypairName)
 		if err != nil {
 			return
 		}
@@ -171,7 +171,7 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 	}
 
 	// configure node connection
-	if len(cc.Spec.AWS.PrivateSubnets) == 0 {
+	if cc.Spec.AWS.Topology == v1alpha1.AWSTopologyPublic {
 		// remote access is only possible when VPC is public-only
 		connectionPrompt := utils.NewPromptSelect(
 			"Allow remote access to nodes from the internet?",
