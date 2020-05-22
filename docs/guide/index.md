@@ -1,6 +1,3 @@
----
-sidebarDepth: 2
----
 # Getting Started
 
 ## Requirements

@@ -105,6 +105,7 @@ func GetMergedConfigForType(kclient client.Client, confType v1alpha1.ConfigType,
 	}
 
 	if baseConfig == nil {
+		err = nil
 		return
 	}
 

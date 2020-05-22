@@ -284,6 +284,10 @@ func (r *ReconcileDeployment) reconcileConfigMap(at *v1alpha1.AppTarget) (config
 	}
 
 	// check if existing configmap with the hash
+	if ac == nil && len(sharedConfigs) == 0 {
+		// no config maps needed
+		return
+	}
 	configMap = resources.CreateConfigMap(ac, sharedConfigs)
 	_, err = resources.GetConfigMap(r.client, at.ScopedName(), configMap.Name)
 	if errors.IsNotFound(err) {

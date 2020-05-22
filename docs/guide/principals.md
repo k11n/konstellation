@@ -14,7 +14,7 @@ With that thought, I wrote the first line of code for Konstellation in November 
 
 Konstellation is built as a layer on top of Kubernetes, and does not take away or hide any functionality from standard Kubernetes. You could continue to use standard tools like kubectl, and any resources that Kubernetes supports natively.
 
-You may also install any standard Kubernetes components to a Konstellation managed cluster. However, you should avoid installing other service meshes, or anything that uses sidecars to alter the networking stack. Konstellation already deploys Istio, and is tightly integrated with it. Other service meshes would interfere with this setup.
+You may also install any standard Kubernetes components to a Konstellation managed cluster. However, you should avoid installing other service meshes, or anything that uses sidecars to enhance routing. Konstellation already deploys Istio, and is tightly integrated with it. Other service meshes would interfere with this setup.
 
 ## Reproducibility and undo
 
@@ -36,7 +36,7 @@ With new Konstellation releases, they will include updates to the dependent comp
 
 Konstellation uses [SemVer](https://semver.org/), and will adopt the following guarantees:
 
-* releases within the same __major__ version will be API compatible (work with the CLI)
+* releases within the same __major__ version will be API compatible between the cluster and CLI
 * releases within the same __minor__ version will only include components with only minor version changes
 
 ## Beta software
