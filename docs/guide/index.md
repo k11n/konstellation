@@ -8,7 +8,7 @@ Before you start, ensure that you have [kubectl](https://kubernetes.io/docs/task
 
 ## Installation
 
-Konstellation CLI has been tested thoroughly on MacOS.
+Konstellation CLI should be compatible with Mac, Linux, and Windows. On Mac it's available via Brew. Otherwise you could build it from source.
 
 ### Mac
 
@@ -18,6 +18,15 @@ Konstellation CLI has been tested thoroughly on MacOS.
 ```
 
 When this is installed, run `kon --version` to confirm the CLI is correctly installed
+
+### Linux
+
+```text
+% git clone https://github.com/k11n/konstellation.git
+% cd konstellation
+% make cli
+% cp -Rv konstellation/cmd/kon /usr/local/bin
+```
 
 ## Configuration
 

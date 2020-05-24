@@ -11,12 +11,12 @@ features:
 - title: Production ready
   details: Built on years of experience with running production Kubernetes clusters. Konstellation provides an integrated stack including load balancing, autoscaling, and release management.
 - title: Optimized for AWS
-  details: Konstellation is initially optimized to work with AWS EKS. It helps you to set up and manage secure EKS clusters, nodepools, VPCs, and load balancers.
+  details: Konstellation has been thorougly optimized to work with AWS. It helps you to set up and manage EKS clusters, nodepools, VPCs, and load balancers. It integrates it all to provide a secure and robust apps platform.
 footer: MIT Licensed | Copyright © 2019-2020 David Zhao
 ---
 ## App to deployment in minutes
 
-Your time is precious, and it shouldn't be spent on messing with the deployment stack. While Kubernetes provides the scale and efficient resource utilization, it's *raw*, forcing users to think in resources. Konstellation is a layer on top of Kubernetes focused around apps (or services).
+Your time is precious, and it shouldn't be spent on messing with the deployment stack. While Kubernetes provides the scale and efficient resource utilization, it's *raw*, forcing users to think in resources. Konstellation is a layer on top of Kubernetes focused around apps.
 
 ```text
 % kon cluster create
@@ -39,7 +39,7 @@ myapp-20200421-1102-b723    registry/myapp:1     2020-04-21 11:02:03    0       
 
 ## One config to rule them all
 
-No one should be copying and pasting resource templates that they don't understand. Konstellation provides high level custom resources and then manages native Kubernetes resources behind the scenes. For external facing apps, specify hostnames and a load balancer will be created automatically.
+Konstellation provides high level custom resources and then manages native Kubernetes resources behind the scenes. This means the end of copying and pasting resource templates that you don't understand. The following app config would set up ReplicaSets, Service, Autoscaler, Ingress, along with the necessary resources for the service mesh.
 
 ```yaml
 apiVersion: k11n.dev/v1alpha1

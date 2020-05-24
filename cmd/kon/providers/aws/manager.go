@@ -133,6 +133,8 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 
 	clusterTfOut, err := ParseClusterTFOutput(out)
 	if err != nil {
+		fmt.Printf("Failed to create the cluster, this might be an issue with AWS quotas. Refer to %s on current usage and request an increase.\n",
+			a.quotaConsoleUrl())
 		return err
 	}
 
@@ -203,6 +205,8 @@ func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nod
 		// create it
 		err = kubeProvider.CreateNodepool(context.TODO(), cc.Name, np)
 		if err != nil {
+			fmt.Printf("Failed to create the nodepool, this might be an issue with AWS quotas. Refer to %s on current usage and request an increase.\n",
+				a.quotaConsoleUrl())
 			return err
 		}
 	}
@@ -214,6 +218,8 @@ func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nod
 			return kubeProvider.IsNodepoolReady(context.Background(), cc.Name, np.Name)
 		})
 		if err != nil {
+			fmt.Printf("Nodepool creation failed after timeout, please check %s for details.",
+				a.eksNodePoolUrl(cc, np))
 			return err
 		}
 	}
@@ -511,6 +517,15 @@ func (a *AWSManager) addCAThumbprintToProvider(cluster string) error {
 	}
 
 	return nil
+}
+
+func (a *AWSManager) quotaConsoleUrl() string {
+	return fmt.Sprintf("https://%s.console.aws.amazon.com/servicequotas/home", a.Region())
+}
+
+func (a *AWSManager) eksNodePoolUrl(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) string {
+	return fmt.Sprintf("https://%s.console.aws.amazon.com/eks/home?region=%s#/clusters/%s/nodegroups/%s",
+		a.Region(), a.Region(), cc.Name, np.Name)
 }
 
 func sessionForRegion(region string) (*session.Session, error) {
