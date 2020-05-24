@@ -216,29 +216,37 @@ func appStatus(c *cli.Context) error {
 	}
 	kclient := ac.kubernetesClient()
 
-	// find all the app targets
-	targets, err := resources.GetAppTargets(kclient, appName)
+	app, err := resources.GetAppByName(kclient, appName)
 	if err != nil {
 		return err
 	}
 
+	// find all the app targets
 	requiredTarget := c.String("target")
 	// what information is useful here?
 	// group by target
 	// Build, date deployed, status, numAvailable/Desired, traffic
-	for _, target := range targets {
+	for _, target := range app.Spec.Targets {
 		if requiredTarget != "" && target.Name != requiredTarget {
 			continue
 		}
 
+		fmt.Printf("\nTarget: %s\n", target.Name)
+
+		at, err := resources.GetAppTargetWithLabels(kclient, app.Name, target.Name)
+		if err == resources.ErrNotFound {
+			fmt.Println("skipping, not configured for the active cluster")
+			continue
+		}
+
 		// find all targets of this app
-		releases, err := resources.GetAppReleases(kclient, target.Spec.App, target.Spec.Target, 100)
+		releases, err := resources.GetAppReleases(kclient, app.Name, target.Name, 100)
 		if err != nil {
 			return err
 		}
 
 		// find ingress requests
-		ir, err := resources.GetIngressRequestForAppTarget(kclient, target.Spec.App, target.Spec.Target)
+		ir, err := resources.GetIngressRequestForAppTarget(kclient, app.Name, target.Name)
 		if err != nil {
 			if err == resources.ErrNotFound {
 				// just skip
@@ -247,12 +255,11 @@ func appStatus(c *cli.Context) error {
 			}
 		}
 
-		fmt.Printf("\nTarget: %s\n", target.Spec.Target)
 		if ir != nil {
 			fmt.Printf("Hosts: %s\n", strings.Join(ir.Spec.Hosts, ", "))
 			fmt.Printf("Load Balancer: %s\n", ir.Status.Address)
 		}
-		fmt.Printf("Scale: %d min, %d max\n", target.Spec.Scale.Min, target.Spec.Scale.Max)
+		fmt.Printf("Scale: %d min, %d max\n", at.Spec.Scale.Min, at.Spec.Scale.Max)
 		fmt.Println()
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{
