@@ -40,6 +40,8 @@ spec:
                   items:
                     type: string
                   type: array
+                nodeRoleArn:
+                  type: string
                 privateSubnets:
                   items:
                     properties:
@@ -93,6 +95,7 @@ spec:
               required:
               - albRoleArn
               - availabilityZone
+              - nodeRoleArn
               - publicSubnets
               - securityGroups
               - topology

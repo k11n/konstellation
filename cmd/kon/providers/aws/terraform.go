@@ -2,6 +2,7 @@ package aws
 
 import (
 	"fmt"
+	"os"
 	"path"
 
 	"github.com/k11n/konstellation/cmd/kon/config"
@@ -11,7 +12,6 @@ import (
 
 var (
 	vpcFiles = []string{
-		"aws/vpc/iam.tf",
 		"aws/vpc/main.tf",
 		"aws/vpc/tags.tf",
 		"aws/vpc/vars.tf",
@@ -20,6 +20,7 @@ var (
 	clusterFiles = []string{
 		"aws/cluster/cluster.tf",
 		"aws/cluster/data.tf",
+		"aws/cluster/iam.tf",
 		"aws/cluster/main.tf",
 		"aws/cluster/tags.tf",
 		"aws/cluster/vars.tf",
@@ -54,8 +55,9 @@ type TFSubnet struct {
 }
 
 type TFClusterOutput struct {
-	ClusterName       string `json:"cluster_name"`
-	AlbIngressRoleArn string `json:"cluster_alb_role_arn"`
+	ClusterName       string
+	AlbIngressRoleArn string
+	NodeRoleArn       string
 }
 
 func NewCreateVPCTFAction(bucket, region, vpcCidr string, zones []string, topology string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
@@ -85,7 +87,9 @@ func NewCreateVPCTFAction(bucket, region, vpcCidr string, zones []string, topolo
 		},
 		terraform.TerraformTemplateVars{
 			"state_bucket": bucket,
-		})
+		},
+		getAWSCredentials(),
+	)
 	a = terraform.NewTerraformAction(targetDir, opts...)
 	return
 }
@@ -109,7 +113,9 @@ func NewDestroyVPCTFAction(bucket, region, vpcCidr string, topology string, opts
 		},
 		terraform.TerraformTemplateVars{
 			"state_bucket": bucket,
-		})
+		},
+		getAWSCredentials(),
+	)
 	a = terraform.NewTerraformAction(targetDir, opts...)
 	return
 }
@@ -130,7 +136,9 @@ func NewCreateEKSClusterTFAction(bucket, region, vpcId string, name string, secu
 		},
 		terraform.TerraformTemplateVars{
 			"state_bucket": bucket,
-		})
+		},
+		getAWSCredentials(),
+	)
 	a = terraform.NewTerraformAction(targetDir, opts...)
 	return
 }
@@ -149,7 +157,9 @@ func NewDestroyEKSClusterTFAction(bucket, region string, cluster string, opts ..
 		},
 		terraform.TerraformTemplateVars{
 			"state_bucket": bucket,
-		})
+		},
+		getAWSCredentials(),
+	)
 	a = terraform.NewTerraformAction(targetDir, opts...)
 	return
 }
@@ -181,6 +191,18 @@ func ParseClusterTFOutput(data []byte) (tf *TFClusterOutput, err error) {
 	tf = &TFClusterOutput{
 		ClusterName:       oc.GetString("cluster_name"),
 		AlbIngressRoleArn: oc.GetString("cluster_alb_role_arn"),
+		NodeRoleArn:       oc.GetString("cluster_node_role_arn"),
 	}
 	return
+}
+
+func getAWSCredentials() terraform.EnvVar {
+	creds := config.GetConfig().Clouds.AWS.Credentials
+	home, _ := os.UserHomeDir()
+	return terraform.EnvVar{
+		"AWS_ACCESS_KEY_ID":     creds.AccessKeyID,
+		"AWS_SECRET_ACCESS_KEY": creds.SecretAccessKey,
+		// needed by terraform: https://github.com/hashicorp/terraform/issues/24520
+		"HOME": home,
+	}
 }

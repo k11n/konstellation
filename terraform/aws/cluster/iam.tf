@@ -2,7 +2,7 @@
 
 // EKS service role
 resource "aws_iam_role" "eks_service_role" {
-  name = "kon-eks-service-role"
+  name = "kon-${var.cluster}-service-role"
 
   assume_role_policy = <<EOF
 {
@@ -19,7 +19,7 @@ resource "aws_iam_role" "eks_service_role" {
 }
 EOF
 
-  tags = local.common_tags
+  tags = local.cluster_tags
 }
 
 resource "aws_iam_role_policy_attachment" "eks_service_role_eks_service_policy" {
@@ -33,7 +33,7 @@ resource "aws_iam_role_policy_attachment" "eks_service_role_eks_cluster_policy" 
 
 // EKS Node Role
 resource "aws_iam_role" "eks_node_role" {
-  name = "kon-eks-node-role"
+  name = "kon-${var.cluster}-node-role"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -49,7 +49,7 @@ resource "aws_iam_role" "eks_node_role" {
 }
 EOF
 
-  tags = local.common_tags
+  tags = local.cluster_tags
 }
 
 resource "aws_iam_role_policy" "eks_node_role_autoscaler_policy" {
@@ -93,6 +93,39 @@ resource "aws_iam_role_policy_attachment" "eks_node_role_eks_container_registry_
 
 
 // Policy for ALB
+
+data "aws_iam_policy_document" "assume_role_policy" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_iam_openid_connect_provider.main.url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:kube-system:alb-ingress-controller"]
+    }
+
+    principals {
+      identifiers = [aws_iam_openid_connect_provider.main.arn]
+      type        = "Federated"
+    }
+  }
+}
+
+resource "aws_iam_role" "cluster_alb_role" {
+  name               = "kon-${var.cluster}-alb-role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
+
+  tags = local.cluster_tags
+}
+
+// associate ingress policy with it
+resource "aws_iam_role_policy_attachment" "alb_ingress_attachment" {
+  role = aws_iam_role.cluster_alb_role.name
+  policy_arn = aws_iam_policy.alb_policy.arn
+  // policy_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/ALBIngressControllerIAMPolicy"
+}
+
 resource "aws_iam_policy" "alb_policy" {
   name        = "ALBIngressControllerIAMPolicy"
   description = "Policy for AWS ALB Ingress Controller"

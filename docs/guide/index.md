@@ -8,7 +8,7 @@ Before you start, ensure that you have [kubectl](https://kubernetes.io/docs/task
 
 ## Installation
 
-Konstellation CLI should be compatible with Mac, Linux, and Windows. On Mac it's available via Brew. Otherwise you could build it from source.
+Konstellation CLI is be compatible with Mac, Linux, and Windows. On Mac it's available via Brew. Otherwise you could build it from source.
 
 ### Mac
 
@@ -36,6 +36,7 @@ Use the arrow keys to navigate: ↓ ↑ → ←
 ? Choose a cloud provider to configure:
   ▸ AWS
 ```
+
 Konstellation requires a few pieces information before creating a cluster:
 
 * AWS Access Key and Secret Key - used to manage AWS resources
@@ -99,7 +100,7 @@ The app config is persisted in Kubernetes, and can be edited at any time with `k
 
 The status command gives an overview of the state of your app as currently deployed. It's useful to check up on different releases of the app, and load balancer status.
 
-```
+```text
 % kon app status <yourapp>
 
 Target: production
@@ -121,9 +122,9 @@ On EKS, Konstellation uses an [Application Load Balancer (ALB)](https://aws.amaz
 
 With this, SSL certificates are handled securely that they never leave ACM. Konstellation needs only a reference to the certificates in order to configure them.
 
-To use SSL with Konstellation, first ensure your certificate is uploaded into [ACM](https://us-west-2.console.aws.amazon.com/acm/home), then sync certificate references into Kubernetes with:
+To use SSL with Konstellation, first ensure your certificate is uploaded into [ACM](https://console.aws.amazon.com/acm/home), then sync certificate references into Kubernetes with:
 
-```
+```text
 % kon certificate sync
 ```
 

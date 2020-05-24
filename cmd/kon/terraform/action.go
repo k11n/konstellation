@@ -26,6 +26,7 @@ type TerraformAction struct {
 	WorkingDir      string
 	vars            map[string]string
 	templateVars    map[string]string
+	env             map[string]string
 	displayOutput   bool
 	requireApproval bool
 
@@ -76,6 +77,17 @@ func (v TerraformTemplateVars) Apply(a *TerraformAction) {
 			data, _ := json.Marshal(val)
 			a.templateVars[key] = string(data)
 		}
+	}
+}
+
+type EnvVar map[string]string
+
+func (v EnvVar) Apply(a *TerraformAction) {
+	if a.env == nil {
+		a.env = make(map[string]string)
+	}
+	for key, val := range v {
+		a.env[key] = val
 	}
 }
 
@@ -181,6 +193,7 @@ func (a *TerraformAction) runAction(args ...string) error {
 	cmd := exec.Command("terraform", args...)
 	cmd.Dir = a.WorkingDir
 	cmd.Stderr = os.Stderr
+	cmd.Env = a.getEnvVars()
 	if connectStdIn {
 		cmd.Stdin = os.Stdin
 	}
@@ -202,6 +215,9 @@ func (a *TerraformAction) initIfNeeded() error {
 	}
 	cmd := exec.Command("terraform", "init")
 	cmd.Dir = a.WorkingDir
+	cmd.Env = a.getEnvVars()
+	//cmd.Stderr = os.Stderr
+	//cmd.Stdout = os.Stdout
 	if err := cmd.Run(); err != nil {
 		return errors.Wrapf(err, "Could not init terraform. Path: %s", a.WorkingDir)
 	}
@@ -227,4 +243,12 @@ func (a *TerraformAction) GetOutput() (content []byte, err error) {
 	}
 	content = buf.Bytes()
 	return
+}
+
+func (a *TerraformAction) getEnvVars() []string {
+	envVars := make([]string, 0, len(a.env))
+	for key, val := range a.env {
+		envVars = append(envVars, fmt.Sprintf("%s=%s", key, val))
+	}
+	return envVars
 }

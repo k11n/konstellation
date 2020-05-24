@@ -72,6 +72,7 @@ type AWSClusterSpec struct {
 	// +nullable
 	PrivateSubnets []*AWSSubnet `json:"privateSubnets"`
 	AlbRoleArn     string       `json:"albRoleArn"`
+	NodeRoleArn    string       `json:"nodeRoleArn"`
 }
 
 type AWSSubnet struct {

@@ -22,3 +22,7 @@ output "cluster_name" {
 output "cluster_alb_role_arn" {
   value = aws_iam_role.cluster_alb_role.arn
 }
+
+output "cluster_node_role_arn" {
+  value = aws_iam_role.eks_node_role.arn
+}

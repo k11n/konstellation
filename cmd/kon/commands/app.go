@@ -185,7 +185,7 @@ func appList(c *cli.Context) error {
 	}
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"App", "Targets"})
+	table.SetHeader([]string{"App", "Targets", "Ports"})
 	for _, app := range apps {
 		targets := []string{}
 		for _, target := range app.Spec.Targets {
@@ -194,9 +194,16 @@ func appList(c *cli.Context) error {
 		if requiredTarget != "" && !funk.Contains(targets, requiredTarget) {
 			continue
 		}
+
+		var portsStr []string
+
+		for _, port := range app.Spec.Ports {
+			portsStr = append(portsStr, fmt.Sprintf("%s-%d", port.Name, port.Port))
+		}
 		table.Append([]string{
 			app.Name,
-			strings.Join(targets, ","),
+			strings.Join(targets, ", "),
+			strings.Join(portsStr, ", "),
 		})
 	}
 	utils.FormatTable(table)

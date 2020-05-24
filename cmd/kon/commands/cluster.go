@@ -267,7 +267,7 @@ func clusterDestroy(c *cli.Context) error {
 	}
 	cm, err := ClusterManagerForCluster(clusterName)
 
-	fmt.Printf("This will destroy the cluster %s, removing all of the nodepools.\n", clusterName)
+	fmt.Printf("This will destroy the cluster %s, removing all of apps and configs on this cluster. This action cannot be reversed.\n", clusterName)
 
 	prompt := promptui.Prompt{
 		Label: fmt.Sprintf("Sure you want to proceed? (type in %s to proceed)", clusterName),

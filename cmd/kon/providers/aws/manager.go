@@ -52,12 +52,12 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 			fmt.Sprintf("VPC with CIDR (%s)", awsConf.VpcCidr),
 			"Subnets for each availability zone",
 			"Internet gateway/NAT gateways",
-			"IAM roles for EKS",
-			" - kon-eks-node-role",
-			" - kon-eks-service-role",
 		)
 	}
-	inventory = append(inventory, fmt.Sprintf("IAM role for ALB: kon-alb-role-%s", cc.Name))
+	inventory = append(inventory, "IAM roles for the cluster:")
+	inventory = append(inventory, fmt.Sprintf("  kon-%s-service-role", cc.Name))
+	inventory = append(inventory, fmt.Sprintf("  kon-%s-node-role", cc.Name))
+	inventory = append(inventory, fmt.Sprintf("  kon-%s-alb-role", cc.Name))
 	inventory = append(inventory, fmt.Sprintf("EKS Cluster %s", cc.Name))
 
 	// explicit confirmation about confirmation, or look at terraform file
@@ -139,6 +139,7 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	}
 
 	awsConf.AlbRoleArn = clusterTfOut.AlbIngressRoleArn
+	awsConf.NodeRoleArn = clusterTfOut.NodeRoleArn
 
 	// tag subnets
 	sess, err := a.awsSession()
@@ -153,6 +154,7 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	for _, sub := range awsConf.PrivateSubnets {
 		subnetIds = append(subnetIds, sub.SubnetId)
 	}
+
 	err = eksSvc.TagSubnetsForCluster(context.Background(), cc.Name, subnetIds)
 	if err != nil {
 		return err
@@ -187,15 +189,7 @@ func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nod
 		nps.AWS.SubnetIds = append(nps.AWS.SubnetIds, subnet.SubnetId)
 	}
 
-	iamSvc := kaws.NewIAMService(sess)
-	// node role
-	roleRes, err := iamSvc.IAM.GetRole(&iam.GetRoleInput{
-		RoleName: aws.String(kaws.EKSNodeRole),
-	})
-	if err != nil {
-		return err
-	}
-	nps.AWS.RoleARN = *roleRes.Role.Arn
+	nps.AWS.RoleARN = awsConf.NodeRoleArn
 
 	// check aws nodepool status. if it doesn't exist, then create it
 	kubeProvider := a.KubernetesProvider()
@@ -326,6 +320,28 @@ func (a *AWSManager) DestroyVPC(vpcId string) error {
 		return err
 	}
 
+	// destroy security groups
+	sess, err := a.awsSession()
+	if err != nil {
+		return err
+	}
+	ec2Svc := ec2.New(sess)
+	groups, err := kaws.ListSecurityGroups(ec2Svc, vpcId)
+	if err != nil {
+		return err
+	}
+
+	for _, group := range groups {
+		if *group.GroupName == "default" {
+			continue
+		}
+
+		_, err = ec2Svc.DeleteSecurityGroup(&ec2.DeleteSecurityGroupInput{GroupId: group.GroupId})
+		if err != nil {
+			return err
+		}
+	}
+
 	tf, err := NewDestroyVPCTFAction(a.stateBucket, a.region, vpc.CIDRBlock, vpc.Topology, terraform.OptionDisplayOutput)
 	if err != nil {
 		return err
@@ -343,7 +359,7 @@ func (a *AWSManager) getAlbRole(cluster string) (*iam.Role, error) {
 	}
 
 	for _, role := range roles {
-		if strings.HasPrefix(*role.RoleName, "kon-alb-role-") {
+		if strings.HasSuffix(*role.RoleName, "-alb-role") {
 			// get role to include tags
 			roleOut, err := iamSvc.IAM.GetRole(&iam.GetRoleInput{RoleName: role.RoleName})
 			if err != nil {
