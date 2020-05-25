@@ -4,11 +4,11 @@
 
 Kubernetes has become the de-facto standard for running workloads on machines. It's been adopted by tech companies big and small. It's also got a vibrant ecosystem, with many wonderful projects that are built on top of Kubernetes, solving [these](https://github.com/kubernetes/autoscaler) [important](https://istio.io/) [problems](https://github.com/kubernetes-sigs/aws-alb-ingress-controller).
 
-However, the learning curve remains steep for developers. For many, using kubernetes means spending days learning about various components, and copying YAML definitions from Medium articles to make it all work. Even when it's set up, it remains a challenge to operate it: from things like rolling back a bad release, to figuring out how to update components to a new version.
+However, the learning curve remains steep for developers. For many, using kubernetes means spending days learning about various components, and copying YAML definitions from Medium articles to make it all work. Even when it's set up, it remains a challenge to operate it: from things like rolling back a bad release, to figuring out how to update components to a new version. These are outside of scope of Kubernetes itself, and yet are important problems when operating a production cluster.
 
-Working with raw Kubernetes is undesirable. Companies that use Kubernetes often build internal tools to make working with Kubernetes more practical. In fact, I've worked at two companies that did exactly that. After deciding to adopt Kubernetes, they spent weeks learning about Kubernetes, and then months developing internal tools to make it usable. Having been through this experience twice, I wanted a set of tools that's open source, and can be used by anyone.
+Given the plethora of components that are out there, you have to become proficient in each one to know when to use it, and how to make it work for your needs. As you can imagine, that's a non-trivial amount of knowledge that can become a nightmare to keep track of. Companies with scale can devote internal teams to build tools to make working with Kubernetes more practical. In fact, I've worked at two companies that did exactly that. After deciding to adopt Kubernetes, they spent the subsequent months developing internal tools to make it usable. Having been through this experience twice, I wanted a set of tools that's open source, and simplifies the process by adopting the best practices.
 
-With that thought, I wrote the first line of code for Konstellation in November 2019. I wanted to give users a solution that's as simple as Heroku, while running on a robust infrastructure that you control. Konstellation should give you all of the tools necessary to manage Kubernetes, significantly lowering the barrier of entry.
+With that thought, I wrote the first line of code for Konstellation in November 2019. From the onset, my goal is to create a solution as simple to use as Heroku, while running on a robust layer that Kubernetes is known for. Konstellation should give you all of the tools necessary to deploy and operate your apps on Kubernetes.
 
 ## Compatibility with Kubernetes
 
@@ -24,13 +24,13 @@ It should also be easy to replicate a cluster, with no manual steps. Konstellati
 
 ## Optimized for services, not databases
 
-A application typically involves a combination services and databases. While it's possible to run databases inside of Kubernetes, it's preferable to run them externally. This is because:
+A application typically involves a combination services and databases. While it's possible to run databases inside of Kubernetes, I prefer to run them externally. This is because:
 
 * Databases benefit from having close to the metal access
 * Operating databases is very different from operating services, and there are managed services that solve that problem very well. ([RDS](https://aws.amazon.com/rds/), [ElastiCache](https://aws.amazon.com/elasticache/), [ScyllaCloud](https://www.scylladb.com/product/scylla-cloud/) to name a few)
 * Scaling databases is tricky, due to the amount of data on disk. The policies used for scaling homogenous services (increasing # of instances) may not work for DBs.
 
-Konstellation focuses on services (used synonymously as apps), and tries to solve this problem really well.
+Konstellation focuses on services (used synonymously as apps), and is designed to allow you to point to externally hosted databases via [Configs](apps.md#Configuration).
 
 ## Upgrading software
 

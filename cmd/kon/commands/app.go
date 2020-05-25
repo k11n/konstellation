@@ -103,6 +103,7 @@ var AppCommands = []*cli.Command{
 			{
 				Name:      "logs",
 				Usage:     "Print logs from a pod for the app",
+				Aliases:   []string{"log"},
 				ArgsUsage: "<app>",
 				Action:    appLogs,
 				Flags: []cli.Flag{

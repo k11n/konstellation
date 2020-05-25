@@ -123,11 +123,10 @@ resource "aws_iam_role" "cluster_alb_role" {
 resource "aws_iam_role_policy_attachment" "alb_ingress_attachment" {
   role = aws_iam_role.cluster_alb_role.name
   policy_arn = aws_iam_policy.alb_policy.arn
-  // policy_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/ALBIngressControllerIAMPolicy"
 }
 
 resource "aws_iam_policy" "alb_policy" {
-  name        = "ALBIngressControllerIAMPolicy"
+  name        = "ALBIngressControllerIAMPolicy-${var.cluster}"
   description = "Policy for AWS ALB Ingress Controller"
   policy = <<EOF
 {

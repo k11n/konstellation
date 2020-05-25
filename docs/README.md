@@ -2,21 +2,21 @@
 home: true
 # heroImage: /hero.png
 heroText: Konstellation
-tagline: An application platform for Kubernetes
+tagline: Open source application platform for Kubernetes
 actionText: Get Started →
 actionLink: /guide/
 features:
 - title: Simple to use
   details: Konstellation gives you a Heroku-like experience on top of Kubernetes. A fully featured CLI that allows you to manage every aspect of your app deployment. New apps are deployed in minutes with minimal configuration.
 - title: Production ready
-  details: Built on years of experience with running production Kubernetes clusters. Konstellation provides an integrated stack including load balancing, autoscaling, and release management.
+  details: Built on years of experience with running production Kubernetes clusters. Konstellation provides an integrated stack including load balancing, autoscaling, service mesh, and release management.
 - title: Optimized for AWS
-  details: Konstellation has been thorougly optimized to work with AWS. It helps you to set up and manage EKS clusters, nodepools, VPCs, and load balancers. It integrates it all to provide a secure and robust apps platform.
+  details: Konstellation has been optimized to work with AWS. It helps you to set up and manage EKS clusters, nodepools, VPCs, and load balancers. It integrates with other AWS services to provide a secure and robust apps platform.
 footer: MIT Licensed | Copyright © 2019-2020 David Zhao
 ---
 ## App to deployment in minutes
 
-Your time is precious, and it shouldn't be spent on messing with the deployment stack. While Kubernetes provides the scale and efficient resource utilization, it's *raw*, forcing users to think in resources. Konstellation is a layer on top of Kubernetes focused around apps.
+Your time is precious, and it shouldn't be spent on messing the deployment stack. While Kubernetes provides the scale and efficient resource utilization, it's *raw*, forcing users to think in resources. Konstellation is a layer on top of Kubernetes focused around apps.
 
 ```text
 % kon cluster create
