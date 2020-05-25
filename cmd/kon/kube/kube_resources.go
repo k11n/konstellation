@@ -4,6 +4,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	metrics "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	kconf "sigs.k8s.io/controller-runtime/pkg/client/config"
 
@@ -51,8 +52,9 @@ var (
 
 func init() {
 	// register both our scheme and konstellation scheme
-	clientgoscheme.AddToScheme(scheme)
 	apis.AddToScheme(scheme)
+	clientgoscheme.AddToScheme(scheme)
+	metrics.AddToScheme(scheme)
 }
 
 func KubernetesClientWithContext(contextName string) (client.Client, error) {

@@ -16,7 +16,10 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	k8sJson "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	metrics "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/cmd/kon/config"
@@ -106,8 +109,11 @@ var ClusterCommands = []*cli.Command{
 }
 
 type clusterInfo struct {
-	Cluster *types.Cluster
-	Config  *v1alpha1.ClusterConfig
+	Cluster     *types.Cluster
+	Config      *v1alpha1.ClusterConfig
+	Nodepools   []*v1alpha1.Nodepool
+	Nodes       []corev1.Node
+	NodeMetrics []metrics.NodeMetrics
 }
 
 func clusterList(c *cli.Context) error {
@@ -142,6 +148,25 @@ func clusterList(c *cli.Context) error {
 				continue
 			}
 			info.Config = config
+
+			info.Nodepools, err = resources.GetNodepools(kclient)
+			if err != nil {
+				continue
+			}
+
+			// get all nodes
+			nodeList := corev1.NodeList{}
+			if err = kclient.List(context.TODO(), &nodeList); err == nil {
+				info.Nodes = nodeList.Items
+			}
+
+			// get node metrics
+			metricsList := metrics.NodeMetricsList{}
+			if err = kclient.List(context.TODO(), &metricsList); err == nil {
+				info.NodeMetrics = metricsList.Items
+			} else {
+				fmt.Println("error", err)
+			}
 		}
 		printClusterSection(cm, infos)
 	}
@@ -695,10 +720,10 @@ func printClusterSection(section providers.ClusterManager, clusters []*clusterIn
 	fmt.Printf("\n%s (%s)\n", section.Cloud(), section.Region())
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Cluster", "Version", "Status", "Konstellation", "Targets", "Provider ID"})
+	table.SetHeader([]string{"Cluster", "Version", "Status", "Konstellation", "Targets", "Nodes", "CPU", "Memory"})
 	for _, ci := range clusters {
 		c := ci.Cluster
-		targets := []string{}
+		targets := make([]string, 0)
 		konVersion := ""
 		if ci.Config != nil {
 			targets = ci.Config.Spec.Targets
@@ -711,13 +736,46 @@ func printClusterSection(section providers.ClusterManager, clusters []*clusterIn
 				c.Status = types.StatusUnconfigured
 			}
 		}
+
+		var nodeStr, cpuStr, memoryStr string
+
+		maxNodes := int64(0)
+		for _, np := range ci.Nodepools {
+			maxNodes += np.Spec.MaxSize
+		}
+		if maxNodes > 0 {
+			nodeStr = fmt.Sprintf("%d (max %d)", len(ci.Nodes), maxNodes)
+		}
+
+		var cpuTotal, memoryTotal resource.Quantity
+		var cpuUsed, memoryUsed resource.Quantity
+
+		for _, node := range ci.Nodes {
+			cpuTotal.Add(*node.Status.Allocatable.Cpu())
+			memoryTotal.Add(*node.Status.Allocatable.Memory())
+		}
+		for _, nm := range ci.NodeMetrics {
+			cpuUsed.Add(*nm.Usage.Cpu())
+			memoryUsed.Add(*nm.Usage.Memory())
+		}
+		if cpuTotal.Value() != 0 {
+			cpuStr = fmt.Sprintf("%d/%d (%d%%)", cpuUsed.Value(), cpuTotal.Value(), cpuUsed.Value()*100/cpuTotal.Value())
+		}
+		if memoryTotal.Value() != 0 {
+			mb := int64(1000 * 1000)
+			memoryStr = fmt.Sprintf("%d/%dMi (%d%%)", memoryUsed.Value()/mb, memoryTotal.Value()/mb, memoryUsed.Value()*100/memoryTotal.Value())
+		}
+
+		// node metrics
 		table.Append([]string{
 			c.Name,
 			c.Version,
 			c.Status.String(),
 			konVersion,
 			strings.Join(targets, ","),
-			c.ID,
+			nodeStr,
+			cpuStr,
+			memoryStr,
 		})
 	}
 	utils.FormatTable(table)

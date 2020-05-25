@@ -45,10 +45,11 @@ require (
 	istio.io/api v0.0.0-20200417223136-90a960729620
 	istio.io/client-go v0.0.0-20200417172857-74af6f52f3d9
 	istio.io/gogo-genproto v0.0.0-20200416215531-c23ae6ad14f9 // indirect
-	k8s.io/api v0.18.1
-	k8s.io/apimachinery v0.18.1
+	k8s.io/api v0.18.3
+	k8s.io/apimachinery v0.18.3
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kube-state-metrics v1.9.5 // indirect
+	k8s.io/metrics v0.18.3
 	k8s.io/utils v0.0.0-20200414100711-2df71ebbae66 // indirect
 	sigs.k8s.io/controller-runtime v0.5.2
 )
