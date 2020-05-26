@@ -15,7 +15,7 @@ spec:
       serviceAccountName: konstellation
       containers:
         - name: konstellation
-          image: k11n/operator:v0.1.1
+          image: k11n/operator:v0.1.2
           command:
           - konstellation
           imagePullPolicy: Always
