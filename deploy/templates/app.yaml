@@ -53,12 +53,12 @@ spec:
 #      liveness:
 #        httpGet:
 #          path: /running
-#          port: {{.Port}}
+#          port: http
 #        failureThreshold: 3
 #      readiness:
 #        httpGet:
 #          path: /ready
-#          port: {{.Port}}
+#          port: http
 #        failureThreshold: 6
 
   # One or more targets to deploy your app to
@@ -72,7 +72,7 @@ spec:
 #      ingress:
 #        hosts:
 #          - www.yourhost.com
-#        port: {{.Port}}
+#        port: http
 #      resources:
 #      probes:
 #

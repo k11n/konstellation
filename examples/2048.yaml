@@ -12,4 +12,4 @@ spec:
       ingress:
         hosts:
           - 2048.davidzhao.com
-        port: 80
+        port: http

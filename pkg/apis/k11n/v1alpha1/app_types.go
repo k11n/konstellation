@@ -78,7 +78,7 @@ type AppList struct {
 type PortSpec struct {
 	Name string `json:"name"`
 	Port int32  `json:"port"`
-	// TCP by default. IngressPath works only with HTTP services
+	// TCP by default. Ingress works only with HTTP services
 	// +optional
 	Protocol corev1.Protocol `json:"protocol,omitempty"`
 }
@@ -128,7 +128,7 @@ type TargetConfig struct {
 
 type IngressConfig struct {
 	Hosts []string `json:"hosts"`
-	Port  int32    `json:"port"`
+	Port  string   `json:"port"`
 }
 
 func init() {
@@ -193,7 +193,7 @@ func (p *Probe) ToCoreProbe() *corev1.Probe {
 		coreHander.HTTPGet = &corev1.HTTPGetAction{
 			Path:        hg.Path,
 			Host:        hg.Host,
-			Port:        intstr.FromInt(hg.Port),
+			Port:        intstr.FromString(hg.Port),
 			Scheme:      hg.Scheme,
 			HTTPHeaders: hg.HTTPHeaders,
 		}
@@ -266,10 +266,9 @@ type HTTPGetAction struct {
 	// Path to access on the HTTP server.
 	// +optional
 	Path string `json:"path,omitempty" protobuf:"bytes,1,opt,name=path"`
-	// Name or number of the port to access on the container.
-	// Number must be in the range 1 to 65535.
+	// Name of the port to access on the container.
 	// Name must be an IANA_SVC_NAME.
-	Port int `json:"port" protobuf:"bytes,2,opt,name=port"`
+	Port string `json:"port"`
 	// Host name to connect to, defaults to the pod IP. You probably want to set
 	// "Host" in httpHeaders instead.
 	// +optional

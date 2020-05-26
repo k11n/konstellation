@@ -16,7 +16,9 @@ import (
 )
 
 var (
-	allGateways = []string{"mesh", fmt.Sprintf("%s.%s.cluster.local", resources.GatewayName, resources.IstioNamespace)}
+	meshGateway = "mesh"
+	konGateway  = fmt.Sprintf("%s.%s.cluster.local", resources.GatewayName, resources.IstioNamespace)
+	allGateways = []string{meshGateway, konGateway}
 )
 
 func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *corev1.Service, err error) {
@@ -178,11 +180,11 @@ func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases
 	name := at.Spec.App
 
 	svcHost := resources.GetServiceDNS(service)
-	hosts := []string{
+	allHosts := []string{
 		svcHost,
 	}
 	if at.Spec.Ingress != nil {
-		hosts = append(hosts, at.Spec.Ingress.Hosts...)
+		allHosts = append(allHosts, at.Spec.Ingress.Hosts...)
 	}
 
 	releasesByPort := map[int32][]*v1alpha1.AppRelease{}
@@ -193,11 +195,13 @@ func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases
 	}
 
 	var routes []*istionetworking.HTTPRoute
-	for port, releases := range releasesByPort {
+
+	// create internal routes, map each port
+	for port, portReleases := range releasesByPort {
 		route := &istionetworking.HTTPRoute{
 			Match: []*istionetworking.HTTPMatchRequest{
 				{
-					Gateways: allGateways,
+					Gateways: []string{meshGateway},
 					Uri: &istionetworking.StringMatch{
 						MatchType: &istionetworking.StringMatch_Prefix{
 							Prefix: "/",
@@ -207,7 +211,7 @@ func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases
 				},
 			},
 		}
-		for _, ar := range releases {
+		for _, ar := range portReleases {
 			rd := &istionetworking.HTTPRouteDestination{
 				Destination: &istionetworking.Destination{
 					Host:   svcHost,
@@ -221,6 +225,48 @@ func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases
 		routes = append(routes, route)
 	}
 
+	// create external route, map the desired port to 80
+	if at.Spec.Ingress != nil {
+		var targetPort int32
+		for _, port := range at.Spec.Ports {
+			if targetPort == 0 {
+				targetPort = port.Port
+			}
+			if port.Name == at.Spec.Ingress.Port {
+				targetPort = port.Port
+				break
+			}
+		}
+		if targetPort != 0 {
+			route := &istionetworking.HTTPRoute{
+				Match: []*istionetworking.HTTPMatchRequest{
+					{
+						Gateways: []string{konGateway},
+						Uri: &istionetworking.StringMatch{
+							MatchType: &istionetworking.StringMatch_Prefix{
+								Prefix: "/",
+							},
+						},
+						Port: 80,
+					},
+				},
+			}
+			// should always have a port in order for VS to be defined
+			for _, ar := range releases {
+				rd := &istionetworking.HTTPRouteDestination{
+					Destination: &istionetworking.Destination{
+						Host:   svcHost,
+						Port:   &istionetworking.PortSelector{Number: uint32(targetPort)},
+						Subset: ar.Name,
+					},
+					Weight: ar.Spec.TrafficPercentage,
+				}
+				route.Route = append(route.Route, rd)
+			}
+			routes = append(routes, route)
+		}
+	}
+
 	vs := &istio.VirtualService{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -229,7 +275,7 @@ func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases
 		},
 		Spec: istionetworking.VirtualService{
 			Gateways: allGateways,
-			Hosts:    hosts,
+			Hosts:    allHosts,
 			Http:     routes,
 		},
 	}

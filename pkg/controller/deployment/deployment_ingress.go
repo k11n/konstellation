@@ -55,13 +55,6 @@ func newIngressRequestForAppTarget(at *v1alpha1.AppTarget) *v1alpha1.IngressRequ
 	}
 	if at.Spec.Ingress != nil {
 		ir.Spec.Hosts = at.Spec.Ingress.Hosts
-		ir.Spec.Port = at.Spec.Ingress.Port
-		if ir.Spec.Port == 0 {
-			// when not specified.. we try to pick the first port
-			if len(at.Spec.Ports) > 0 {
-				ir.Spec.Port = at.Spec.Ports[0].Port
-			}
-		}
 	}
 	return ir
 }

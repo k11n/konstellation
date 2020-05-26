@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -54,6 +55,12 @@ var AppCommands = []*cli.Command{
 		Category: "App",
 		Subcommands: []*cli.Command{
 			{
+				Name:      "delete",
+				Usage:     "Deletes an app from the current cluster",
+				Action:    appDelete,
+				ArgsUsage: "<app>",
+			},
+			{
 				Name:      "deploy",
 				Usage:     "Deploy a new version of an app",
 				Action:    appDeploy,
@@ -62,11 +69,6 @@ var AppCommands = []*cli.Command{
 					&cli.StringFlag{
 						Name:     "tag",
 						Usage:    "image tag to use",
-						Required: true,
-					},
-					&cli.StringFlag{
-						Name:     "app",
-						Usage:    "app to deploy",
 						Required: true,
 					},
 				},
@@ -304,6 +306,38 @@ func appStatus(c *cli.Context) error {
 		table.Render()
 		fmt.Println()
 	}
+	return nil
+}
+
+func appDelete(c *cli.Context) error {
+	appName, err := getAppArg(c)
+	if err != nil {
+		return err
+	}
+
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+
+	kclient := ac.kubernetesClient()
+
+	app, err := resources.GetAppByName(kclient, appName)
+	if err != nil {
+		return err
+	}
+
+	err = utils.ExplicitConfirmationPrompt(fmt.Sprintf("Sure you want to delete %s?", app.Name))
+	if err != nil {
+		return err
+	}
+
+	err = kclient.Delete(context.TODO(), app)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("App %s has been deleted\n", app.Name)
 	return nil
 }
 

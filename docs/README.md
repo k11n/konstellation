@@ -7,7 +7,7 @@ actionText: Get Started →
 actionLink: /guide/
 features:
 - title: Simple to use
-  details: Konstellation gives you a Heroku-like experience on top of Kubernetes. A fully featured CLI that allows you to manage every aspect of your app deployment. New apps are deployed in minutes with minimal configuration.
+  details: Konstellation gives you a Heroku-like experience on top of Kubernetes that you fully control. It gives you a CLI that manages every aspect of your app deployment. New apps are deployed in minutes with minimal configuration.
 - title: Production ready
   details: Built on years of experience with running production Kubernetes clusters. Konstellation provides an integrated stack including load balancing, autoscaling, service mesh, and release management.
 - title: Optimized for AWS
@@ -26,7 +26,7 @@ Your time is precious, and it shouldn't be spent on messing the deployment stack
 % kon config edit myapp
 ...
 % kon app status myapp
-Target: development
+Target: production
 Hosts: myapp.mydomain.com
 Load Balancer: b0d94a8d-istiosystem-konin-a4cf-358886547.us-west-2.elb.amazonaws.com
 Scale: 2 min, 10 max

@@ -56,8 +56,7 @@ spec:
                     format: int32
                     type: integer
                   protocol:
-                    description: TCP by default. IngressPath works only with HTTP
-                      services
+                    description: TCP by default. Ingress works only with HTTP services
                     type: string
                 required:
                 - name
@@ -124,10 +123,9 @@ spec:
                           description: Path to access on the HTTP server.
                           type: string
                         port:
-                          description: Name or number of the port to access on the
-                            container. Number must be in the range 1 to 65535. Name
-                            must be an IANA_SVC_NAME.
-                          type: integer
+                          description: Name of the port to access on the container.
+                            Name must be an IANA_SVC_NAME.
+                          type: string
                         scheme:
                           description: Scheme to use for connecting to the host. Defaults
                             to HTTP.
@@ -216,10 +214,9 @@ spec:
                           description: Path to access on the HTTP server.
                           type: string
                         port:
-                          description: Name or number of the port to access on the
-                            container. Number must be in the range 1 to 65535. Name
-                            must be an IANA_SVC_NAME.
-                          type: integer
+                          description: Name of the port to access on the container.
+                            Name must be an IANA_SVC_NAME.
+                          type: string
                         scheme:
                           description: Scheme to use for connecting to the host. Defaults
                             to HTTP.
@@ -308,10 +305,9 @@ spec:
                           description: Path to access on the HTTP server.
                           type: string
                         port:
-                          description: Name or number of the port to access on the
-                            container. Number must be in the range 1 to 65535. Name
-                            must be an IANA_SVC_NAME.
-                          type: integer
+                          description: Name of the port to access on the container.
+                            Name must be an IANA_SVC_NAME.
+                          type: string
                         scheme:
                           description: Scheme to use for connecting to the host. Defaults
                             to HTTP.
@@ -412,8 +408,7 @@ spec:
                           type: string
                         type: array
                       port:
-                        format: int32
-                        type: integer
+                        type: string
                     required:
                     - hosts
                     - port
@@ -482,10 +477,9 @@ spec:
                                 description: Path to access on the HTTP server.
                                 type: string
                               port:
-                                description: Name or number of the port to access
-                                  on the container. Number must be in the range 1
-                                  to 65535. Name must be an IANA_SVC_NAME.
-                                type: integer
+                                description: Name of the port to access on the container.
+                                  Name must be an IANA_SVC_NAME.
+                                type: string
                               scheme:
                                 description: Scheme to use for connecting to the host.
                                   Defaults to HTTP.
@@ -578,10 +572,9 @@ spec:
                                 description: Path to access on the HTTP server.
                                 type: string
                               port:
-                                description: Name or number of the port to access
-                                  on the container. Number must be in the range 1
-                                  to 65535. Name must be an IANA_SVC_NAME.
-                                type: integer
+                                description: Name of the port to access on the container.
+                                  Name must be an IANA_SVC_NAME.
+                                type: string
                               scheme:
                                 description: Scheme to use for connecting to the host.
                                   Defaults to HTTP.
@@ -674,10 +667,9 @@ spec:
                                 description: Path to access on the HTTP server.
                                 type: string
                               port:
-                                description: Name or number of the port to access
-                                  on the container. Number must be in the range 1
-                                  to 65535. Name must be an IANA_SVC_NAME.
-                                type: integer
+                                description: Name of the port to access on the container.
+                                  Name must be an IANA_SVC_NAME.
+                                type: string
                               scheme:
                                 description: Scheme to use for connecting to the host.
                                   Defaults to HTTP.

@@ -10,6 +10,7 @@ module.exports = {
       '/guide/': [
         'principals',
         '',
+        'appyaml',
         'apps',
         'clusters',
       ],
