@@ -40,14 +40,14 @@ spec:
       ingress:
         hosts:
           - staging.myapp.com
-        port: 80
+        port: http
       scale:
         max: 1
     - name: production
       ingress:
         hosts:
           - www.myapp.com
-        port: 80
+        port: http
       scale:
         min: 5
         max: 20

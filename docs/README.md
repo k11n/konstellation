@@ -57,5 +57,5 @@ spec:
       ingress:
         hosts:
           - myapp.mydomain.com
-        port: 80
+        port: http
 ```
