@@ -313,32 +313,24 @@ func promptAZs(ec2Svc *ec2.EC2) (zones []string, err error) {
 	if err != nil {
 		return
 	}
-	zonePrompt := promptui.SelectWithAdd{
-		Label:    "How many availability zones would you use?",
-		Items:    []string{fmt.Sprintf("All %d zones", len(zoneRes.AvailabilityZones))},
-		AddLabel: "Custom (enter a number)",
-		Validate: func(s string) error {
-			num, err := strconv.Atoi(s)
-			if err != nil {
-				return err
-			}
-			if num < 2 || num > len(zoneRes.AvailabilityZones) {
-				return fmt.Errorf("needs to be between 2-4")
-			}
-			return nil
-		},
+
+	totalZones := len(zoneRes.AvailabilityZones)
+	if totalZones < 2 {
+		err = fmt.Errorf("Konstellation requires at least 2 availability zones, the current region contains only %d", totalZones)
+		return
 	}
-	idx, res, err := zonePrompt.Run()
+
+	zoneItems := make([]string, 0, totalZones)
+	for i := 2; i <= totalZones; i++ {
+		zoneItems = append(zoneItems, strconv.Itoa(i))
+	}
+	zonePrompt := utils.NewPromptSelect("How many availability zones would you use", zoneItems)
+	_, res, err := zonePrompt.Run()
 	if err != nil {
 		return
 	}
 
-	var numZones int
-	if idx != -1 {
-		numZones = len(zoneRes.AvailabilityZones)
-	} else {
-		numZones = cast.ToInt(res)
-	}
+	numZones := cast.ToInt(res)
 	zones = make([]string, 0, numZones)
 	for i := 0; i < numZones; i++ {
 		z := zoneRes.AvailabilityZones[i]

@@ -60,7 +60,7 @@ type TFClusterOutput struct {
 	NodeRoleArn       string
 }
 
-func NewCreateVPCTFAction(bucket, region, vpcCidr string, zones []string, topology string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+func NewCreateVPCTFAction(bucket, bucketRegion, region, vpcCidr string, zones []string, topology string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
 	targetDir := path.Join(config.TerraformDir(), "aws", "vpc")
 	tfFiles := make([]string, 0, len(vpcFiles))
 	tfFiles = append(tfFiles, vpcFiles...)
@@ -86,7 +86,8 @@ func NewCreateVPCTFAction(bucket, region, vpcCidr string, zones []string, topolo
 			"topology":    topology,
 		},
 		terraform.TerraformTemplateVars{
-			"state_bucket": bucket,
+			"state_bucket":        bucket,
+			"state_bucket_region": bucketRegion,
 		},
 		getAWSCredentials(),
 	)
@@ -94,7 +95,7 @@ func NewCreateVPCTFAction(bucket, region, vpcCidr string, zones []string, topolo
 	return
 }
 
-func NewDestroyVPCTFAction(bucket, region, vpcCidr string, topology string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+func NewDestroyVPCTFAction(bucket, bucketRegion, region, vpcCidr string, topology string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
 	targetDir := path.Join(config.TerraformDir(), "aws", "vpc")
 	tfFiles := make([]string, 0, len(vpcFiles))
 	tfFiles = append(tfFiles, vpcFiles...)
@@ -112,7 +113,8 @@ func NewDestroyVPCTFAction(bucket, region, vpcCidr string, topology string, opts
 			"topology": topology,
 		},
 		terraform.TerraformTemplateVars{
-			"state_bucket": bucket,
+			"state_bucket":        bucket,
+			"state_bucket_region": bucketRegion,
 		},
 		getAWSCredentials(),
 	)
@@ -120,7 +122,7 @@ func NewDestroyVPCTFAction(bucket, region, vpcCidr string, topology string, opts
 	return
 }
 
-func NewCreateEKSClusterTFAction(bucket, region, vpcId string, name string, securityGroupIds []string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+func NewCreateEKSClusterTFAction(bucket, bucketRegion, region, vpcId string, name string, securityGroupIds []string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
 	targetDir := path.Join(config.TerraformDir(), "aws", "cluster", name)
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, clusterFiles...)
 	if err != nil {
@@ -135,7 +137,8 @@ func NewCreateEKSClusterTFAction(bucket, region, vpcId string, name string, secu
 			"security_group_ids": securityGroupIds,
 		},
 		terraform.TerraformTemplateVars{
-			"state_bucket": bucket,
+			"state_bucket":        bucket,
+			"state_bucket_region": bucketRegion,
 		},
 		getAWSCredentials(),
 	)
@@ -143,7 +146,7 @@ func NewCreateEKSClusterTFAction(bucket, region, vpcId string, name string, secu
 	return
 }
 
-func NewDestroyEKSClusterTFAction(bucket, region string, cluster string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+func NewDestroyEKSClusterTFAction(bucket, bucketRegion, region string, cluster string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
 	targetDir := path.Join(config.TerraformDir(), "aws", "cluster", fmt.Sprintf("%s_destroy", cluster))
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, "aws/cluster/main.tf")
 	if err != nil {
@@ -156,7 +159,8 @@ func NewDestroyEKSClusterTFAction(bucket, region string, cluster string, opts ..
 			"cluster": cluster,
 		},
 		terraform.TerraformTemplateVars{
-			"state_bucket": bucket,
+			"state_bucket":        bucket,
+			"state_bucket_region": bucketRegion,
 		},
 		getAWSCredentials(),
 	)

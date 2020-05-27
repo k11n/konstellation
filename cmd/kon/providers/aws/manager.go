@@ -27,16 +27,18 @@ import (
 )
 
 type AWSManager struct {
-	region      string
-	stateBucket string
-	kubeSvc     *kaws.EKSService
-	acmSvc      *kaws.ACMService
+	region            string
+	stateBucket       string
+	stateBucketRegion string
+	kubeSvc           *kaws.EKSService
+	acmSvc            *kaws.ACMService
 }
 
 func NewAWSManager(region string) *AWSManager {
 	return &AWSManager{
-		region:      region,
-		stateBucket: config.GetConfig().Clouds.AWS.StateS3Bucket,
+		region:            region,
+		stateBucket:       config.GetConfig().Clouds.AWS.StateS3Bucket,
+		stateBucketRegion: config.GetConfig().Clouds.AWS.StateS3BucketRegion,
 	}
 }
 
@@ -89,8 +91,8 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 
 	if awsConf.Vpc == "" {
 		// run terraform for VPC
-		tfVpc, err := NewCreateVPCTFAction(a.stateBucket, a.region, awsConf.VpcCidr, awsConf.AvailabilityZones,
-			string(awsConf.Topology), terraform.OptionDisplayOutput)
+		tfVpc, err := NewCreateVPCTFAction(a.stateBucket, a.stateBucketRegion, a.region, awsConf.VpcCidr,
+			awsConf.AvailabilityZones, string(awsConf.Topology), terraform.OptionDisplayOutput)
 		if err != nil {
 			return err
 		}
@@ -117,7 +119,7 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	}
 
 	// create cluster
-	clusterTf, err := NewCreateEKSClusterTFAction(a.stateBucket, a.region, awsConf.Vpc, cc.Name,
+	clusterTf, err := NewCreateEKSClusterTFAction(a.stateBucket, a.stateBucketRegion, a.region, awsConf.Vpc, cc.Name,
 		awsConf.SecurityGroups, terraform.OptionDisplayOutput)
 	if err != nil {
 		return err
@@ -306,7 +308,7 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 	}
 
 	// done, load cluster config and delete cluster
-	tf, err := NewDestroyEKSClusterTFAction(a.stateBucket, a.region, cluster, terraform.OptionDisplayOutput)
+	tf, err := NewDestroyEKSClusterTFAction(a.stateBucket, a.stateBucketRegion, a.region, cluster, terraform.OptionDisplayOutput)
 	if err != nil {
 		return err
 	}
@@ -342,7 +344,7 @@ func (a *AWSManager) DestroyVPC(vpcId string) error {
 		}
 	}
 
-	tf, err := NewDestroyVPCTFAction(a.stateBucket, a.region, vpc.CIDRBlock, vpc.Topology, terraform.OptionDisplayOutput)
+	tf, err := NewDestroyVPCTFAction(a.stateBucket, a.stateBucketRegion, a.region, vpc.CIDRBlock, vpc.Topology, terraform.OptionDisplayOutput)
 	if err != nil {
 		return err
 	}

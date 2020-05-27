@@ -53,6 +53,8 @@ func setupStart(c *cli.Context) error {
 					return err
 				}
 				installConfirmed = true
+				// empty line
+				fmt.Println()
 			}
 			fmt.Printf("Installing CLI for %s\n", comp.Name())
 			err = cliComp.InstallCLI()

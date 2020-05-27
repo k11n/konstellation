@@ -10,9 +10,10 @@ import (
 )
 
 type AWSConfig struct {
-	Regions       []string
-	StateS3Bucket string
-	Credentials   AWSCredentials `yaml:"credentials"`
+	Regions             []string
+	StateS3Bucket       string
+	StateS3BucketRegion string         `yaml:"states3bucket_region"`
+	Credentials         AWSCredentials `yaml:"credentials"`
 }
 
 type AWSCredentials struct {

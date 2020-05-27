@@ -121,6 +121,11 @@ func clusterList(c *cli.Context) error {
 	if conf.IsClusterSelected() {
 		fmt.Printf("\nSelected cluster %s\n", conf.SelectedCluster)
 	}
+
+	if err := updateClusterLocations(); err != nil {
+		return err
+	}
+
 	for _, cm := range GetClusterManagers() {
 		ksvc := cm.KubernetesProvider()
 		if ksvc == nil {

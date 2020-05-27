@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/manifoldco/promptui"
@@ -46,20 +47,7 @@ func (a *AWSProvider) Setup() error {
 	conf := config.GetConfig()
 	awsConf := &conf.Clouds.AWS
 	creds := awsConf.GetDefaultCredentials()
-	//if err != nil {
-	//	genericErr := fmt.Errorf("Could not find AWS credentials, run \"aws configure\" to set it")
-	//	// configure aws credentials
-	//	err = cli.RunCommandWithStd("aws", "configure")
-	//	if err != nil {
-	//		return genericErr
-	//	}
-	//	_, err = awsConf.GetDefaultCredentials()
-	//	if err != nil {
-	//		return genericErr
-	//	}
-	//} else {
-	//	fmt.Println("Found credentials under ~/.aws/credentials. Konstellation will use these credentials to connect to AWS.")
-	//}
+
 	prompt := promptui.Prompt{
 		Label:     "AWS Access Key ID",
 		Default:   creds.AccessKeyID,
@@ -99,9 +87,8 @@ func (a *AWSProvider) Setup() error {
 		}
 	}
 	regionPrompt := promptui.Prompt{
-		Label:     "Regions to use (separate multiple regions with comma)",
-		Default:   strings.Join(regions, ","),
-		AllowEdit: true,
+		Label:   "Regions to use (separate multiple regions with comma)",
+		Default: strings.Join(regions, ","),
 		Validate: func(s string) error {
 			regions := strings.Split(s, ",")
 			for _, r := range regions {
@@ -134,12 +121,12 @@ func (a *AWSProvider) Setup() error {
 	}
 
 	// check if key works
-	session, err := sessionForRegion(awsConf.Regions[0])
+	sess, err := sessionForRegion(awsConf.Regions[0])
 	if err != nil {
 		return errors.Wrapf(err, "AWS credentials are not valid")
 	}
 
-	iamSvc := iam.New(session)
+	iamSvc := iam.New(sess)
 	_, err = iamSvc.GetUser(&iam.GetUserInput{})
 	if err != nil {
 		return errors.Wrapf(err, "Couldn't make authenticated calls using provided credentials")
@@ -148,8 +135,7 @@ func (a *AWSProvider) Setup() error {
 	// TODO: ensure that the permissions we need are accessible
 
 	// ask for a bucket to store state
-	s3Svc := s3.New(session)
-	awsConf.StateS3Bucket, err = a.createStateBucket(s3Svc, awsConf.StateS3Bucket)
+	awsConf.StateS3Bucket, awsConf.StateS3BucketRegion, err = a.createStateBucket(sess, awsConf.StateS3Bucket)
 	if err != nil {
 		return err
 	}
@@ -159,8 +145,9 @@ func (a *AWSProvider) Setup() error {
 	return conf.Persist()
 }
 
-func (a *AWSProvider) createStateBucket(s3Svc *s3.S3, defaultBucket string) (bucketName string, err error) {
+func (a *AWSProvider) createStateBucket(sess *session.Session, defaultBucket string) (bucketName string, bucketRegion string, err error) {
 	fmt.Println("Konstellation needs to store configuration in a S3 bucket, enter name of an existing or new bucket.")
+	fmt.Println("If you've already created a bucket on a different machine, please enter the same one.")
 	bucketPrompt := promptui.Prompt{
 		Label:   "Bucket name",
 		Default: defaultBucket,
@@ -172,19 +159,16 @@ func (a *AWSProvider) createStateBucket(s3Svc *s3.S3, defaultBucket string) (buc
 		if err != nil {
 			return "", err
 		}
-		_, err = s3Svc.HeadBucket(&s3.HeadBucketInput{
-			Bucket: &bn,
-		})
-		if err == nil {
-			// exists
+		bi, err := getBucketInfo(bn, sess)
+		if err != nil {
+			return "", err
+		}
+		if !bi.exists || bi.hasPermission {
+			// we can use it
 			return bn, nil
+		} else {
+			return "", fmt.Errorf("bucket already exists")
 		}
-		if aerr, ok := err.(awserr.Error); ok {
-			if aerr.Code() == "NotFound" {
-				return bn, nil
-			}
-		}
-		return "", err
 	}
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -198,15 +182,22 @@ func (a *AWSProvider) createStateBucket(s3Svc *s3.S3, defaultBucket string) (buc
 		if err != nil {
 			if err != promptui.ErrAbort && err != promptui.ErrInterrupt {
 				fmt.Println("Bucket name already in use, please try another name")
+			} else {
+				// aborted or interrupted
+				return
 			}
+			continue
 		}
 		break
 	}
 
-	_, err = s3Svc.HeadBucket(&s3.HeadBucketInput{
-		Bucket: &bucketName,
-	})
+	bi, err := getBucketInfo(bucketName, sess)
 	if err != nil {
+		return
+	}
+
+	bucketRegion = bi.region
+	if !bi.exists {
 		// bucket doesn't exist, try to create it
 		bucketPrompt = promptui.Prompt{
 			Label:     fmt.Sprintf("Bucket %s doesn't exist, ok to create?", bucketName),
@@ -216,6 +207,9 @@ func (a *AWSProvider) createStateBucket(s3Svc *s3.S3, defaultBucket string) (buc
 		if _, err = bucketPrompt.Run(); err != nil {
 			return
 		}
+
+		s3Svc := s3.New(sess)
+		bucketRegion = *s3Svc.Config.Region
 		_, err = s3Svc.CreateBucket(&s3.CreateBucketInput{
 			Bucket: &bucketName,
 		})
@@ -225,4 +219,50 @@ func (a *AWSProvider) createStateBucket(s3Svc *s3.S3, defaultBucket string) (buc
 	}
 
 	return
+}
+
+type bucketInfo struct {
+	name          string
+	region        string
+	hasPermission bool
+	exists        bool
+}
+
+func getBucketInfo(bucket string, session *session.Session) (*bucketInfo, error) {
+	s3Svc := s3.New(session)
+	_, err := s3Svc.HeadBucket(&s3.HeadBucketInput{
+		Bucket: &bucket,
+	})
+	bi := &bucketInfo{}
+	bi.name = bucket
+	bi.region = *s3Svc.Config.Region
+	if err == nil {
+		// exists and user owns it
+		bi.hasPermission = true
+		bi.exists = true
+		return bi, nil
+	}
+	if aerr, ok := err.(awserr.Error); ok {
+		switch aerr.Code() {
+		case "NotFound":
+			// new bucket, we'll create it
+			bi.hasPermission = true
+			bi.exists = false
+		case "BadRequest":
+			// see if we can get region info
+			res, err := s3Svc.GetBucketLocation(&s3.GetBucketLocationInput{Bucket: &bucket})
+			if err != nil {
+				return nil, err
+			}
+			bi.region = *res.LocationConstraint
+			bi.exists = true
+			bi.hasPermission = true
+		default:
+			bi.exists = true
+			bi.hasPermission = false
+			fmt.Println("AWS Error: ", aerr.Code())
+		}
+		return bi, nil
+	}
+	return nil, err
 }
