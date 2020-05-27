@@ -25,8 +25,10 @@ When this is installed, run `kon --version` to confirm the CLI is correctly inst
 % git clone https://github.com/k11n/konstellation.git
 % cd konstellation
 % make cli
-% cp -Rv konstellation/cmd/kon /usr/local/bin
+% cp -Rv cmd/kon /usr/local/bin
 ```
+
+A single binary is all you need to use the CLI.
 
 ## Configuration
 
@@ -128,7 +130,7 @@ To use SSL with Konstellation, first ensure your certificate is uploaded into [A
 % kon certificate sync
 ```
 
-After this, your app should be automatically available via https
+After this, your app should be automatically available via HTTPS. Note: ACM is region aware, your cluster and certificates must reside in the same region for them to be usable.
 
 ### Configuring your app
 
