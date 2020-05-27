@@ -17,7 +17,7 @@ import (
 
 var (
 	meshGateway = "mesh"
-	konGateway  = fmt.Sprintf("%s.%s.cluster.local", resources.GatewayName, resources.IstioNamespace)
+	konGateway  = fmt.Sprintf("%s/%s", resources.IstioNamespace, resources.GatewayName)
 	allGateways = []string{meshGateway, konGateway}
 )
 
