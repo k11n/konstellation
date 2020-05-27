@@ -373,20 +373,18 @@ func promptCreateKeypair(ec2Svc *ec2.EC2, name string) (keyName string, err erro
 	homeDir, err := os.UserHomeDir()
 	saved := false
 	if err == nil {
-		printTargetPath := path.Join("~", ".ssh", name+".pem")
-		saveTargetPath := path.Join(homeDir, ".ssh", name+".pem")
 		savePrompt := promptui.Prompt{
-			IsConfirm: true,
-			Default:   "y",
-			Label:     fmt.Sprintf("Save new keypair to %s", printTargetPath),
+			Label:     "Path to save this keypair",
+			AllowEdit: true,
+			Default:   path.Join(homeDir, ".ssh", name+".pem"),
 		}
-		_, err = savePrompt.Run()
-		if err == nil {
+		utils.FixPromptBell(&savePrompt)
+		if saveTargetPath, err := savePrompt.Run(); err == nil {
 			err = ioutil.WriteFile(saveTargetPath, []byte(*res.KeyMaterial), 0600)
 			if err != nil {
 				fmt.Println("Error while saving key:", err)
 			} else {
-				fmt.Printf("Keypair %s saved to: %s\n", keyName, printTargetPath)
+				fmt.Printf("Keypair %s saved to: %s\n", keyName, saveTargetPath)
 				saved = true
 			}
 		}
