@@ -75,12 +75,12 @@ var ClusterCommands = []*cli.Command{
 			},
 			{
 				Name:   "export",
-				Usage:  "export apps, configs, and other cluster settings",
+				Usage:  "export apps, configs, and other cluster data",
 				Action: clusterExport,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
 						Name:     "dir",
-						Usage:    "directory to export resource configs to",
+						Usage:    "directory to export cluster data to",
 						Required: true,
 					},
 				},
