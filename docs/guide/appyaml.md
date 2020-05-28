@@ -31,9 +31,20 @@ placeholder
 
 Probes allows Kubernetes to understand the state of your app so that it could act accordingly.
 
-| Field         | Type            | Required | Description                    |
-|:------------- |:--------------- |:-------- |:------------------------------ |
-| httpGet       | HTTPGetAction
+| Field               | Type            | Required | Description                    |
+|:------------------- |:--------------- |:-------- |:------------------------------ |
+| httpGet             | HTTPGetAction   | no       | set if using HTTP probes       |
+| exec                | [ExecAction](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#execaction-v1-core)      | no       | set if using command line probes
+| initialDelaySeconds | int             | no       | Number of seconds after the container has started before probes are initiated.
+| timeoutSeconds      | int             | no       | Number of seconds after which the probe times out. Defaults to 1 second.
+| periodSeconds       | int             | no       | How often (in seconds) to perform the probe. Default to 10 seconds.
+| successThreshold    | int             | no       | Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1.
+| failureThreshold    | int             | no       | Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3.
+
+Http Example
+
+```yaml
+```
 
 ## ProbeConfig
 
