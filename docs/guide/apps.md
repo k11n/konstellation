@@ -113,15 +113,17 @@ When executed, your app will receive these environment variables:
 | PUBLISHED_AT | "1590564232"       |
 | APP_CONFIG   | a copy of the config in YAML |
 
+Note that keys have been converted to upper case, and any dashes `-` that you might have in the key names are converted to underscores `_`.
+
 Because the `navigation` field is not a simple type, Konstellation does not attempt to convert it to an env var. Instead, the entire config file is available in the `APP_CONFIG` variable.
 
 ### Shared config
 
 While app configs are great way to pass app specific configuration to your app, what about for configurations that multiple apps care about? For example, you may want to store connection to databases without having to modify multiple app configs to pass along the same information.
 
-Shared configs is the way to accomplish this. Shared configs are given names, and can be referenced by multiple apps. Below is an example of creating a shared config and using it in my app. Create a shared config with `kon config edit --name db_connection`
+Shared configs is the way to accomplish this. Shared configs are given names, and can be referenced by multiple apps. Below is an example of creating a shared config and using it in my app. Create a shared config with `kon config edit --name db-connection`
 
-db_connection shared config
+db-connection shared config
 
 ```yaml
 engine: mysql
@@ -141,7 +143,7 @@ metadata:
 spec:
   image: repo/myapp
   configs:
-    - db_connection
+    - db-connection
   targets:
     - name: production
 ```

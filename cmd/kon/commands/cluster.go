@@ -74,6 +74,18 @@ var ClusterCommands = []*cli.Command{
 				},
 			},
 			{
+				Name:   "export",
+				Usage:  "export apps, configs, and other cluster settings",
+				Action: clusterExport,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "dir",
+						Usage:    "directory to export resource configs to",
+						Required: true,
+					},
+				},
+			},
+			{
 				Name:   "list",
 				Usage:  "list clusters",
 				Action: clusterList,
@@ -286,6 +298,23 @@ func clusterCreate(c *cli.Context) error {
 
 	fmt.Println()
 	fmt.Printf("Cluster %s has been successfully created. Run `kon cluster select %s` to use it\n", cc.Name, cc.Name)
+	return nil
+}
+
+func clusterExport(c *cli.Context) error {
+	target := c.String("dir")
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+
+	exporter := resources.NewExporter(ac.kubernetesClient(), target)
+	err = exporter.Export()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Successfully exported cluster to", target)
 	return nil
 }
 

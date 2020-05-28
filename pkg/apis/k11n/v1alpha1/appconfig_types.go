@@ -58,6 +58,10 @@ func (c *AppConfig) GetAppName() string {
 	return c.Labels[AppLabel]
 }
 
+func (c *AppConfig) GetTarget() string {
+	return c.Labels[TargetLabel]
+}
+
 func (c *AppConfig) GetConfig() map[string]interface{} {
 	if c.ConfigYaml == nil {
 		return nil

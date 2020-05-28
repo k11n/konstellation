@@ -37,6 +37,9 @@ type AppSpec struct {
 	Configs []string `json:"configs,omitempty"`
 
 	// +optional
+	Dependencies []AppReference `json:"dependencies,omitempty"`
+
+	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 	// +optional
 	Scale ScaleSpec `json:"scale,omitempty"`
@@ -50,7 +53,7 @@ type AppSpec struct {
 
 // AppStatus defines the observed state of App
 type AppStatus struct {
-	ActiveTargets []string `json:"activeTargets"`
+	ActiveTargets []string `json:"activeTargets,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -129,6 +132,15 @@ type TargetConfig struct {
 type IngressConfig struct {
 	Hosts []string `json:"hosts"`
 	Port  string   `json:"port"`
+}
+
+type AppReference struct {
+	Name string `json:"name"`
+
+	// +optional
+	Target string `json:"target,omitempty"`
+	// +optional
+	Port string `json:"port,omitempty"`
 }
 
 func init() {
