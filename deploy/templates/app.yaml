@@ -12,7 +12,9 @@ spec:
   imageTag: {{.DockerTag}}
 
   # Set command to override the default CMD in your docker image
-#  command: cmd_to_run
+#  command:
+#    - cmd
+#    - arg
 
   # Port configuration,
   # Change port below to match the port that your app runs on

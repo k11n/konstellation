@@ -10,14 +10,14 @@ import (
 	"github.com/k11n/konstellation/pkg/utils/cli"
 )
 
-func KubeApplyFile(filename string) error {
+func KubeApplyFile(filename string, context string) error {
 	filepath, err := TempfileFromDeployResource(filename)
 	if err != nil {
 		return err
 	}
 	defer os.Remove(filepath)
 
-	return cli.KubeCtl("apply", "-f", filepath)
+	return cli.KubeCtl("apply", "--context", context, "-f", filepath)
 }
 
 func TempfileFromDeployResource(name string) (temppath string, err error) {

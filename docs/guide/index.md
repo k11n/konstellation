@@ -49,6 +49,8 @@ This setup needs to be performed only once.
 
 ## Creating a cluster
 
+A cluster is the hosting container for your apps. It represents a Kubernetes cluster, and will make use of a configurable number of nodes.
+
 ```bash
 % kon cluster create
 ```

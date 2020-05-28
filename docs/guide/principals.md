@@ -2,11 +2,13 @@
 
 ## Why Konstellation
 
-Kubernetes has become the de-facto standard for running workloads on machines. It's been adopted by tech companies big and small. It's also got a vibrant ecosystem, with many wonderful projects that are built on top of Kubernetes, solving [these](https://github.com/kubernetes/autoscaler) [important](https://istio.io/) [problems](https://github.com/kubernetes-sigs/aws-alb-ingress-controller).
+Kubernetes is quickly becoming the de-facto standard for running workloads on machines. It's been embraced by Fortune 500s as well as fast-growing startups. It's got a vibrant ecosystem, with many wonderful projects that are built on top of Kubernetes, solving [these](https://github.com/kubernetes/autoscaler) [important](https://istio.io/) [problems](https://github.com/kubernetes-sigs/aws-alb-ingress-controller).
 
 However, the learning curve remains steep for developers. For many, using kubernetes means spending days learning about various components, and copying YAML definitions from Medium articles to make it all work. Even when it's set up, it remains a challenge to operate it: from things like rolling back a bad release, to figuring out how to update components to a new version. These are outside of scope of Kubernetes itself, and yet are important problems when operating a production cluster.
 
-Given the plethora of components that are out there, you have to become proficient in each one to know when to use it, and how to make it work for your needs. As you can imagine, that's a non-trivial amount of knowledge that can become a nightmare to keep track of. Companies with scale can devote internal teams to build tools to make working with Kubernetes more practical. In fact, I've worked at two companies that did exactly that. After deciding to adopt Kubernetes, they spent the subsequent months developing internal tools to make it usable. Having been through this experience twice, I wanted a set of tools that's open source, and simplifies the process by adopting the best practices.
+Given the plethora of components that are out there, you have to become proficient in each one to know when to use it, and how to make it work for your needs. As you can imagine, that's a non-trivial amount of knowledge that can become a nightmare to keep track of. Companies with scale devote internal teams to build tooling around Kubernetes in order to make all that manageable. But those tools primary stay in-house, and each company has to reinvent the wheel.
+
+The inspiration for Konstellation came from having worked at two companies that did exactly that. After deciding to adopt Kubernetes, they spent the subsequent months developing internal tools to make it usable. Having been through this experience twice, I wanted an open source set of tools that can solve these pain points; but none existed.
 
 With that thought, I wrote the first line of code for Konstellation in November 2019. From the onset, my goal is to create a solution as simple to use as Heroku, while running on a robust layer that Kubernetes is known for. Konstellation should give you all of the tools necessary to deploy and operate your apps on Kubernetes.
 

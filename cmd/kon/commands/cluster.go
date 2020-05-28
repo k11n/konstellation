@@ -278,7 +278,7 @@ func clusterCreate(c *cli.Context) error {
 
 	// generate config to use with Kube
 	updateClusterLocations()
-	if err = ac.generateKubeConfig(); err != nil {
+	if err = generateKubeConfig(); err != nil {
 		return err
 	}
 
@@ -388,14 +388,14 @@ func clusterSelect(clusterName string) error {
 		Manager: cm,
 		Cluster: clusterName,
 	}
+	conf := config.GetConfig()
+	conf.SelectedCluster = clusterName
 
-	err = ac.generateKubeConfig()
+	err = generateKubeConfig()
 	if err != nil {
 		return err
 	}
 
-	conf := config.GetConfig()
-	conf.SelectedCluster = clusterName
 	err = conf.Persist()
 	if err != nil {
 		return err
@@ -510,8 +510,9 @@ type activeCluster struct {
 func (c *activeCluster) loadResourcesIntoKube() error {
 	// load new resources into kube
 	fmt.Println("Loading custom resource definitions into Kubernetes...")
+	contextName := resources.ContextNameForCluster(c.Manager.Cloud(), c.Cluster)
 	for _, file := range kube.KUBE_RESOURCES {
-		err := utils.KubeApplyFile(file)
+		err := utils.KubeApplyFile(file, contextName)
 		if err != nil {
 			return errors.Wrapf(err, "Unable to apply config %s", file)
 		}
@@ -519,7 +520,6 @@ func (c *activeCluster) loadResourcesIntoKube() error {
 
 	err := utils.WaitUntilComplete(utils.ShortTimeoutSec, utils.MediumCheckInterval, func() (bool, error) {
 		// use a new kclient to avoid caching
-		contextName := resources.ContextNameForCluster(c.Manager.Cloud(), c.Cluster)
 		kclient, err := kube.KubernetesClientWithContext(contextName)
 		if err != nil {
 			return false, err
@@ -634,7 +634,26 @@ func (c *activeCluster) installComponents() error {
 	return nil
 }
 
-func (c *activeCluster) generateKubeConfig() error {
+func (c *activeCluster) kubernetesClient() client.Client {
+	if c.kclient == nil {
+		err := c.initClient()
+		if err != nil {
+			log.Fatalf("Unable to acquire client to Kubernetes, err: %v", err)
+		}
+	}
+	return c.kclient
+}
+
+func (c *activeCluster) initClient() error {
+	kclient, err := kube.KubernetesClientWithContext(resources.ContextNameForCluster(c.Manager.Cloud(), c.Cluster))
+	if err != nil {
+		return errors.Wrap(err, "Unable to create Kubernetes Client")
+	}
+	c.kclient = kclient
+	return nil
+}
+
+func generateKubeConfig() error {
 	// spec from: https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins
 	// find current executable path
 	cmdPath, err := os.Executable()
@@ -644,6 +663,16 @@ func (c *activeCluster) generateKubeConfig() error {
 	cmdPath, err = filepath.Abs(cmdPath)
 	if err != nil {
 		return err
+	}
+
+	var selectedCluster, selectedCloud string
+	if config.GetConfig().SelectedCluster != "" {
+		selectedCluster = config.GetConfig().SelectedCluster
+		cm, err := ClusterManagerForCluster(selectedCluster)
+		if err != nil {
+			return err
+		}
+		selectedCloud = cm.Cloud()
 	}
 
 	clusterConfs := []*resources.KubeClusterConfig{}
@@ -657,7 +686,7 @@ func (c *activeCluster) generateKubeConfig() error {
 		if err != nil {
 			return err
 		}
-		for i, cluster := range clusters {
+		for _, cluster := range clusters {
 			cc := &resources.KubeClusterConfig{
 				Cloud:       cm.Cloud(),
 				Cluster:     cluster.Name,
@@ -666,8 +695,8 @@ func (c *activeCluster) generateKubeConfig() error {
 			}
 			clusterConfs = append(clusterConfs, cc)
 
-			if c.Manager.Cloud() == cm.Cloud() && c.Cluster == cluster.Name {
-				selectedIdx = i
+			if selectedIdx == -1 || (selectedCluster == cluster.Name && selectedCloud == cm.Cloud()) {
+				selectedIdx = len(clusterConfs) - 1
 			}
 		}
 	}
@@ -688,8 +717,7 @@ func (c *activeCluster) generateKubeConfig() error {
 		_, err = prompt.Run()
 		if err != nil {
 			// prompt aborted
-			fmt.Printf("selecting a cluster requires writing to ~/.kube/config. To try this again run `%s cluster select --cluster %s`\n",
-				config.ExecutableName, c.Cluster)
+			fmt.Println("Konstellation requires updating ~/.kube/config. Please try this again")
 			return fmt.Errorf("select aborted")
 		}
 	}
@@ -721,25 +749,6 @@ func (c *activeCluster) generateKubeConfig() error {
 		return err
 	}
 	return ioutil.WriteFile(cp, []byte(checksum), files.DefaultFileMode)
-}
-
-func (c *activeCluster) kubernetesClient() client.Client {
-	if c.kclient == nil {
-		err := c.initClient()
-		if err != nil {
-			log.Fatalf("Unable to acquire client to Kubernetes, err: %v", err)
-		}
-	}
-	return c.kclient
-}
-
-func (c *activeCluster) initClient() error {
-	kclient, err := kube.KubernetesClientWithContext(resources.ContextNameForCluster(c.Manager.Cloud(), c.Cluster))
-	if err != nil {
-		return errors.Wrap(err, "Unable to create Kubernetes Client")
-	}
-	c.kclient = kclient
-	return nil
 }
 
 func ensureClusterSelected() error {
