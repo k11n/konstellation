@@ -41,6 +41,8 @@ func (e *Exporter) Export() error {
 	// target/
 	//   apps/
 	//     app-name.yaml
+	//   builds/
+	//     build-name.yaml
 	//   configs/
 	//     app/
 	//       app-name.yaml
@@ -56,6 +58,10 @@ func (e *Exporter) Export() error {
 	}
 
 	if err := e.ExportApps(path.Join(e.targetPath, "apps")); err != nil {
+		return err
+	}
+
+	if err := e.ExportBuilds(path.Join(e.targetPath, "builds")); err != nil {
 		return err
 	}
 
@@ -117,6 +123,28 @@ func (e *Exporter) ExportApps(appsDir string) error {
 		err = e.encoder.Encode(&app, f)
 		if err == nil && e.printStatus {
 			fmt.Println("exported app", app.Name)
+		}
+		return err
+	})
+	return err
+}
+
+func (e *Exporter) ExportBuilds(buildsDir string) error {
+	err := os.MkdirAll(buildsDir, files.DefaultDirectoryMode)
+	if err != nil {
+		return err
+	}
+	err = ForEach(e.client, &v1alpha1.BuildList{}, func(item interface{}) error {
+		build := item.(v1alpha1.Build)
+		f, err := os.Create(path.Join(buildsDir, build.Name+".yaml"))
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		err = e.encoder.Encode(&build, f)
+		if err == nil && e.printStatus {
+			fmt.Println("exported build", build.Name)
 		}
 		return err
 	})
