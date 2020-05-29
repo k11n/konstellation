@@ -237,6 +237,7 @@ func (a *TerraformAction) GetOutput() (content []byte, err error) {
 	cmd.Dir = a.WorkingDir
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = buf
+	cmd.Env = a.getEnvVars()
 
 	if err = cmd.Run(); err != nil {
 		return
