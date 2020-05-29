@@ -43,6 +43,19 @@ spec:
               items:
                 type: string
               type: array
+            dependencies:
+              items:
+                properties:
+                  name:
+                    type: string
+                  port:
+                    type: string
+                  target:
+                    type: string
+                required:
+                - name
+                type: object
+              type: array
             image:
               type: string
             image_tag:
@@ -775,8 +788,6 @@ spec:
               items:
                 type: string
               type: array
-          required:
-          - activeTargets
           type: object
       type: object
   version: v1alpha1
