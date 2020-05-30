@@ -49,18 +49,36 @@ spec:
             args:
               items:
                 type: string
+              nullable: true
               type: array
             build:
               type: string
             command:
               items:
                 type: string
+              nullable: true
               type: array
             configs:
               items:
                 type: string
+              nullable: true
+              type: array
+            dependencies:
+              items:
+                properties:
+                  name:
+                    type: string
+                  port:
+                    type: string
+                  target:
+                    type: string
+                required:
+                - name
+                type: object
+              nullable: true
               type: array
             ingress:
+              nullable: true
               properties:
                 hosts:
                   items:
@@ -87,6 +105,7 @@ spec:
                 - name
                 - port
                 type: object
+              nullable: true
               type: array
             probes:
               properties:

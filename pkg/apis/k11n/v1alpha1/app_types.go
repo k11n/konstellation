@@ -21,28 +21,42 @@ type AppSpec struct {
 	Registry string `json:"registry,omitempty"`
 	Image    string `json:"image"`
 
+	// +kubebuilder:validation:Optional
 	// +optional
 	Ports []PortSpec `json:"ports,omitempty"`
 
 	// +optional
 	ImageTag string `json:"image_tag,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +nullable
 	// +optional
 	Command []string `json:"command,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +nullable
 	// +optional
 	Args []string `json:"args,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +nullable
 	// +optional
 	Configs []string `json:"configs,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +nullable
 	// +optional
 	Dependencies []AppReference `json:"dependencies,omitempty"`
 
+	// +kubebuilder:validation:Optional
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// +kubebuilder:validation:Optional
 	// +optional
 	Scale ScaleSpec `json:"scale,omitempty"`
+
+	// +kubebuilder:validation:Optional
 	// +optional
 	Probes ProbeConfig `json:"probes,omitempty"`
 

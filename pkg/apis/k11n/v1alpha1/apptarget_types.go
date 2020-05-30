@@ -13,22 +13,39 @@ type AppTargetSpec struct {
 	Target string `json:"target"`
 	Build  string `json:"build"`
 
+	// +kubebuilder:validation:Optional
+	// +nullable
 	// +optional
 	Ports []PortSpec `json:"ports,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +nullable
 	// +optional
 	Command []string `json:"command,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +nullable
 	// +optional
 	Args []string `json:"args,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +nullable
 	// +optional
 	Configs []string `json:"configs,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +nullable
+	// +optional
+	Dependencies []AppReference `json:"dependencies,omitempty"`
+	// +kubebuilder:validation:Optional
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	// +kubebuilder:validation:Optional
 	// +optional
 	Scale ScaleSpec `json:"scale,omitempty"`
+	// +kubebuilder:validation:Optional
 	// +optional
 	Probes ProbeConfig `json:"probes,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +nullable
 	// +optional
 	Ingress *IngressConfig `json:"ingress,omitempty"`
 }
@@ -124,4 +141,8 @@ func (at *AppTarget) NeedsAutoscaler() bool {
 		return false
 	}
 	return true
+}
+
+func (at *AppTarget) ServiceHostName() string {
+	return fmt.Sprintf("%s.%s.svc.cluster.local", at.Spec.App, at.TargetNamespace())
 }

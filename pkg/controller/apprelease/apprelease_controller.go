@@ -103,7 +103,7 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 			return res, err
 		}
 	}
-	rs := newReplicaSetForAR(ar, build, cm)
+	rs := r.newReplicaSetForAR(ar, build, cm)
 
 	if ar.Spec.Role == v1alpha1.ReleaseRoleActive {
 		// TODO: update this with current replicaset replica count
@@ -191,7 +191,7 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	return res, err
 }
 
-func newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build, cm *corev1.ConfigMap) *appsv1.ReplicaSet {
+func (r *ReconcileAppRelease) newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build, cm *corev1.ConfigMap) *appsv1.ReplicaSet {
 	labels := labelsForAppRelease(ar)
 	labels[resources.BuildLabel] = build.Name
 
@@ -223,6 +223,18 @@ func newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build, cm *core
 			})
 		}
 	}
+
+	// check app dependencies and make urls available
+	for _, ref := range ar.Spec.Dependencies {
+		envs, err := resources.GetServiceHostEnvForReference(r.client, ref, ar.Spec.Target)
+		if err != nil {
+			log.Error(err, "could not resolve dependencies", "app", ar.Spec.App, "target", ar.Spec.Target, "dependency", ref.Name)
+		}
+		for _, e := range envs {
+			container.Env = append(container.Env, e)
+		}
+	}
+
 	podSpec := corev1.PodSpec{
 		Containers: []corev1.Container{
 			container,

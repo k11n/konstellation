@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/go-logr/logr"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -159,4 +160,8 @@ func ForEach(kclient client.Client, listObj runtime.Object, eachFunc func(item i
 		}
 	}
 	return nil
+}
+
+func ToEnvVar(s string) string {
+	return strings.ToUpper(strings.ReplaceAll(s, "-", "_"))
 }

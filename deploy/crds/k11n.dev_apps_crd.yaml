@@ -34,14 +34,17 @@ spec:
             args:
               items:
                 type: string
+              nullable: true
               type: array
             command:
               items:
                 type: string
+              nullable: true
               type: array
             configs:
               items:
                 type: string
+              nullable: true
               type: array
             dependencies:
               items:
@@ -55,6 +58,7 @@ spec:
                 required:
                 - name
                 type: object
+              nullable: true
               type: array
             image:
               type: string

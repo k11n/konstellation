@@ -16,6 +16,10 @@ release-operator: operator
 run-operator:
 	OPERATOR_NAME=k11n-operator operator-sdk run --local --operator-flags="--zap-devel"
 
+generate:
+	operator-sdk generate k8s
+	operator-sdk generate crds
+
 all: cli operator
 
-.PHONEY: deps release-operator run-operator vs
+.PHONEY: deps release-operator run-operator
