@@ -142,7 +142,3 @@ func (at *AppTarget) NeedsAutoscaler() bool {
 	}
 	return true
 }
-
-func (at *AppTarget) ServiceHostName() string {
-	return fmt.Sprintf("%s.%s.svc.cluster.local", at.Spec.App, at.TargetNamespace())
-}

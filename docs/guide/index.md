@@ -98,7 +98,7 @@ Once complete, then load your config into Kubernetes with
 
 That's it! With that, Konstellation will create all of the resources necessary to run your app on Kubernetes. It creates a native load balancer and outputs its address.
 
-The app config is persisted in Kubernetes, and can be edited at any time with `kon app edit <app>`
+The app manifest is persisted in Kubernetes, and can be edited at any time with `kon app edit <app>`
 
 ### Checking app status
 

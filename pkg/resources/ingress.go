@@ -54,7 +54,3 @@ func GetKonIngress(kclient client.Client) (*netv1beta1.Ingress, error) {
 	}
 	return &ingress, nil
 }
-
-func MatchesHost(mainHost string, matchingHost string) bool {
-	return true
-}

@@ -7,14 +7,14 @@ spec:
   # If using Amazon ECR in the same account as the Kubernetes cluster, it should have access to repos in Amazon ECR
   # If using other docker registries, ensure Kubernetes has access to them:
   # https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
-#  registry: registry_url
+  # registry: registry_url
   image: {{.DockerImage}}
   imageTag: {{.DockerTag}}
 
   # Set command to override the default CMD in your docker image
-#  command:
-#    - cmd
-#    - arg
+  command:
+    - cmd
+    - arg
 
   # Port configuration,
   # Change port below to match the port that your app runs on
@@ -24,22 +24,26 @@ spec:
       port: {{.Port}}
 
   # Any named configs your app requires
-#  configs:
-#    - name
+  # configs: ['name']
+
+  # Other apps that you depend on, their hostnames will be made available via env vars
+  # dependencies:
+  #   - name: other_app
+  #     port: http
 
   # Define resources that your app requires
   # with CPU, 1000m equals to a single core
-#  resources:
-#    requests:
-#      memory: '50Mi'
-#      cpu: '100m'
-#    limits:
-#      memory: '200Mi'
-#      cpu: '200m'
+  # resources:
+  #   requests:
+  #     memory: '50Mi'
+  #     cpu: '100m'
+  #   limits:
+  #     memory: '200Mi'
+  #     cpu: '200m'
 
   # Scaling configuration
-#  scale:
-#    targetCPUUtilizationPercentage: 60
+  # scale:
+  #   targetCPUUtilizationPercentage: 60
 
   # Probes
   # * liveness: restarts this pod if probe does not return 200
@@ -48,20 +52,20 @@ spec:
   # - initialDelaySeconds: amount of time to wait before probes should start
   # - timeoutSeconds: amount of time to allow the probes to wait
   # - periodSeconds: frequency of probe pings
-#  probes:
-#      initialDelaySeconds: 15
-#      timeoutSeconds: 3
-#      periodSeconds: 10
-#      liveness:
-#        httpGet:
-#          path: /running
-#          port: http
-#        failureThreshold: 3
-#      readiness:
-#        httpGet:
-#          path: /ready
-#          port: http
-#        failureThreshold: 6
+  # probes:
+  #     initialDelaySeconds: 15
+  #     timeoutSeconds: 3
+  #     periodSeconds: 10
+  #     liveness:
+  #       httpGet:
+  #         path: /running
+  #         port: http
+  #       failureThreshold: 3
+  #     readiness:
+  #       httpGet:
+  #         path: /ready
+  #         port: http
+  #       failureThreshold: 6
 
   # One or more targets to deploy your app to
   # Uncomment ingress to create a load balancer and/or handle SSL termination for your host
@@ -71,10 +75,9 @@ spec:
   targets:
     - name: {{.Target}}
       scale: {min: 1, max: 5}
-#      ingress:
-#        hosts:
-#          - www.yourhost.com
-#        port: http
-#      resources:
-#      probes:
-#
+      # ingress:
+      #   hosts:
+      #     - www.yourhost.com
+      #   port: http
+      # resources:
+      # probes:

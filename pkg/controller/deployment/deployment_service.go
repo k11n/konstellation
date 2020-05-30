@@ -159,7 +159,7 @@ func newDestinationRule(at *v1alpha1.AppTarget, service *corev1.Service, release
 			Namespace: at.TargetNamespace(),
 		},
 		Spec: istionetworking.DestinationRule{
-			Host:    resources.GetServiceDNS(service),
+			Host:    resources.ServiceHostname(service.Namespace, service.Name),
 			Subsets: subsets,
 			// TODO: allow other types of connections
 			TrafficPolicy: &istionetworking.TrafficPolicy{
@@ -179,7 +179,7 @@ func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases
 	ls := labelsForAppTarget(at)
 	name := at.Spec.App
 
-	svcHost := resources.GetServiceDNS(service)
+	svcHost := resources.ServiceHostname(service.Namespace, service.Name)
 	allHosts := []string{
 		svcHost,
 	}

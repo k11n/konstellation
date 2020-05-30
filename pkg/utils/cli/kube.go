@@ -58,7 +58,7 @@ func NewKubeProxy() *KubeProxy {
 	return &KubeProxy{}
 }
 
-func NewKubeProxyForService(kclient client.Client, namespace, service string) (kp *KubeProxy, err error) {
+func NewKubeProxyForService(kclient client.Client, namespace, service string, port int) (kp *KubeProxy, err error) {
 	// find port for service
 	svc, err := resources.GetService(kclient, namespace, service)
 	if err != nil {
@@ -69,10 +69,14 @@ func NewKubeProxyForService(kclient client.Client, namespace, service string) (k
 		err = fmt.Errorf("Service does not have any ports")
 		return
 	}
+
+	if port == 0 {
+		port = int(svc.Spec.Ports[0].Port)
+	}
 	kp = &KubeProxy{
 		Namespace:   namespace,
 		Service:     service,
-		ServicePort: int(svc.Spec.Ports[0].Port),
+		ServicePort: port,
 	}
 
 	return
@@ -149,8 +153,12 @@ func (p *KubeProxy) Stop() {
 	p.started = false
 }
 
+func (p *KubeProxy) URL() string {
+	return fmt.Sprintf("http://%s", p.HostWithPort())
+}
+
 func (p *KubeProxy) HostWithPort() string {
-	return fmt.Sprintf("http://localhost:%d", p.LocalPort)
+	return fmt.Sprintf("localhost:%d", p.LocalPort)
 }
 
 func (p *KubeProxy) findUnusedPort(initial int) (int, error) {

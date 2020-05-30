@@ -39,7 +39,7 @@ myapp-20200421-1102-b723    registry/myapp:1     2020-04-21 11:02:03    0       
 
 ## One config to rule them all
 
-Konstellation provides high level custom resources and then manages native Kubernetes resources behind the scenes. This means the end of copying and pasting resource templates that you don't understand. The following app config would set up ReplicaSets, Service, Autoscaler, Ingress, along with the necessary resources for the service mesh.
+Konstellation provides high level custom resources and then manages native Kubernetes resources behind the scenes. This means the end of copying and pasting resource templates that you don't understand. The following app manifest would set up ReplicaSets, Service, Autoscaler, Ingress, along with the necessary resources for the service mesh.
 
 ```yaml
 apiVersion: k11n.dev/v1alpha1

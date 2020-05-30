@@ -5,13 +5,16 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/manifoldco/promptui"
 	"github.com/olekukonko/tablewriter"
+	errorshelper "github.com/pkg/errors"
 	"github.com/spf13/cast"
 	"github.com/thoas/go-funk"
 	"github.com/urfave/cli/v2"
@@ -95,8 +98,8 @@ var AppCommands = []*cli.Command{
 			},
 			{
 				Name:      "local",
-				Usage:     "Run app locally with config environment",
-				ArgsUsage: "<appName> <executable> [args...]",
+				Usage:     "Run app locally with cluster environment. The first argument must be the name of your app in the cluster OR path to app.yaml",
+				ArgsUsage: "<app name or manifest> <executable> [args...]",
 				Action:    appLocal,
 				Flags: []cli.Flag{
 					targetFlag,
@@ -505,24 +508,92 @@ func appLocal(c *cli.Context) error {
 
 	kclient := ac.kubernetesClient()
 
-	pc, err := chooseReleaseHelper(kclient, c)
-	if err != nil {
-		return err
-	}
+	var app *v1alpha1.App
+	target := c.String("target")
+	// Load app or manifest
+	if _, err := os.Stat(c.Args().Get(0)); err == nil {
+		content, err := ioutil.ReadFile(c.Args().Get(0))
+		if err != nil {
+			return err
+		}
+		obj, _, err := kube.GetKubeDecoder().Decode(content, nil, &v1alpha1.App{})
+		if err != nil {
+			return err
+		}
+		app = obj.(*v1alpha1.App)
+	} else {
+		// not a file, assume it's an app name
+		appName, err := getAppArg(c)
+		if err != nil {
+			return err
+		}
 
-	release, err := resources.GetAppRelease(kclient, pc.app, pc.target, pc.release)
-	if err != nil {
-		return err
-	}
-
-	// find the config map
-	var cm *corev1.ConfigMap
-	if release.Spec.Config != "" {
-		cm, err = resources.GetConfigMap(kclient, release.Namespace, release.Spec.Config)
+		app, err = resources.GetAppByName(kclient, appName)
 		if err != nil {
 			return err
 		}
 	}
+
+	if len(app.Spec.Targets) == 0 {
+		return fmt.Errorf("app does not have any targets")
+	}
+
+	if target == "" {
+		target = app.Spec.Targets[0].Name
+	}
+
+	// find config dependencies and create configmap
+	appConfig, err := resources.GetMergedConfigForType(kclient, v1alpha1.ConfigTypeApp, app.Name, target)
+	if err != nil {
+		return err
+	}
+
+	// find other configmaps
+	sharedConfigs := make([]*v1alpha1.AppConfig, 0, len(app.Spec.Configs))
+	for _, config := range app.Spec.Configs {
+		sc, cErr := resources.GetMergedConfigForType(kclient, v1alpha1.ConfigTypeShared, config, target)
+		if cErr != nil {
+			return fmt.Errorf("could not find shared config: %s", config)
+		}
+		sharedConfigs = append(sharedConfigs, sc)
+	}
+
+	// find the config map
+	var cm *corev1.ConfigMap
+	if appConfig != nil || len(sharedConfigs) > 0 {
+		cm = resources.CreateConfigMap(appConfig, sharedConfigs)
+	}
+
+	// find dependencies
+	var deps []resources.DependencyInfo
+	for _, ref := range app.Spec.Dependencies {
+		refDeps, err := resources.GetDependencyInfos(kclient, ref, target)
+		if err != nil {
+			return errorshelper.Wrapf(err, "could not find dependency for %s", ref.Name)
+		}
+		deps = append(deps, refDeps...)
+	}
+
+	// start proxies to these services if needed
+	if len(deps) > 0 {
+		fmt.Println("Starting proxies for dependencies...")
+	}
+	proxies := make([]*utilscli.KubeProxy, len(deps))
+	for i, dep := range deps {
+		proxy, err := utilscli.NewKubeProxyForService(kclient, dep.Namespace, dep.Service, dep.Port)
+		if err != nil {
+			// ignore this and log a warning
+			log.Printf("Could not create proxy to dependency %s: %v\n", dep.Service, err)
+			continue
+		}
+		if err = proxy.Start(); err != nil {
+			return err
+		}
+		defer proxy.Stop()
+		proxies[i] = proxy
+	}
+	// give it a second for subcommands to start
+	time.Sleep(1 * time.Second)
 
 	args := c.Args().Slice()[1:]
 	fmt.Printf("Running %s...\n", strings.Join(args, " "))
@@ -539,8 +610,30 @@ func appLocal(c *cli.Context) error {
 			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, utilscli.EscapeEnvVar(val)))
 		}
 	}
+	for i, dep := range deps {
+		proxy := proxies[i]
+		if proxy == nil {
+			continue
+		}
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", dep.HostKey(), proxy.HostWithPort()))
+	}
 
-	return cmd.Run()
+	if len(cmd.Env) > 0 {
+		fmt.Println("environment:")
+		for _, e := range cmd.Env {
+			fmt.Println("  ", e)
+		}
+	}
+
+	err = cmd.Run()
+	for _, proxy := range proxies {
+		if proxy != nil {
+			// ensure clean shutdown
+			proxy.WaitUntilDone()
+		}
+	}
+
+	return err
 }
 
 func appLogs(c *cli.Context) error {

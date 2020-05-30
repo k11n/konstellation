@@ -1,6 +1,8 @@
-# App.yaml
+# App Manifest
 
-The main entry point, the app config is the single source of truth to how an app should be deployed. This section serves as a reference to the nitty gritty details of the app yaml.
+## App.yaml
+
+The main entry point, the app manifest is the single source of truth to how an app should be deployed. This section serves as a reference to the nitty gritty details of the app yaml.
 
 | Field         | Type            | Required | Description                    |
 |:------------- |:--------------- |:-------- |:------------------------------ |

@@ -61,10 +61,10 @@ func kubeDashboard(c *cli.Context) error {
 	}
 
 	// launch web browser after delay
-	fmt.Printf("Launching Kubernetes Dashboard: %s\n", proxy.HostWithPort())
+	fmt.Printf("Launching Kubernetes Dashboard: %s\n", proxy.URL())
 
 	time.Sleep(2 * time.Second)
-	browser.OpenURL(proxy.HostWithPort() + kubedash.ProxyPath)
+	browser.OpenURL(proxy.URL() + kubedash.ProxyPath)
 
 	proxy.WaitUntilDone()
 	return nil
@@ -86,7 +86,7 @@ func kialiDashboard(c *cli.Context) error {
 	fmt.Printf("Passphrase: %s\n\n", secret.Data["passphrase"])
 
 	// run proxy
-	proxy, err := koncli.NewKubeProxyForService(ac.kubernetesClient(), "istio-system", "kiali")
+	proxy, err := koncli.NewKubeProxyForService(ac.kubernetesClient(), "istio-system", "kiali", 0)
 	if err != nil {
 		return err
 	}
@@ -94,11 +94,11 @@ func kialiDashboard(c *cli.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to start kubernetes proxy")
 	}
-	fmt.Printf("Launching Kiali Dashboard: %s\n", proxy.HostWithPort())
+	fmt.Printf("Launching Kiali Dashboard: %s\n", proxy.URL())
 
 	// launch web browser after delay
 	time.Sleep(2 * time.Second)
-	browser.OpenURL(proxy.HostWithPort())
+	browser.OpenURL(proxy.URL())
 
 	proxy.WaitUntilDone()
 	return nil
