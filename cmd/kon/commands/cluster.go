@@ -86,6 +86,18 @@ var ClusterCommands = []*cli.Command{
 				},
 			},
 			{
+				Name:   "import",
+				Usage:  "import apps, builds, and configs into the selected cluster",
+				Action: clusterImport,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "dir",
+						Usage:    "directory to import cluster data from",
+						Required: true,
+					},
+				},
+			},
+			{
 				Name:   "list",
 				Usage:  "list clusters",
 				Action: clusterList,
@@ -315,6 +327,23 @@ func clusterExport(c *cli.Context) error {
 	}
 
 	fmt.Println("Successfully exported cluster to", target)
+	return nil
+}
+
+func clusterImport(c *cli.Context) error {
+	source := c.String("dir")
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+
+	importer := resources.NewImporter(ac.kubernetesClient(), source)
+	err = importer.Import()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Successfully imported settings into cluster")
 	return nil
 }
 

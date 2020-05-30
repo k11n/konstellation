@@ -5,19 +5,46 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
+// handles exports and importing cluster settings to files
+// the exported data should be in this structure
+// target/
+//   apps/
+//     app-name.yaml
+//   builds/
+//     build-name.yaml
+//   configs/
+//     app/
+//       app-name.yaml
+//       target/
+//         app-name.yaml
+//     shared/
+//       name.yaml
+//       target/
+//         app-name.yaml
+
 type Exporter struct {
 	client      client.Client
 	targetPath  string
 	encoder     runtime.Encoder
+	printStatus bool
+}
+
+type Importer struct {
+	client      client.Client
+	sourcePath  string
+	decoder     runtime.Decoder
 	printStatus bool
 }
 
@@ -36,23 +63,16 @@ func NewExporter(kclient client.Client, targetPath string) *Exporter {
 	}
 }
 
-func (e *Exporter) Export() error {
-	// create directory structure
-	// target/
-	//   apps/
-	//     app-name.yaml
-	//   builds/
-	//     build-name.yaml
-	//   configs/
-	//     app/
-	//       app-name.yaml
-	//       target/
-	//         app-name.yaml
-	//     shared/
-	//       name.yaml
-	//       target/
-	//         app-name.yaml
+func NewImporter(kclient client.Client, sourcePath string) *Importer {
+	return &Importer{
+		client:      kclient,
+		sourcePath:  sourcePath,
+		decoder:     clientgoscheme.Codecs.UniversalDeserializer(),
+		printStatus: true,
+	}
+}
 
+func (e *Exporter) Export() error {
 	if err := os.MkdirAll(e.targetPath, files.DefaultDirectoryMode); err != nil {
 		return err
 	}
@@ -185,4 +205,176 @@ func (e *Exporter) ExportConfigs(configsDir string) error {
 	})
 
 	return err
+}
+
+func (i *Importer) Import() error {
+	// Import in this order: builds, configs, apps
+	// when apps are imported, it'll create builds when missing.
+	// apps will also create releases.. so it'd be ideal to avoid useless releases
+	if err := i.ImportBuilds(path.Join(i.sourcePath, "builds")); err != nil {
+		return err
+	}
+
+	if err := i.ImportConfigs(path.Join(i.sourcePath, "configs")); err != nil {
+		return err
+	}
+
+	if err := i.ImportApps(path.Join(i.sourcePath, "apps")); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (i *Importer) ImportApps(appsDir string) error {
+	files, err := ioutil.ReadDir(appsDir)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			fmt.Println("Unexpected directory", f.Name())
+			continue
+		}
+		content, err := ioutil.ReadFile(path.Join(appsDir, f.Name()))
+		if err != nil {
+			return err
+		}
+		obj, _, err := i.decoder.Decode(content, nil, &v1alpha1.App{})
+		if err != nil {
+			return err
+		}
+
+		app := obj.(*v1alpha1.App)
+		app.Generation = 0
+		app.ResourceVersion = ""
+		app.UID = ""
+		app.SetSelfLink("")
+
+		// load into cluster
+		if _, err = UpdateResource(i.client, app, nil, nil); err != nil {
+			return errors.Wrapf(err, "could not import app: %s", app.Name)
+		}
+		if i.printStatus {
+			fmt.Println("Imported app", app.Name)
+		}
+	}
+	return nil
+}
+
+func (i *Importer) ImportBuilds(buildsDir string) error {
+	files, err := ioutil.ReadDir(buildsDir)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			fmt.Println("Unexpected directory", f.Name())
+			continue
+		}
+		content, err := ioutil.ReadFile(path.Join(buildsDir, f.Name()))
+		if err != nil {
+			return err
+		}
+		obj, _, err := i.decoder.Decode(content, nil, &v1alpha1.Build{})
+		if err != nil {
+			return err
+		}
+
+		build := obj.(*v1alpha1.Build)
+		build.Generation = 0
+		build.ResourceVersion = ""
+		build.UID = ""
+		build.SetSelfLink("")
+
+		// load into cluster
+		if _, err = UpdateResource(i.client, build, nil, nil); err != nil {
+			return err
+		}
+		if i.printStatus {
+			fmt.Println("Imported build", build.Name)
+		}
+	}
+	return nil
+}
+
+type configImport struct {
+	dir      string
+	confType v1alpha1.ConfigType
+}
+
+func (i *Importer) ImportConfigs(configsDir string) error {
+	configSets := []configImport{
+		{
+			dir:      path.Join(configsDir, "app"),
+			confType: v1alpha1.ConfigTypeApp,
+		},
+		{
+			dir:      path.Join(configsDir, "shared"),
+			confType: v1alpha1.ConfigTypeShared,
+		},
+	}
+
+	for _, ci := range configSets {
+		if _, err := os.Stat(ci.dir); err != nil {
+			continue
+		}
+
+		files, err := ioutil.ReadDir(ci.dir)
+		if err != nil {
+			return err
+		}
+
+		// import files directly, and directories as targets
+		for _, f := range files {
+			itemPath := path.Join(ci.dir, f.Name())
+			if f.IsDir() {
+				subfiles, err := ioutil.ReadDir(itemPath)
+				if err != nil {
+					return err
+				}
+				target := f.Name()
+				for _, subf := range subfiles {
+					if subf.IsDir() {
+						return fmt.Errorf("unexpected directory: %s", path.Join(itemPath, subf.Name()))
+					}
+					if err = i.importConfig(path.Join(itemPath, subf.Name()), ci.confType, target); err != nil {
+						return err
+					}
+					if i.printStatus {
+						fmt.Printf("Imported %s config %s (target %s)\n", ci.confType, subf.Name(), target)
+					}
+				}
+			} else {
+				if err = i.importConfig(itemPath, ci.confType, ""); err != nil {
+					return err
+				}
+				if i.printStatus {
+					fmt.Printf("Imported %s config %s\n", ci.confType, f.Name())
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func (i *Importer) importConfig(filename string, confType v1alpha1.ConfigType, target string) error {
+	name := path.Base(filename)
+	var extension = filepath.Ext(name)
+	name = name[0 : len(name)-len(extension)]
+
+	var conf *v1alpha1.AppConfig
+	if confType == v1alpha1.ConfigTypeApp {
+		conf = v1alpha1.NewAppConfig(name, target)
+	} else {
+		conf = v1alpha1.NewSharedConfig(name, target)
+	}
+
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	conf.ConfigYaml = data
+	return SaveAppConfig(i.client, conf)
 }
