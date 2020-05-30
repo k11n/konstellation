@@ -2,21 +2,13 @@
 
 ## Targets
 
-Target is a concept in Konstellation that provides a namespace for your app. The goal of having this layer is to enable you to run different environments for the same app. For example, you could run a production and a development environment, with different configurations for number of instances to run, and hostnames.
+Target is a concept in Konstellation that provides a namespace for your app. A target is roughly equivalent to a specific environment of your app. For example, you could specify a production and a development target, with different configurations for hostnames, scale parameters, and receive target-specific configs.
 
-Your cluster would define the targets that it supports. When deploying an app to a cluster, it will set up a deployment for each target that your cluster supports. This configuration allows for the flexibility of using the same `app.yaml` across multiple clusters, if you prefer to have dedicated clusters for each target.
-
-Attributes for a target
-
-| Attribute | Type              | Required | Description             |
-| --------- | ----------------- |:--------:|:----------------------- |
-| name      | string            | yes      | Name of the target. It must match what's defined in your cluster config. |
-| ingress   |                   | no       | Specifies how to expose your app to the outside |
-| resources |                   | no       | Target specific resources requirements/limits   |
-| scale     |                   | no       | Target specific scaling definition              |
-| probes    |                   | no       | Target specific probes |
+Your cluster would define the targets that it supports with `kon cluster configure`. When deploying an app to a cluster, it will set up a deployment for each target that your cluster has declared. This configuration allows for the flexibility of using the same `app.yaml` across multiple clusters, if you prefer to have dedicated clusters for each target.
 
 Most target attributes can be defined on the app itself, and when running under that target, they are inherited from the base config. You may choose to override only specific portion of the attributes, and the result would be merged. The only attribute that's target-specific is `ingress`. Since ingress is specific to hostnames and exposing traffic to the outside world, it must be defined under the target.
+
+See [TargetConfig](appyaml.md#targetconfig)
 
 App.yaml example:
 

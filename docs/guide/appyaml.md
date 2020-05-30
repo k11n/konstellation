@@ -115,9 +115,27 @@ probes:
 
 Identical to [Kubernetes Resource Requirements](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
 
+Example
+
+```yaml
+resources:
+  requests:
+    memory: '100Mi'
+    cpu: '1000m'
+  limits:
+    memory: '200Mi'
+    cpu: '1200m'
+```
+
 ## ScaleSpec
 
-Placeholder
+Controls the scaling behavior of your app
+
+| Field                          | Type            | Required | Description                    |
+|:------------------------------ |:--------------- |:-------- |:------------------------------ |
+| targetCPUUtilizationPercentage | string          | no       | Scale up or down to get to this level of ideal CPU utilization
+| min                            | int             | no       | Min number of instances. Default 1
+| max                            | int             | no       | Max number of instances. Defaults to same as min
 
 ## TargetConfig
 
@@ -130,3 +148,9 @@ Defines for the behavior for the target. The target name must match one of the s
 | resources     | [ResourceRequirements](#resource-requirements) | no | Override the app's resource requirements
 | scale         | [ScaleSpec](#scalespec) | no | Override the app's scaling behavior
 | probes        | [ProbeConfig](#probeconfig) | no | Override the app's probes
+
+## Examples
+
+[Minimal example](https://github.com/k11n/konstellation/blob/master/examples/simple/2048.yaml)
+
+[Full example]()
