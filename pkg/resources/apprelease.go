@@ -88,7 +88,7 @@ func GetAppRelease(kclient client.Client, app, target, name string) (*v1alpha1.A
 }
 
 func SortAppReleasesByLatest(releases []*v1alpha1.AppRelease) {
-	sort.Slice(releases, func(i, j int) bool {
+	sort.SliceStable(releases, func(i, j int) bool {
 		if !releases[i].CreationTimestamp.IsZero() && !releases[j].CreationTimestamp.IsZero() {
 			return releases[i].CreationTimestamp.After(releases[j].CreationTimestamp.Time)
 		}

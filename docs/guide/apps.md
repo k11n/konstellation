@@ -150,12 +150,16 @@ When you edit a config by passing in a `--target` flag, it will create an overri
 
 To see the final config values that a specific release of your app will receive, use the `kon config show` command.
 
-## Running Locally
+## Running locally
 
 To make testing locally more convenient, Konstellation has a `local` mode that replicates the production config for your app. To use this, run `kon app local [--target target] <yourapp>`
 
 If a target is not passed in, it'll use the first target defined.
 
-## Deploying Updates
+When running locally, the same environment variables will be set for the configuration and hostnames of service dependencies. For service dependencies, proxies will be created on localhost that would allow you to connect to services running inside of the Kubernetes cluster.
+
+## Deploying new builds
+
+When you have a new docker build of your app.
 
 ## Rolling back

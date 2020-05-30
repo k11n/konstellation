@@ -165,7 +165,7 @@ aws (us-west-2)
 ------------------------------------------------------------------------
 ```
 
-Then use the `vpc destroy command`
+Then destroy it.
 
 ```text
 % kon vpc destroy --vpc <yourvpc>

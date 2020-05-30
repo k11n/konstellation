@@ -21,7 +21,7 @@ func GetIngressRequests(kclient client.Client) (requestList *v1alpha1.IngressReq
 	if err == nil {
 		requests := requestList.Items
 		// sort by creation time
-		sort.Slice(requests, func(i, j int) bool {
+		sort.SliceStable(requests, func(i, j int) bool {
 			// by creation time
 			return requests[j].CreationTimestamp.After(requests[i].CreationTimestamp.Time)
 		})
