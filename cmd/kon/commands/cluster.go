@@ -354,6 +354,9 @@ func clusterDestroy(c *cli.Context) error {
 		return err
 	}
 	cm, err := ClusterManagerForCluster(clusterName)
+	if err != nil {
+		return err
+	}
 
 	fmt.Printf("This will destroy the cluster %s, removing all of apps and configs on this cluster. This action cannot be reversed.\n", clusterName)
 
