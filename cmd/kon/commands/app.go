@@ -430,18 +430,26 @@ func appNew(c *cli.Context) error {
 }
 
 func appLoad(c *cli.Context) error {
-	app, err := getAppArg(c)
+	appFile, err := getAppArg(c)
 	if err != nil {
 		return err
 	}
 
-	_, err = getActiveCluster()
+	ac, err := getActiveCluster()
 	if err != nil {
 		return err
 	}
 
-	err = utilscli.KubeApply(app)
+	// convert it to an app and ensure it's not another type
+	content, err := ioutil.ReadFile(appFile)
 	if err != nil {
+		return err
+	}
+
+	obj, _, err := kube.GetKubeDecoder().Decode(content, nil, &v1alpha1.App{})
+	app := obj.(*v1alpha1.App)
+
+	if _, err := resources.UpdateResource(ac.kubernetesClient(), app, nil, nil); err != nil {
 		return err
 	}
 
@@ -561,7 +569,7 @@ func appLocal(c *cli.Context) error {
 	// find the config map
 	var cm *corev1.ConfigMap
 	if appConfig != nil || len(sharedConfigs) > 0 {
-		cm = resources.CreateConfigMap(appConfig, sharedConfigs)
+		cm = resources.CreateConfigMap(app.Name, appConfig, sharedConfigs)
 	}
 
 	// find dependencies
@@ -654,7 +662,7 @@ func appLogs(c *cli.Context) error {
 		verb = "following"
 	}
 	fmt.Printf("%s logs for pod %s\n", verb, pc.pod)
-	namespace := resources.NamespaceForAppTarget(pc.app, pc.target)
+	namespace := pc.target
 	args := []string{
 		"logs", pc.pod, "-n", namespace, "-c", "app",
 	}
@@ -680,7 +688,7 @@ func appPods(c *cli.Context) error {
 		return err
 	}
 
-	pods, err := resources.GetPodsForAppRelease(kclient, resources.NamespaceForAppTarget(pc.app, pc.target), pc.release)
+	pods, err := resources.GetPodsForAppRelease(kclient, pc.target, pc.release)
 	if err != nil {
 		return err
 	}
@@ -764,8 +772,7 @@ func appShell(c *cli.Context) error {
 	}
 
 	fmt.Printf("initializing shell to pod %s\n", pc.pod)
-	namespace := resources.NamespaceForAppTarget(pc.app, pc.target)
-	cmd := exec.Command("kubectl", "exec", "-n", namespace, "-it", pc.pod, "--container", "app", "--", c.String("shell"))
+	cmd := exec.Command("kubectl", "exec", "-n", pc.target, "-it", pc.pod, "--container", "app", "--", c.String("shell"))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -874,7 +881,7 @@ func selectAppTarget(kclient client.Client, appName string) (target string, err 
 }
 
 func selectAppPod(kclient client.Client, app, target, release string) (pod string, err error) {
-	pods, err := resources.GetPodsForAppRelease(kclient, resources.NamespaceForAppTarget(app, target), release)
+	pods, err := resources.GetPodsForAppRelease(kclient, target, release)
 
 	if len(pods) == 0 {
 		err = fmt.Errorf("No pods found")

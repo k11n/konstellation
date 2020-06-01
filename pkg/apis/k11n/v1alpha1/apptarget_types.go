@@ -106,7 +106,7 @@ func (at *AppTarget) ScopedName() string {
 }
 
 func (at *AppTarget) TargetNamespace() string {
-	return at.ScopedName()
+	return at.Spec.Target
 }
 
 func (at *AppTarget) DesiredInstances() int32 {

@@ -9,12 +9,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -165,11 +163,6 @@ func (r *ReconcileDeployment) Reconcile(request reconcile.Request) (res reconcil
 	// copy status to detect changes
 	atStatus := at.Status.DeepCopy()
 
-	err = r.ensureNamespaceCreated(at)
-	if err != nil {
-		return
-	}
-
 	// figure out configs
 	configMap, err := r.reconcileConfigMap(at)
 	if err != nil {
@@ -235,34 +228,6 @@ func (r *ReconcileDeployment) Reconcile(request reconcile.Request) (res reconcil
 	return
 }
 
-func (r *ReconcileDeployment) ensureNamespaceCreated(at *v1alpha1.AppTarget) error {
-	namespace := at.TargetNamespace()
-	_, err := resources.GetNamespace(r.client, namespace)
-	if err == nil {
-		return nil
-	}
-
-	// create a new one
-	n := corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
-			Labels: map[string]string{
-				resources.IstioInjectLabel: "enabled",
-				resources.AppLabel:         at.Spec.App,
-				resources.TargetLabel:      at.Spec.Target,
-				resources.ManagedByLabel:   resources.Konstellation,
-			},
-		},
-	}
-	// ensures namespace is cleaned up after app target is
-	err = controllerutil.SetControllerReference(at, &n, r.scheme)
-	if err != nil {
-		return err
-	}
-
-	return r.client.Create(context.TODO(), &n)
-}
-
 func (r *ReconcileDeployment) reconcileConfigMap(at *v1alpha1.AppTarget) (configMap *corev1.ConfigMap, err error) {
 	// grab app release for this app
 	ac, err := resources.GetMergedConfigForType(r.client, v1alpha1.ConfigTypeApp, at.Spec.App, at.Spec.Target)
@@ -288,12 +253,12 @@ func (r *ReconcileDeployment) reconcileConfigMap(at *v1alpha1.AppTarget) (config
 		// no config maps needed
 		return
 	}
-	configMap = resources.CreateConfigMap(ac, sharedConfigs)
-	_, err = resources.GetConfigMap(r.client, at.ScopedName(), configMap.Name)
+	configMap = resources.CreateConfigMap(at.Spec.App, ac, sharedConfigs)
+	_, err = resources.GetConfigMap(r.client, at.TargetNamespace(), configMap.Name)
 	if errors.IsNotFound(err) {
 		log.Info("Creating ConfigMap", "app", at.Spec.App, "target", at.Spec.Target)
 		// create new
-		configMap.Namespace = at.ScopedName()
+		configMap.Namespace = at.TargetNamespace()
 		err = r.client.Create(context.Background(), configMap)
 	}
 	return

@@ -158,7 +158,7 @@ func configShow(c *cli.Context) error {
 		return fmt.Errorf("Release %s does not have a config", release)
 	}
 
-	cm, err := resources.GetConfigMap(kclient, resources.NamespaceForAppTarget(ar.Spec.App, ar.Spec.Target), ar.Spec.Config)
+	cm, err := resources.GetConfigMap(kclient, ar.Spec.Target, ar.Spec.Config)
 	if err != nil {
 		return err
 	}

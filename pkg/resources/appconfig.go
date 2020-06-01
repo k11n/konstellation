@@ -117,7 +117,7 @@ func GetMergedConfigForType(kclient client.Client, confType v1alpha1.ConfigType,
 	return baseConfig, nil
 }
 
-func CreateConfigMap(ac *v1alpha1.AppConfig, sharedConfigs []*v1alpha1.AppConfig) *corev1.ConfigMap {
+func CreateConfigMap(appName string, ac *v1alpha1.AppConfig, sharedConfigs []*v1alpha1.AppConfig) *corev1.ConfigMap {
 	data := make(map[string]string)
 	if ac != nil {
 		data = ac.ToEnvMap()
@@ -143,7 +143,7 @@ func CreateConfigMap(ac *v1alpha1.AppConfig, sharedConfigs []*v1alpha1.AppConfig
 
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: hash,
+			Name: fmt.Sprintf("%s-%s", appName, hash[:6]),
 			Labels: map[string]string{
 				v1alpha1.ConfigHashLabel: hash,
 			},

@@ -46,7 +46,7 @@ func kubeDashboard(c *cli.Context) error {
 	}
 
 	// print token
-	secret, err := resources.GetSecretForAccount(ac.kubernetesClient(), resources.KubeSystemNamespace, resources.SERVICE_ACCOUNT_KON_ADMIN)
+	secret, err := resources.GetSecretForAccount(ac.kubernetesClient(), resources.KonSystemNamespace, resources.SERVICE_ACCOUNT_KON_ADMIN)
 	if err != nil {
 		return errors.Wrap(err, "failed to get authentication token")
 	}

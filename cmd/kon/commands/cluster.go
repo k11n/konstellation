@@ -467,7 +467,11 @@ func clusterSelect(clusterName string) error {
 		}
 	}
 
-	return ac.installComponents()
+	if err = ac.installComponents(); err != nil {
+		return err
+	}
+	fmt.Println("Switched active cluster to", clusterName)
+	return nil
 }
 
 func clusterReset(c *cli.Context) error {
@@ -619,6 +623,8 @@ func (c *activeCluster) installComponents() error {
 	if err != nil {
 		return err
 	}
+
+	messagesPrinted := false
 	// now install all these resources
 	installed := make(map[string]string)
 	for _, comp := range cc.Status.InstalledComponents {
@@ -634,7 +640,11 @@ func (c *activeCluster) installComponents() error {
 			return fmt.Errorf("Cluster requires %s, which is no longer available", comp.Name)
 		}
 
-		fmt.Printf("Installing Kubernetes components for %s\n", compInstaller.Name())
+		if !messagesPrinted {
+			messagesPrinted = true
+			fmt.Println("\nInstalling required components onto the current cluster...")
+		}
+		fmt.Println("\nInstalling Kubernetes components for", compInstaller.Name())
 
 		// TODO: better handle versions
 		if compInstaller.Version() != comp.Version {

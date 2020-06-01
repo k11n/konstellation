@@ -28,7 +28,7 @@ func GetAppReleases(kclient client.Client, app string, target string, count int)
 	}, client.MatchingLabels{
 		AppLabel:    app,
 		TargetLabel: target,
-	}, client.InNamespace(NamespaceForAppTarget(app, target)))
+	}, client.InNamespace(target))
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func GetActiveRelease(kclient client.Client, app, target string) (*v1alpha1.AppR
 	}, client.MatchingLabels{
 		AppLabel:    app,
 		TargetLabel: target,
-	}, client.InNamespace(NamespaceForAppTarget(app, target)))
+	}, client.InNamespace(target))
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func GetActiveRelease(kclient client.Client, app, target string) (*v1alpha1.AppR
 func GetAppRelease(kclient client.Client, app, target, name string) (*v1alpha1.AppRelease, error) {
 	ar := &v1alpha1.AppRelease{}
 	err := kclient.Get(context.TODO(), client.ObjectKey{
-		Namespace: NamespaceForAppTarget(app, target),
+		Namespace: target,
 		Name:      name,
 	}, ar)
 	return ar, err
