@@ -5,7 +5,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: konstellation
-  namespace: default
+  namespace: kon-system
 roleRef:
   kind: ClusterRole
   name: konstellation

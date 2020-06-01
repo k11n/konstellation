@@ -26,6 +26,7 @@ import (
 	"github.com/k11n/konstellation/cmd/kon/utils"
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	kaws "github.com/k11n/konstellation/pkg/cloud/aws"
+	"github.com/k11n/konstellation/pkg/cloud/types"
 	"github.com/k11n/konstellation/pkg/components/ingress"
 	"github.com/k11n/konstellation/pkg/resources"
 	"github.com/k11n/konstellation/version"
@@ -263,9 +264,11 @@ func promptChooseVPC(sess *session.Session) (vpcId string, cidrBlock string, err
 		return
 	}
 
-	vpcItems := make([]string, 0)
+	konVpcs := make([]*types.VPC, 0, len(vpcs))
+	vpcItems := make([]string, 0, len(vpcs))
 	for _, vpc := range vpcs {
 		if vpc.SupportsKonstellation {
+			konVpcs = append(konVpcs, vpc)
 			vpcItems = append(vpcItems, fmt.Sprintf("%s - %s", vpc.ID, vpc.CIDRBlock))
 		}
 	}
@@ -301,8 +304,8 @@ func promptChooseVPC(sess *session.Session) (vpcId string, cidrBlock string, err
 		return
 	}
 	if idx != -1 {
-		cidrBlock = vpcs[idx].CIDRBlock
-		vpcId = vpcs[idx].ID
+		cidrBlock = konVpcs[idx].CIDRBlock
+		vpcId = konVpcs[idx].ID
 	}
 	return
 }
