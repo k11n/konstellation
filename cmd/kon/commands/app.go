@@ -103,6 +103,11 @@ var AppCommands = []*cli.Command{
 				Action:    appLocal,
 				Flags: []cli.Flag{
 					targetFlag,
+					&cli.StringSliceFlag{
+						Name:    "env",
+						Aliases: []string{"e"},
+						Usage:   "additional environment variables to pass. --env KEY=VALUE",
+					},
 				},
 			},
 			{
@@ -612,6 +617,7 @@ func appLocal(c *cli.Context) error {
 	cmd := exec.Command(args[0], cmdArgs...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	cmd.Stdin = os.Stdin
 
 	if cm != nil {
 		for key, val := range cm.Data {
@@ -624,6 +630,11 @@ func appLocal(c *cli.Context) error {
 			continue
 		}
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", dep.HostKey(), proxy.HostWithPort()))
+	}
+
+	// pass any other custom env vars
+	for _, flag := range c.StringSlice("env") {
+		cmd.Env = append(cmd.Env, flag)
 	}
 
 	if len(cmd.Env) > 0 {
