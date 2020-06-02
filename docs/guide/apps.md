@@ -8,7 +8,9 @@ Your cluster would define the targets that it supports with `kon cluster configu
 
 Most target attributes can be defined on the app itself, and when running under that target, they are inherited from the base config. You may choose to override only specific portion of the attributes, and the result would be merged. The only attribute that's target-specific is `ingress`. Since ingress is specific to hostnames and exposing traffic to the outside world, it must be defined under the target.
 
-See [TargetConfig](appyaml.md#targetconfig)
+Konstellation will automatically create a namespace for each target and place all of the native resources under that namespace.
+
+See [TargetConfig](manifest.md#targetconfig)
 
 App.yaml example:
 

@@ -80,6 +80,7 @@ rules:
   - certificates
   - appreleases
   - appconfigs
+  - rolebasedserviceaccounts
   verbs:
   - create
   - delete

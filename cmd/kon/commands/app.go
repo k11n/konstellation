@@ -98,10 +98,20 @@ var AppCommands = []*cli.Command{
 			},
 			{
 				Name:      "local",
-				Usage:     "Run app locally with cluster environment. The first argument must be the name of your app in the cluster OR path to app.yaml",
-				ArgsUsage: "<app name or manifest> <executable> [args...]",
+				Usage:     "Run app locally with cluster environment. Either --app or --manifest is required",
+				ArgsUsage: "<executable> [args...]",
 				Action:    appLocal,
 				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "app",
+						Aliases: []string{"a"},
+						Usage:   "name of app to load environment from. app must exist in the cluster",
+					},
+					&cli.StringFlag{
+						Name:    "manifest",
+						Aliases: []string{"m"},
+						Usage:   "path to an app manifest. use to test an app before deployed to cluster",
+					},
 					targetFlag,
 					&cli.StringSliceFlag{
 						Name:    "env",
@@ -511,8 +521,17 @@ func appEdit(c *cli.Context) error {
 }
 
 func appLocal(c *cli.Context) error {
-	if c.NArg() < 2 {
-		return cli.ShowSubcommandHelp(c)
+	appName := c.String("app")
+	manifestPath := c.String("manifest")
+
+	if appName == "" && manifestPath == "" {
+		cli.ShowSubcommandHelp(c)
+		return fmt.Errorf("--app or --manifest is required")
+	}
+
+	if c.NArg() < 1 {
+		cli.ShowSubcommandHelp(c)
+		return fmt.Errorf("executable not passed in")
 	}
 	ac, err := getActiveCluster()
 	if err != nil {
@@ -524,8 +543,8 @@ func appLocal(c *cli.Context) error {
 	var app *v1alpha1.App
 	target := c.String("target")
 	// Load app or manifest
-	if _, err := os.Stat(c.Args().Get(0)); err == nil {
-		content, err := ioutil.ReadFile(c.Args().Get(0))
+	if manifestPath != "" {
+		content, err := ioutil.ReadFile(manifestPath)
 		if err != nil {
 			return err
 		}
@@ -536,11 +555,6 @@ func appLocal(c *cli.Context) error {
 		app = obj.(*v1alpha1.App)
 	} else {
 		// not a file, assume it's an app name
-		appName, err := getAppArg(c)
-		if err != nil {
-			return err
-		}
-
 		app, err = resources.GetAppByName(kclient, appName)
 		if err != nil {
 			return err
@@ -608,7 +622,7 @@ func appLocal(c *cli.Context) error {
 	// give it a second for subcommands to start
 	time.Sleep(1 * time.Second)
 
-	args := c.Args().Slice()[1:]
+	args := c.Args().Slice()
 	fmt.Printf("Running %s...\n", strings.Join(args, " "))
 	var cmdArgs []string
 	if len(args) > 1 {
@@ -638,9 +652,14 @@ func appLocal(c *cli.Context) error {
 	}
 
 	if len(cmd.Env) > 0 {
-		fmt.Println("environment:")
+		fmt.Println("Environment:")
 		for _, e := range cmd.Env {
-			fmt.Println("  ", e)
+			parts := strings.Split(e, "\n")
+			fmt.Printf("   %s", parts[0])
+			if len(parts) > 1 {
+				fmt.Printf("...")
+			}
+			fmt.Println("")
 		}
 	}
 

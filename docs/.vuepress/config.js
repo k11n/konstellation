@@ -10,9 +10,9 @@ module.exports = {
       '/guide/': [
         'principals',
         '',
-        'appyaml',
         'apps',
         'clusters',
+        'manifest',
       ],
       '/reference/': [
         '',
