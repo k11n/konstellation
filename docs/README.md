@@ -1,6 +1,6 @@
 ---
 home: true
-# heroImage: /hero.png
+# heroImage: /konstellation-logo.png
 heroText: Konstellation
 tagline: Open source application platform for Kubernetes
 actionText: Get Started →
@@ -12,7 +12,7 @@ features:
   details: Built on years of experience with running production Kubernetes clusters. Konstellation provides an integrated stack including load balancing, autoscaling, service mesh, and release management.
 - title: Optimized for AWS
   details: Konstellation has been optimized to work with AWS. It helps you to set up and manage EKS clusters, nodepools, VPCs, and load balancers. It integrates with other AWS services to provide a secure and robust apps platform.
-footer: MIT Licensed | Copyright © 2019-2020 David Zhao
+footer: Apache 2.0 Licensed | Copyright © 2019-2020 David Zhao
 ---
 ## App to deployment in minutes
 
