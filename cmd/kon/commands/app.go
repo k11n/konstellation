@@ -468,7 +468,7 @@ func appLoad(c *cli.Context) error {
 		return err
 	}
 
-	fmt.Printf("Successfully loaded %s\n", app)
+	fmt.Printf("Successfully loaded app %s\n", app.Name)
 	return nil
 }
 
