@@ -9,12 +9,12 @@ spec:
   # https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
   # registry: registry_url
   image: {{.DockerImage}}
-  imageTag: {{.DockerTag}}
+  imageTag: "{{.DockerTag}}"
 
   # Set command to override the default CMD in your docker image
-  command:
-    - cmd
-    - arg
+  # command:
+  #   - cmd
+  #   - arg
 
   # Port configuration,
   # Change port below to match the port that your app runs on

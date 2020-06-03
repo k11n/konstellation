@@ -582,7 +582,7 @@ func appLocal(c *cli.Context) error {
 	sharedConfigs := make([]*v1alpha1.AppConfig, 0, len(app.Spec.Configs))
 	for _, config := range app.Spec.Configs {
 		sc, cErr := resources.GetMergedConfigForType(kclient, v1alpha1.ConfigTypeShared, config, target)
-		if cErr != nil {
+		if cErr != nil || sc == nil {
 			return fmt.Errorf("could not find shared config: %s", config)
 		}
 		sharedConfigs = append(sharedConfigs, sc)
