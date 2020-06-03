@@ -62,7 +62,7 @@ spec:
               type: array
             image:
               type: string
-            image_tag:
+            imageTag:
               type: string
             ports:
               items:

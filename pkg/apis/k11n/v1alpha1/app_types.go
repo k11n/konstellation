@@ -26,7 +26,7 @@ type AppSpec struct {
 	Ports []PortSpec `json:"ports,omitempty"`
 
 	// +optional
-	ImageTag string `json:"image_tag,omitempty"`
+	ImageTag string `json:"imageTag,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// +nullable
