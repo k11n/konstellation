@@ -462,6 +462,9 @@ func appLoad(c *cli.Context) error {
 	}
 
 	obj, _, err := kube.GetKubeDecoder().Decode(content, nil, &v1alpha1.App{})
+	if err != nil {
+		return errorshelper.Wrap(err, "could not load app")
+	}
 	app := obj.(*v1alpha1.App)
 
 	if _, err := resources.UpdateResource(ac.kubernetesClient(), app, nil, nil); err != nil {
