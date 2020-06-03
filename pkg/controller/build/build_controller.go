@@ -114,7 +114,7 @@ func (r *ReconcileBuild) Reconcile(request reconcile.Request) (res reconcile.Res
 		resources.LogUpdates(log, op, "Removed latest label from build", "build", b.Name, "newBuild", build.Name)
 	}
 
-	// trigger app reconcile
+	// trigger appTarget reconcile
 	err = resources.ForEach(r.client, &v1alpha1.AppTargetList{}, func(item interface{}) error {
 		at := item.(v1alpha1.AppTarget)
 

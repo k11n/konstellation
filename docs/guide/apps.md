@@ -1,5 +1,15 @@
 # Working with Apps
 
+## Container Registry
+
+Your app needs to be hosted by a container registry in order to be used with Kubernetes. The `registry` field in the app manifest specifies the URL to the registry. When `registry` is left blank, it defaults to Docker Hub. By default, the cluster only has access to public repos on Docker Hub. To access private registries, there are two options.
+
+### ECR
+
+The simplest option is to use [Amazon ECR](https://aws.amazon.com/ecr/). When Konstellation sets up the IAM role for the cluster, it included read-only access to your repos on ECR.
+
+Once your images are pushed to ECR, set the registry field your ECR URL. That's it.
+
 ## Targets
 
 Target is a concept in Konstellation that provides a namespace for your app. A target is roughly equivalent to a specific environment of your app. For example, you could specify a production and a development target, with different configurations for hostnames, scale parameters, and receive target-specific configs.
