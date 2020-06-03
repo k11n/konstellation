@@ -132,7 +132,11 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 		NumAvailable: rs.Status.AvailableReplicas,
 	}
 	if ar.Spec.Role == v1alpha1.ReleaseRoleActive {
-		status.State = v1alpha1.ReleaseStateReleased
+		if status.NumReady == status.NumAvailable && status.NumReady > 0 {
+			status.State = v1alpha1.ReleaseStateReleased
+		} else {
+			status.State = v1alpha1.ReleaseStateReleasing
+		}
 	} else if ar.Spec.Role == v1alpha1.ReleaseRoleTarget {
 		status.State = v1alpha1.ReleaseStateReleasing
 	} else if ar.Spec.Role == v1alpha1.ReleaseRoleBad {
