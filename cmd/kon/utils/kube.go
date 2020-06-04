@@ -17,7 +17,13 @@ func KubeApplyFile(filename string, context string) error {
 	}
 	defer os.Remove(filepath)
 
-	return cli.KubeCtl("apply", "--context", context, "-f", filepath)
+	args := []string{
+		"apply", "-f", filepath,
+	}
+	if context != "" {
+		args = append(args, "--context", context)
+	}
+	return cli.KubeCtl(args...)
 }
 
 func TempfileFromDeployResource(name string) (temppath string, err error) {

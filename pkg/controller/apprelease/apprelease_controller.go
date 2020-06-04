@@ -117,7 +117,7 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 		)
 	} else {
 		var op controllerutil.OperationResult
-		op, err = resources.UpdateResourceWithMerge(r.client, rs, ar, r.scheme)
+		op, err = resources.UpdateResource(r.client, rs, ar, r.scheme)
 		resources.LogUpdates(reqLogger, op, "Updated ReplicaSet", "numAvailable", rs.Status.AvailableReplicas)
 	}
 	if err != nil {
@@ -184,6 +184,7 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	if !apiequality.Semantic.DeepEqual(status, ar.Status) {
+		//reqLogger.Info("status changed", "old", ar.Status, "new", status)
 		ar.Status = status
 		err = r.client.Status().Update(context.TODO(), ar)
 		reqLogger.Info("Updated AppRelease status", "numAvailable", status.NumAvailable, "numDesired", status.NumDesired)

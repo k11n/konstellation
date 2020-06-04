@@ -373,8 +373,9 @@ func appReleaseForTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build, configMa
 	name := fmt.Sprintf("%s-%s", at.Spec.App, build.CreationTimestamp.Format("20060102-1504"))
 	if configMap != nil {
 		labels[v1alpha1.ConfigHashLabel] = configMap.Name
-		if len(configMap.Name) > 4 {
-			name = name + "-" + configMap.Name[:4]
+		confLen := len(configMap.Name)
+		if confLen > 5 {
+			name = name + "-" + configMap.Name[confLen-5:]
 		}
 	}
 
@@ -385,15 +386,16 @@ func appReleaseForTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build, configMa
 			Labels:    labels,
 		},
 		Spec: v1alpha1.AppReleaseSpec{
-			App:       at.Spec.App,
-			Target:    at.Spec.Target,
-			Build:     build.Name,
-			Role:      v1alpha1.ReleaseRoleNone,
-			Ports:     at.Spec.Ports,
-			Command:   at.Spec.Command,
-			Args:      at.Spec.Args,
-			Resources: at.Spec.Resources,
-			Probes:    at.Spec.Probes,
+			App:          at.Spec.App,
+			Target:       at.Spec.Target,
+			Build:        build.Name,
+			Dependencies: at.Spec.Dependencies,
+			Role:         v1alpha1.ReleaseRoleNone,
+			Ports:        at.Spec.Ports,
+			Command:      at.Spec.Command,
+			Args:         at.Spec.Args,
+			Resources:    at.Spec.Resources,
+			Probes:       at.Spec.Probes,
 		},
 	}
 	if configMap != nil {
