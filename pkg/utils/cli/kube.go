@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -53,6 +54,10 @@ type KubeProxy struct {
 	sigChan     chan os.Signal
 	doneChan    chan bool
 }
+
+var (
+	usedPorts = sync.Map{}
+)
 
 func NewKubeProxy() *KubeProxy {
 	return &KubeProxy{}
@@ -107,6 +112,7 @@ func (p *KubeProxy) Start() error {
 		}
 	}
 
+	usedPorts.Store(port, true)
 	//fmt.Printf("Running kubectl %s\n", strings.Join(args, " "))
 	p.command = exec.Command("kubectl", args...)
 	err = p.command.Start()
@@ -135,6 +141,7 @@ func (p *KubeProxy) WaitUntilDone() {
 	}()
 
 	<-p.doneChan
+	usedPorts.Delete(p.LocalPort)
 }
 
 func (p *KubeProxy) Stop() {
@@ -163,6 +170,10 @@ func (p *KubeProxy) HostWithPort() string {
 
 func (p *KubeProxy) findUnusedPort(initial int) (int, error) {
 	for port := initial; port < initial+1000; port += 1 {
+		if _, ok := usedPorts.Load(port); ok {
+			// used by another process
+			continue
+		}
 		addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("localhost:%d", port))
 		if err != nil {
 			return 0, err
