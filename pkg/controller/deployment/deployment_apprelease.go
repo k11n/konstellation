@@ -288,7 +288,7 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 
 	at.Status.ActiveRelease = activeRelease.Name
 	at.Status.TargetRelease = targetRelease.Name
-	if hasChanges {
+	if hasChanges || at.Status.DeployUpdatedAt.IsZero() {
 		at.Status.DeployUpdatedAt = metav1.Now()
 	}
 

@@ -263,7 +263,7 @@ func appStatus(c *cli.Context) error {
 
 		at, err := resources.GetAppTargetWithLabels(kclient, app.Name, target.Name)
 		if err == resources.ErrNotFound {
-			fmt.Println("skipping, not configured for the active cluster")
+			fmt.Println("could not find an instance for target ", target.Name)
 			continue
 		}
 
@@ -293,6 +293,9 @@ func appStatus(c *cli.Context) error {
 		table.SetHeader([]string{
 			"Release", "Build", "Date", "Pods", "Status", "Traffic",
 		})
+
+		maxNameLen := 25
+		maxBuildLen := 20
 		for _, release := range releases {
 			// loading build
 			build, err := resources.GetBuildByName(kclient, release.Spec.Build)
@@ -307,13 +310,20 @@ func appStatus(c *cli.Context) error {
 				release.Status.State.String(),
 				fmt.Sprintf("%d%%", release.Spec.TrafficPercentage),
 			}
+
+			if len(release.Name) > maxNameLen {
+				maxNameLen = len(release.Name) + 5
+			}
+			if len(vals[1]) > maxBuildLen {
+				maxBuildLen = len(vals[1]) + 5
+			}
 			table.Append(vals)
 		}
 		table.SetBorder(false)
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
 		table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-		table.SetColMinWidth(0, 30)
-		table.SetColMinWidth(1, 27)
+		table.SetColMinWidth(0, maxNameLen)
+		table.SetColMinWidth(1, 30)
 		table.SetColMinWidth(2, 25)
 		table.SetColMinWidth(3, 8)
 		table.SetColMinWidth(4, 10)

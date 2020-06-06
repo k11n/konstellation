@@ -116,9 +116,10 @@ func TestMergeStructWithMap(t *testing.T) {
 	}
 
 	MergeObject(&dst, &src)
-	if !apiequality.Semantic.DeepEqual(src, dst) {
-		t.Fatalf("src and dst aren't equal")
-	}
+	assert.EqualValues(t, &src, &dst)
+	//if !apiequality.Semantic.DeepEqual(src, dst) {
+	//	t.Fatalf("src and dst aren't equal")
+	//}
 }
 
 // does not overwrite empty value

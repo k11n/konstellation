@@ -37,8 +37,7 @@ func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *cor
 		if errors.IsNotFound(err) {
 			if !serviceNeeded {
 				// don't need a service and none found
-				svc = nil
-				return
+				return nil, nil
 			}
 		} else {
 			// other errors, just return
@@ -68,13 +67,35 @@ func (r *ReconcileDeployment) reconcileService(at *v1alpha1.AppTarget) (svc *cor
 }
 
 func (r *ReconcileDeployment) reconcileDestinationRule(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) error {
+	serviceNeeded := service != nil
 	dr := newDestinationRule(at, service, releases)
+
+	existing := &istio.DestinationRule{}
+	key, err := client.ObjectKeyFromObject(dr)
+	if err != nil {
+		return err
+	}
+	err = r.client.Get(context.TODO(), key, existing)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			if !serviceNeeded {
+				return nil
+			}
+		} else {
+			return err
+		}
+	}
+
 	op, err := resources.UpdateResource(r.client, dr, at, r.scheme)
+	if err != nil {
+		return err
+	}
 	resources.LogUpdates(log, op, "Updated DestinationRule", "appTarget", at.Name)
-	return err
+	return nil
 }
 
 func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) error {
+	serviceNeeded := service != nil
 	vs := newVirtualService(at, service, releases)
 
 	// find existing VS obj
@@ -86,7 +107,7 @@ func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, se
 	err = r.client.Get(context.TODO(), key, existing)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			if !at.NeedsService() {
+			if !serviceNeeded {
 				// don't need a service and none found
 				return nil
 			}
@@ -97,7 +118,7 @@ func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, se
 	}
 
 	// found existing service, but not needed anymore
-	if !at.NeedsService() {
+	if !serviceNeeded {
 		// delete existing service
 		log.Info("Deleting unneeded virtual service", "appTarget", at.Name)
 		return r.client.Delete(context.TODO(), existing)
@@ -110,7 +131,7 @@ func (r *ReconcileDeployment) reconcileVirtualService(at *v1alpha1.AppTarget, se
 
 	resources.LogUpdates(log, op, "Updated VirtualService", "appTarget", at.Name)
 
-	return err
+	return nil
 }
 
 func newServiceForAppTarget(at *v1alpha1.AppTarget) *corev1.Service {
@@ -141,6 +162,8 @@ func newServiceForAppTarget(at *v1alpha1.AppTarget) *corev1.Service {
 }
 
 func newDestinationRule(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) *istio.DestinationRule {
+	// service could be nil, if this resource doesn't require a service
+	// still go ahead with creation of the rule, but will be used for deletion instead
 	subsets := make([]*istionetworking.Subset, 0, len(releases))
 	name := at.Spec.App
 
@@ -159,7 +182,6 @@ func newDestinationRule(at *v1alpha1.AppTarget, service *corev1.Service, release
 			Namespace: at.TargetNamespace(),
 		},
 		Spec: istionetworking.DestinationRule{
-			Host:    resources.ServiceHostname(service.Namespace, service.Name),
 			Subsets: subsets,
 			// TODO: allow other types of connections
 			TrafficPolicy: &istionetworking.TrafficPolicy{
@@ -171,17 +193,23 @@ func newDestinationRule(at *v1alpha1.AppTarget, service *corev1.Service, release
 			},
 		},
 	}
+	if service != nil {
+		dr.Spec.Host = resources.ServiceHostname(service.Namespace, service.Name)
+	}
 	return dr
 }
 
 func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) *istio.VirtualService {
+	// service could be nil, when a virtual service isn't needed
 	namespace := at.TargetNamespace()
 	ls := labelsForAppTarget(at)
 	name := at.Spec.App
 
-	svcHost := resources.ServiceHostname(service.Namespace, service.Name)
-	allHosts := []string{
-		svcHost,
+	allHosts := make([]string, 0)
+	svcHost := ""
+	if service != nil {
+		svcHost = resources.ServiceHostname(service.Namespace, service.Name)
+		allHosts = append(allHosts, svcHost)
 	}
 	if at.Spec.Ingress != nil {
 		allHosts = append(allHosts, at.Spec.Ingress.Hosts...)

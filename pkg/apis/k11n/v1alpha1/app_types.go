@@ -100,11 +100,6 @@ type PortSpec struct {
 	Protocol corev1.Protocol `json:"protocol,omitempty"`
 }
 
-type ResourceLimits struct {
-	Memory string `json:"memory"`
-	CPU    string `json:"cpu"`
-}
-
 type ScaleSpec struct {
 	TargetCPUUtilization int32 `json:"targetCPUUtilizationPercentage,omitempty"`
 	Min                  int32 `json:"min,omitempty"`

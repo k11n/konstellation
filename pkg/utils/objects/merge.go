@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	"github.com/imdario/mergo"
-	"github.com/thoas/go-funk"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -65,22 +64,42 @@ func mergeSliceValue(dst, src reflect.Value) error {
 	return nil
 }
 
-func mergeOverride(dst, src reflect.Value) error {
-	dst.Set(src)
+func mergeResourceRequirements(dst, src reflect.Value) error {
+	// merge resource requirements differently
+	dstRes := dst.Addr().Interface().(*corev1.ResourceRequirements)
+	srcRes := src.Addr().Interface().(*corev1.ResourceRequirements)
+
+	if srcRes.Requests != nil {
+		if dstRes.Requests == nil {
+			dstRes.Requests = make(corev1.ResourceList, len(srcRes.Requests))
+		}
+		for key, val := range srcRes.Requests {
+			dstRes.Requests[key] = val
+		}
+	}
+
+	for key, val := range srcRes.Limits {
+		if dstRes.Limits == nil {
+			dstRes.Limits = make(corev1.ResourceList, len(srcRes.Limits))
+		}
+		dstRes.Limits[key] = val
+	}
 	return nil
 }
 
 func newMergeTransformers() mergeTransformers {
 	return mergeTransformers{
-		overrideTypes: []reflect.Type{
-			reflect.TypeOf(corev1.ResourceRequirements{}),
+		mergeFuncs: map[reflect.Type]mergeFunc{
+			reflect.TypeOf(corev1.ResourceRequirements{}): mergeResourceRequirements,
 		},
 	}
 }
 
+type mergeFunc func(dst, src reflect.Value) error
+
 type mergeTransformers struct {
 	// types that should be overridden
-	overrideTypes []reflect.Type
+	mergeFuncs map[reflect.Type]mergeFunc
 }
 
 func (t mergeTransformers) Transformer(oType reflect.Type) func(dst, src reflect.Value) error {
@@ -88,9 +107,7 @@ func (t mergeTransformers) Transformer(oType reflect.Type) func(dst, src reflect
 	case reflect.Slice:
 		return mergeSliceValue
 	case reflect.Struct:
-		if funk.Contains(t.overrideTypes, oType) {
-			return mergeOverride
-		}
+		return t.mergeFuncs[oType]
 	}
 	return nil
 }
