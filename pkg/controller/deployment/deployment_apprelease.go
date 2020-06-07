@@ -42,22 +42,13 @@ func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget, confi
 		return
 	}
 
-	// TODO: check if a combination of AppTargetHash and ConfigMap exists
-	// use the combination as the release hash
-
 	// do we already have a release for this appTargetHash and configmap combination?
 	// if not we'd want to create a new release
 	var existingRelease *v1alpha1.AppRelease
 	for _, ar := range releases {
-		if at.GetHash() != "" {
-			if ar.Labels[v1alpha1.AppTargetHash] != at.GetHash() {
-				// not the current release
-				continue
-			}
-		} else {
-			if ar.Spec.Build != build.Name {
-				continue
-			}
+		if ar.Labels[v1alpha1.AppTargetHash] != at.GetHash() {
+			// not the current release
+			continue
 		}
 
 		if configMap == nil || configMap.Name == ar.Spec.Config {

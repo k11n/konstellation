@@ -46,6 +46,7 @@ var (
 		Aliases: []string{"p"},
 		Usage:   "a specific pod to use",
 	}
+	cliDateFormat = "2006-01-02 15:04:05"
 )
 
 var AppCommands = []*cli.Command{
@@ -199,36 +200,67 @@ func appList(c *cli.Context) error {
 	}
 
 	requiredTarget := c.String("target")
-	fmt.Printf("Listing apps on %s\n", ac.Cluster)
-	apps, err := resources.ListApps(ac.kubernetesClient())
+	fmt.Printf("Listing apps on %s\n\n", ac.Cluster)
+	kclient := ac.kubernetesClient()
+
+	cc, err := resources.GetClusterConfig(kclient)
 	if err != nil {
 		return err
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"App", "Targets", "Ports"})
-	for _, app := range apps {
-		targets := []string{}
-		for _, target := range app.Spec.Targets {
-			targets = append(targets, target.Name)
-		}
-		if requiredTarget != "" && !funk.Contains(targets, requiredTarget) {
+	targets := make([]string, 0)
+	for _, target := range cc.Spec.Targets {
+		if requiredTarget != "" && requiredTarget != target {
 			continue
 		}
-
-		var portsStr []string
-
-		for _, port := range app.Spec.Ports {
-			portsStr = append(portsStr, fmt.Sprintf("%s-%d", port.Name, port.Port))
-		}
-		table.Append([]string{
-			app.Name,
-			strings.Join(targets, ", "),
-			strings.Join(portsStr, ", "),
-		})
+		targets = append(targets, target)
 	}
-	utils.FormatTable(table)
-	table.Render()
+
+	for _, target := range targets {
+		fmt.Println("Target: ", target)
+
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetHeader([]string{"App", "Image", "Last Deployed", "Pods", "Ports", "Host"})
+		resources.ForEach(kclient, &v1alpha1.AppTargetList{}, func(item interface{}) error {
+			at := item.(v1alpha1.AppTarget)
+			build, err := resources.GetBuildByName(kclient, at.Spec.Build)
+			if err != nil {
+				return err
+			}
+
+			var portsStr []string
+			for _, port := range at.Spec.Ports {
+				portsStr = append(portsStr, fmt.Sprintf("%s-%d", port.Name, port.Port))
+			}
+
+			var hosts string
+			if at.Spec.Ingress != nil {
+				numHosts := len(at.Spec.Ingress.Hosts)
+				if numHosts == 1 {
+					hosts = at.Spec.Ingress.Hosts[0]
+				} else {
+					hosts = fmt.Sprintf("%d hosts", numHosts)
+				}
+			}
+			table.Append([]string{
+				at.Spec.App,
+				build.ShortName(),
+				at.Status.DeployUpdatedAt.Format(cliDateFormat),
+				fmt.Sprintf("%d (max %d)", at.Status.NumAvailable, at.Spec.Scale.Max),
+				strings.Join(portsStr, ", "),
+				hosts,
+			})
+			return nil
+		}, client.MatchingLabels{
+			resources.TargetLabel: target,
+		})
+
+		utils.FormatTable(table)
+		table.Render()
+
+		fmt.Println()
+	}
+
 	return nil
 }
 
@@ -294,9 +326,6 @@ func appStatus(c *cli.Context) error {
 			"Release", "Build", "Date", "Pods", "Status", "Traffic",
 		})
 
-		// unfortunately tablewriter isn't expanding columns so content would fit
-		maxNameLen := 25
-		maxBuildLen := 20
 		for _, release := range releases {
 			// loading build
 			build, err := resources.GetBuildByName(kclient, release.Spec.Build)
@@ -306,32 +335,15 @@ func appStatus(c *cli.Context) error {
 			vals := []string{
 				release.Name,
 				build.ShortName(),
-				release.GetCreationTimestamp().Format("2006-01-02 15:04:05"),
+				release.GetCreationTimestamp().Format(cliDateFormat),
 				fmt.Sprintf("%d/%d", release.Status.NumAvailable, release.Status.NumDesired),
 				release.Status.State.String(),
 				fmt.Sprintf("%d%%", release.Spec.TrafficPercentage),
 			}
 
-			if len(release.Name) > maxNameLen {
-				maxNameLen = len(release.Name) + 5
-			}
-			if len(vals[1]) > maxBuildLen {
-				maxBuildLen = len(vals[1]) + 5
-			}
 			table.Append(vals)
 		}
-		table.SetBorder(false)
-		table.SetAlignment(tablewriter.ALIGN_LEFT)
-		table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
-		table.SetColMinWidth(0, maxNameLen)
-		table.SetColMinWidth(1, maxBuildLen)
-		table.SetColMinWidth(2, 25)
-		table.SetColMinWidth(3, 8)
-		table.SetColMinWidth(4, 10)
-		table.SetCenterSeparator(" ")
-		table.SetColumnSeparator(" ")
-		table.SetHeaderLine(false)
-		table.SetNoWhiteSpace(true)
+		utils.FormatTable(table)
 		table.Render()
 		fmt.Println()
 	}
