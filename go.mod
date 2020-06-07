@@ -16,6 +16,7 @@ require (
 	github.com/golang/protobuf v1.4.0 // indirect
 	github.com/google/uuid v1.1.1
 	github.com/gophercloud/gophercloud v0.10.0 // indirect
+	github.com/hako/durafmt v0.0.0-20200605151348-3a43fc422dd9
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.9
 	github.com/lunixbochs/vtclean v1.0.0 // indirect

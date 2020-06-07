@@ -41,6 +41,8 @@ func (r *ReconcileDeployment) reconcileIngressRequest(at *v1alpha1.AppTarget) er
 	// create or update
 	op, err := resources.UpdateResource(r.client, ir, at, r.scheme)
 	resources.LogUpdates(log, op, "Updated IngressRequest", "appTarget", at.Name, "hosts", ir.Spec.Hosts)
+
+	at.Status.Hostname = ir.Status.Address
 	return err
 }
 

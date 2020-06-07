@@ -12,6 +12,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/hako/durafmt"
 	"github.com/manifoldco/promptui"
 	"github.com/olekukonko/tablewriter"
 	errorshelper "github.com/pkg/errors"
@@ -750,9 +751,40 @@ func appPods(c *cli.Context) error {
 	}
 
 	fmt.Printf("Total pods: %d\n", len(pods))
-	for _, p := range pods {
-		fmt.Println(p)
+
+	if len(pods) == 0 {
+		return nil
 	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Name", "Phase", "Condition", "Last Change", "Message"})
+	// TODO: make this a table with status and stuff
+	for _, p := range pods {
+		var cond string
+		var condTime time.Time
+		for _, c := range p.Status.Conditions {
+			if c.Type == corev1.PodReady {
+				if c.Status == corev1.ConditionTrue {
+					cond = "Ready"
+				} else {
+					cond = "Not ready"
+				}
+				condTime = c.LastTransitionTime.Time
+			}
+		}
+
+		table.Append([]string{
+			p.Name,
+			string(p.Status.Phase),
+			cond,
+			durafmt.ParseShort(time.Since(condTime)).String(),
+			p.Status.Message,
+		})
+		//fmt.Println(p)
+	}
+
+	utils.FormatTable(table)
+	table.Render()
 
 	return nil
 }
@@ -943,14 +975,29 @@ func selectAppPod(kclient client.Client, app, target, release string) (pod strin
 		err = fmt.Errorf("No pods found")
 		return
 	}
+
 	if len(pods) == 1 {
-		pod = pods[0]
+		pod = pods[0].Name
 		return
 	}
 
-	prompt := utils.NewPromptSelect("Select a pod", pods)
+	podLabels := make([]string, 0, len(pods))
+	for _, p := range pods {
+		label := p.Name
+		if p.Status.Phase != corev1.PodRunning {
+			label += fmt.Sprintf(" (%s)", p.Status.Phase)
+		}
+		podLabels = append(podLabels, label)
+	}
+
+	prompt := utils.NewPromptSelect("Select a pod", podLabels)
 	prompt.Size = 10
-	_, pod, err = prompt.Run()
+	idx, _, err := prompt.Run()
+	if err != nil {
+		return
+	}
+
+	pod = pods[idx].Name
 	return
 }
 

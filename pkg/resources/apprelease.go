@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sort"
 
+	"github.com/thoas/go-funk"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -100,14 +101,33 @@ func SortAppReleasesByLatest(releases []*v1alpha1.AppRelease) {
 	})
 }
 
-func GetPodsForAppRelease(kclient client.Client, namespace string, release string) (pods []string, err error) {
+var statusOrder = []corev1.PodPhase{
+	corev1.PodRunning,
+	corev1.PodSucceeded,
+	corev1.PodFailed,
+	corev1.PodUnknown,
+	corev1.PodPending,
+}
+
+func GetPodsForAppRelease(kclient client.Client, namespace string, release string) (pods []*corev1.Pod, err error) {
 	err = ForEach(kclient, &corev1.PodList{}, func(item interface{}) error {
 		pod := item.(corev1.Pod)
-		pods = append(pods, pod.Name)
+		pods = append(pods, &pod)
 		return nil
 	}, client.MatchingLabels{
 		AppReleaseLabel: release,
 	}, client.InNamespace(namespace))
+
+	if err != nil {
+		return
+	}
+
+	sort.SliceStable(pods, func(i, j int) bool {
+		podi := pods[i]
+		podj := pods[j]
+
+		return funk.IndexOf(statusOrder, podi.Status.Phase) < funk.IndexOf(statusOrder, podj.Status.Phase)
+	})
 	return
 }
 
