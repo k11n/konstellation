@@ -197,7 +197,10 @@ func clusterList(c *cli.Context) error {
 				fmt.Println("error", err)
 			}
 		}
-		printClusterSection(cm, infos)
+
+		if len(infos) > 0 {
+			printClusterSection(cm, infos)
+		}
 	}
 
 	return nil
