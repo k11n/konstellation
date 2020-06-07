@@ -105,9 +105,18 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 	rs := r.newReplicaSetForAR(ar, build, cm)
 
+	shouldUpdate := true
 	if ar.Spec.Role == v1alpha1.ReleaseRoleActive {
-		// TODO: update this with current replicaset replica count
-
+		// when we are reconciling the active release, it means autoscaler is in charge of setting the numDesired field
+		// on the replicaset. We don't want to proceed with updates
+		key, err := client.ObjectKeyFromObject(rs)
+		if err != nil {
+			return res, err
+		}
+		err = r.client.Get(context.TODO(), key, rs)
+		if err == nil && ar.Spec.NumDesired != 0 && *rs.Spec.Replicas != 0 {
+			shouldUpdate = false
+		}
 	}
 
 	if ar.Spec.NumDesired == 0 {
@@ -115,7 +124,7 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 		err = client.IgnoreNotFound(
 			r.client.Delete(context.TODO(), rs),
 		)
-	} else {
+	} else if shouldUpdate {
 		var op controllerutil.OperationResult
 		op, err = resources.UpdateResource(r.client, rs, ar, r.scheme)
 		resources.LogUpdates(reqLogger, op, "Updated ReplicaSet", "numAvailable", rs.Status.AvailableReplicas)
