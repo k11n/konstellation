@@ -15,6 +15,7 @@ import (
 
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/resources"
+	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
 const (
@@ -41,12 +42,24 @@ func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget, confi
 		return
 	}
 
-	// keep track of builds that we already have a release for, those can be ignored
+	// TODO: check if a combination of AppTargetHash and ConfigMap exists
+	// use the combination as the release hash
+
+	// do we already have a release for this appTargetHash and configmap combination?
+	// if not we'd want to create a new release
 	var existingRelease *v1alpha1.AppRelease
 	for _, ar := range releases {
-		if ar.Spec.Build != build.Name {
-			continue
+		if at.GetHash() != "" {
+			if ar.Labels[v1alpha1.AppTargetHash] != at.GetHash() {
+				// not the current release
+				continue
+			}
+		} else {
+			if ar.Spec.Build != build.Name {
+				continue
+			}
 		}
+
 		if configMap == nil || configMap.Name == ar.Spec.Config {
 			existingRelease = ar
 			break
@@ -370,14 +383,18 @@ func appReleaseForTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build, configMa
 	for k, v := range resources.LabelsForBuild(build) {
 		labels[k] = v
 	}
-	name := fmt.Sprintf("%s-%s", at.Spec.App, build.CreationTimestamp.Format("20060102-1504"))
+	labels[v1alpha1.AppTargetHash] = at.GetHash()
+
+	// generate name hash with both appTargetHash and config
+	hashStr := at.GetHash()
 	if configMap != nil {
-		labels[v1alpha1.ConfigHashLabel] = configMap.Name
-		confLen := len(configMap.Name)
-		if confLen > 5 {
-			name = name + "-" + configMap.Name[confLen-5:]
-		}
+		labels[v1alpha1.ConfigHashLabel] = configMap.Labels[v1alpha1.ConfigHashLabel]
+		hashStr += "-" + labels[v1alpha1.ConfigHashLabel]
+		hashStr = files.Sha1ChecksumString(hashStr)
 	}
+	name := fmt.Sprintf("%s-%s-%s", at.Spec.App,
+		build.CreationTimestamp.Format("20060102-1504"),
+		hashStr[:5])
 
 	ar := &v1alpha1.AppRelease{
 		ObjectMeta: metav1.ObjectMeta{

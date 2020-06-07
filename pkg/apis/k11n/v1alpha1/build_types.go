@@ -66,7 +66,10 @@ func (b *Build) GetUniqueName() string {
 }
 
 func (b *Build) ImagePath() string {
-	return fmt.Sprintf("%s/%s", b.Spec.Registry, b.Spec.Image)
+	if b.Spec.Registry != "" {
+		return fmt.Sprintf("%s/%s", b.Spec.Registry, b.Spec.Image)
+	}
+	return b.Spec.Image
 }
 
 func (b *Build) FullImageWithTag() string {
@@ -86,9 +89,6 @@ func (b *Build) ShortName() string {
 }
 
 func NewBuild(registry, image, tag string) *Build {
-	if registry == "" {
-		registry = DefaultRegistry
-	}
 	b := Build{
 		Spec: BuildSpec{
 			Registry: registry,

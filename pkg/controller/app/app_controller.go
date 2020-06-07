@@ -161,22 +161,17 @@ func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Resul
 		clusterTargets[target] = true
 	}
 
-	hasUpdates := false
 	var invalidTargets []string
 	// deploy the intersection of app and cluster targets
 	for _, target := range app.Spec.Targets {
-		var targetUpdated bool
 		if !clusterTargets[target.Name] {
 			// skip reconcile, since cluster doesn't support it
 			invalidTargets = append(invalidTargets, target.Name)
 			continue
 		}
-		targetUpdated, err = r.reconcileAppTarget(app, target.Name, build)
+		err = r.reconcileAppTarget(app, target.Name, build)
 		if err != nil {
 			return
-		}
-		if targetUpdated {
-			hasUpdates = true
 		}
 	}
 
@@ -191,10 +186,6 @@ func (r *ReconcileApp) Reconcile(request reconcile.Request) (res reconcile.Resul
 		}
 		reqLogger.Info("Deleting inactive AppTargets", "target", target)
 		err = r.client.Delete(context.TODO(), at)
-	}
-
-	if hasUpdates {
-		//res.Requeue = true
 	}
 
 	return
@@ -223,16 +214,18 @@ func (r *ReconcileApp) reconcileBuild(app *v1alpha1.App) (*v1alpha1.Build, error
 	return existing, nil
 }
 
-func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string, build *v1alpha1.Build) (updated bool, err error) {
+func (r *ReconcileApp) reconcileAppTarget(app *v1alpha1.App, target string, build *v1alpha1.Build) error {
 	appTarget := newAppTargetForApp(app, target, build)
-
+	if err := appTarget.UpdateHash(); err != nil {
+		return err
+	}
 	op, err := resources.UpdateResource(r.client, appTarget, app, r.scheme)
 	if err != nil {
-		return
+		return err
 	}
 
 	resources.LogUpdates(log, op, "reconciled AppTarget", "app", app.Name, "target", target)
-	return
+	return nil
 }
 
 func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Build) *v1alpha1.AppTarget {

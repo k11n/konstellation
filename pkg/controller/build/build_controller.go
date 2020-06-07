@@ -38,9 +38,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to primary resource Build
-	err = c.Watch(&source.Kind{Type: &v1alpha1.Build{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to primary resource App
+	err = c.Watch(&source.Kind{Type: &v1alpha1.App{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
+		return err
+	}
+
+	if err := mgr.GetFieldIndexer().IndexField(&v1alpha1.App{}, "spec.image", func(rawObj runtime.Object) []string {
+		app := rawObj.(*v1alpha1.App)
+		return []string{app.Spec.Image}
+	}); err != nil {
 		return err
 	}
 
@@ -115,19 +122,23 @@ func (r *ReconcileBuild) Reconcile(request reconcile.Request) (res reconcile.Res
 	}
 
 	// trigger appTarget reconcile
-	err = resources.ForEach(r.client, &v1alpha1.AppTargetList{}, func(item interface{}) error {
-		at := item.(v1alpha1.AppTarget)
+	err = resources.ForEach(r.client, &v1alpha1.AppList{}, func(item interface{}) error {
+		app := item.(v1alpha1.App)
 
-		at.Spec.Build = build.Name
-		op, err := resources.UpdateResource(r.client, &at, nil, nil)
+		if app.Spec.Registry != build.Spec.Registry {
+			return nil
+		}
+
+		app.Spec.ImageTag = build.Spec.Tag
+		op, err := resources.UpdateResource(r.client, &app, nil, nil)
 		if err != nil {
 			return err
 		}
-		resources.LogUpdates(log, op, "Updating appTarget build", "appTarget", at.Name, "build", build.Name)
+		resources.LogUpdates(log, op, "Updating app imageTag", "app", app.Name, "image", build.Spec.Image,
+			"tag", build.Spec.Tag)
 		return nil
-	}, client.MatchingLabels{
-		resources.BuildRegistryLabel: build.Labels[resources.BuildRegistryLabel],
-		resources.BuildImageLabel:    build.Labels[resources.BuildImageLabel],
+	}, client.MatchingFields{
+		"spec.image": build.Spec.Image,
 	})
 	return
 }

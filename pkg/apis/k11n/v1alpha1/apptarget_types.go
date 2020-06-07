@@ -1,10 +1,18 @@
 package v1alpha1
 
 import (
+	"bytes"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+
+	"github.com/k11n/konstellation/pkg/utils/files"
+)
+
+const (
+	AppTargetHash = "k11n.dev/appTargetHash"
 )
 
 // AppTargetSpec defines a deployment target for App
@@ -141,4 +149,38 @@ func (at *AppTarget) NeedsAutoscaler() bool {
 		return false
 	}
 	return true
+}
+
+func (at *AppTarget) GetHash() string {
+	return at.Labels[AppTargetHash]
+}
+
+// sets a label on the app target with its hash
+func (at *AppTarget) UpdateHash() error {
+	copy := at.DeepCopy()
+	// clear fields that we don't need to include in hash
+	copy.Spec.Ingress = nil
+	copy.Status = AppTargetStatus{}
+	copy.Labels = nil
+	copy.Annotations = nil
+	encoder := json.NewSerializerWithOptions(json.DefaultMetaFactory, nil, nil,
+		json.SerializerOptions{
+			Yaml:   true,
+			Pretty: true,
+			Strict: false,
+		})
+	buf := bytes.NewBuffer(nil)
+	err := encoder.Encode(copy, buf)
+	if err != nil {
+		return err
+	}
+
+	checksum, err := files.Sha1Checksum(buf)
+	if err != nil {
+		return err
+	}
+
+	at.Labels[AppTargetHash] = checksum
+
+	return nil
 }

@@ -20,6 +20,9 @@ generate:
 	operator-sdk generate k8s
 	operator-sdk generate crds
 
+test:
+	go test ./...
+
 all: cli operator
 
-.PHONEY: deps release-operator run-operator
+.PHONEY: deps release-operator run-operator test

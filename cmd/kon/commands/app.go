@@ -294,6 +294,7 @@ func appStatus(c *cli.Context) error {
 			"Release", "Build", "Date", "Pods", "Status", "Traffic",
 		})
 
+		// unfortunately tablewriter isn't expanding columns so content would fit
 		maxNameLen := 25
 		maxBuildLen := 20
 		for _, release := range releases {
@@ -323,7 +324,7 @@ func appStatus(c *cli.Context) error {
 		table.SetAlignment(tablewriter.ALIGN_LEFT)
 		table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 		table.SetColMinWidth(0, maxNameLen)
-		table.SetColMinWidth(1, 30)
+		table.SetColMinWidth(1, maxBuildLen)
 		table.SetColMinWidth(2, 25)
 		table.SetColMinWidth(3, 8)
 		table.SetColMinWidth(4, 10)
