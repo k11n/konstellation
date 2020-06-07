@@ -124,7 +124,7 @@ What remains is linking your domain to the load balancer. You'll need to create 
 
 On EKS, Konstellation uses an [Application Load Balancer (ALB)](https://aws.amazon.com/elasticloadbalancing/features/) for your ingress. ALB is a layer 7 load balancer and is capable of terminating SSL/TLS requests.
 
-With this, SSL certificates are handled securely that they never leave ACM. Konstellation needs only a reference to the certificates in order to configure them.
+Because the termination is handled by ALB, Konstellation (or Kubernetes) does not need your certificate nor private key. This creates a secure setup since we no longer have to worry about securing Kubernetes' key storage. As long as your certificates are stored in ACM, Konstellation needs only a reference to them.
 
 To use SSL with Konstellation, first ensure your certificate is uploaded into [ACM](https://console.aws.amazon.com/acm/home), then sync certificate references into Kubernetes with:
 
@@ -132,7 +132,7 @@ To use SSL with Konstellation, first ensure your certificate is uploaded into [A
 % kon certificate sync
 ```
 
-After this, your app should be automatically available via HTTPS. Note: ACM is region aware, your cluster and certificates must reside in the same region for them to be usable.
+After this, your app should be automatically available via HTTPS. Note: ACM is region aware, your cluster and certificates must reside in the same region as the cluster for them to be usable.
 
 ### Configuring your app
 

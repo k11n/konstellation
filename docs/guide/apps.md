@@ -172,6 +172,11 @@ When running locally, the same environment variables will be set for the configu
 
 ## Deploying new builds
 
-When you have a new docker build of your app.
+When a new docker image of your app is built, you will need to tell Konstellation of that new build with command `kon app deploy`
+
+This command will deploy your app to all targets simultenously.
 
 ## Rolling back
+
+## Autoscaling
+

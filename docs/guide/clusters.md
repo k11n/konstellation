@@ -6,5 +6,7 @@
 
 ## Working with Multiple Clusters
 
+## Cluster Autoscaling
+
 ## Export & Backup
 
