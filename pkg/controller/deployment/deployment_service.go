@@ -3,6 +3,7 @@ package deployment
 import (
 	"context"
 	"fmt"
+	"sort"
 
 	istionetworking "istio.io/api/networking/v1alpha3"
 	istio "istio.io/client-go/pkg/apis/networking/v1alpha3"
@@ -216,16 +217,22 @@ func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases
 	}
 
 	releasesByPort := map[int32][]*v1alpha1.AppRelease{}
+	ports := make([]int32, 0)
 	for _, ar := range releases {
 		for _, port := range ar.Spec.Ports {
 			releasesByPort[port.Port] = append(releasesByPort[port.Port], ar)
+			ports = append(ports, port.Port)
 		}
 	}
+	sort.Slice(ports, func(i, j int) bool {
+		return ports[i] < ports[j]
+	})
 
 	var routes []*istionetworking.HTTPRoute
 
 	// create internal routes, map each port
-	for port, portReleases := range releasesByPort {
+	for _, port := range ports {
+		portReleases := releasesByPort[port]
 		route := &istionetworking.HTTPRoute{
 			Match: []*istionetworking.HTTPMatchRequest{
 				{
