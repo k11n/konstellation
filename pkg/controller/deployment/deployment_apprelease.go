@@ -20,6 +20,9 @@ import (
 
 const (
 	rampIncrement = 0.25
+	// keep at least 10 releases and everything in last 48 hours
+	numReleasesToKeep  = 10
+	releaseHoursToKeep = 48
 )
 
 func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget, configMap *corev1.ConfigMap) (releases []*v1alpha1.AppRelease, res *reconcile.Result, err error) {
@@ -99,12 +102,16 @@ func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget, confi
 		resources.LogUpdates(log, op, "Updated AppRelease", "appTarget", at.Name, "release", ar.Name)
 	}
 
-	// delete all except for the last 6
-	if len(releases) > 6 {
-		toDelete := releases[6:]
-		releases = releases[:6]
+	// delete older releases
+	if len(releases) > numReleasesToKeep {
+		toDelete := releases[numReleasesToKeep:]
+		releases = releases[:numReleasesToKeep]
 
 		for _, ar := range toDelete {
+			if time.Since(ar.CreationTimestamp.Time) < releaseHoursToKeep*time.Hour {
+				// skip deletion of newer releases
+				continue
+			}
 			err = r.client.Delete(context.TODO(), ar)
 			if err != nil {
 				return

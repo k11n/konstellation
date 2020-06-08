@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/thoas/go-funk"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -17,14 +18,11 @@ var (
 	releasePattern = regexp.MustCompile(`^([\w-]+)-\d{8}-\d{4}-\w{4}$`)
 )
 
-func GetAppReleases(kclient client.Client, app string, target string, count int) ([]*v1alpha1.AppRelease, error) {
+func GetAppReleases(kclient client.Client, app string, target string) ([]*v1alpha1.AppRelease, error) {
 	releases := make([]*v1alpha1.AppRelease, 0)
 	err := ForEach(kclient, &v1alpha1.AppReleaseList{}, func(item interface{}) error {
 		release := item.(v1alpha1.AppRelease)
 		releases = append(releases, &release)
-		if len(releases) == count {
-			return Break
-		}
 		return nil
 	}, client.MatchingLabels{
 		AppLabel:    app,
@@ -107,6 +105,13 @@ var statusOrder = []corev1.PodPhase{
 	corev1.PodFailed,
 	corev1.PodUnknown,
 	corev1.PodPending,
+}
+
+func GetReplicaSetForAppRelease(kclient client.Client, ar *v1alpha1.AppRelease) (rs *appsv1.ReplicaSet, err error) {
+	rs = &appsv1.ReplicaSet{}
+	key := client.ObjectKey{Namespace: ar.Namespace, Name: ar.Name}
+	err = kclient.Get(context.TODO(), key, rs)
+	return
 }
 
 func GetPodsForAppRelease(kclient client.Client, namespace string, release string) (pods []*corev1.Pod, err error) {

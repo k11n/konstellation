@@ -155,6 +155,15 @@ var AppCommands = []*cli.Command{
 				},
 			},
 			{
+				Name:      "restart",
+				Usage:     "Restart the current app",
+				ArgsUsage: "<app>",
+				Action:    appRestart,
+				Flags: []cli.Flag{
+					targetFlag,
+				},
+			},
+			{
 				Name:      "rollback",
 				Usage:     "Rolls back a bad release and deploys a previous one",
 				ArgsUsage: "<app>",
@@ -301,7 +310,7 @@ func appStatus(c *cli.Context) error {
 		}
 
 		// find all targets of this app
-		releases, err := resources.GetAppReleases(kclient, app.Name, target.Name, 100)
+		releases, err := resources.GetAppReleases(kclient, app.Name, target.Name)
 		if err != nil {
 			return err
 		}
@@ -789,6 +798,56 @@ func appPods(c *cli.Context) error {
 	return nil
 }
 
+func appRestart(c *cli.Context) error {
+	app, err := getAppArg(c)
+	if err != nil {
+		return err
+	}
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+
+	kclient := ac.kubernetesClient()
+
+	target := c.String("target")
+	if target == "" {
+		if target, err = selectAppTarget(kclient, app); err != nil {
+			return err
+		}
+	}
+
+	releases, err := resources.GetAppReleases(kclient, app, target)
+	if err != nil {
+		return err
+	}
+
+	restarted := false
+	for _, release := range releases {
+		if release.Spec.NumDesired == 0 {
+			continue
+		}
+		// delete replicasets
+		rs, err := resources.GetReplicaSetForAppRelease(kclient, release)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				continue
+			} else {
+				return err
+			}
+		}
+		restarted = true
+		if err = kclient.Delete(context.TODO(), rs); err != nil {
+			return err
+		}
+	}
+
+	if restarted {
+		fmt.Println("Restarted app", app)
+	}
+	return nil
+}
+
 func appRollback(c *cli.Context) error {
 	app, err := getAppArg(c)
 	if err != nil {
@@ -810,7 +869,7 @@ func appRollback(c *cli.Context) error {
 	}
 
 	if release == "" {
-		releases, err := resources.GetAppReleases(kclient, app, target, 10)
+		releases, err := resources.GetAppReleases(kclient, app, target)
 		if err != nil {
 			return err
 		}
@@ -832,7 +891,7 @@ func appRollback(c *cli.Context) error {
 	}
 
 	// explicit confirmation
-	err = utils.ExplicitConfirmationPrompt(fmt.Sprintf("Do you want to roll back %s?", ar.Name))
+	err = utils.ExplicitConfirmationPrompt(fmt.Sprintf("Do you want to mark release %s as bad?", ar.Name))
 	if err != nil {
 		return err
 	}
