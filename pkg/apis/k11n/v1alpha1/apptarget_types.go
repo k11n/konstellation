@@ -163,6 +163,7 @@ func (at *AppTarget) UpdateHash() error {
 	copy.Status = AppTargetStatus{}
 	copy.Labels = nil
 	copy.Annotations = nil
+	copy.Spec.Scale = ScaleSpec{}
 	encoder := json.NewSerializerWithOptions(json.DefaultMetaFactory, nil, nil,
 		json.SerializerOptions{
 			Yaml:   true,

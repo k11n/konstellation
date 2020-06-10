@@ -8,7 +8,7 @@ module.exports = {
     ],
     sidebar: {
       '/guide/': [
-        'principals',
+        'principles',
         '',
         'apps',
         'clusters',

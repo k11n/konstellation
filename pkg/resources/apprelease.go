@@ -128,10 +128,7 @@ func GetPodsForAppRelease(kclient client.Client, namespace string, release strin
 	}
 
 	sort.SliceStable(pods, func(i, j int) bool {
-		podi := pods[i]
-		podj := pods[j]
-
-		return funk.IndexOf(statusOrder, podi.Status.Phase) < funk.IndexOf(statusOrder, podj.Status.Phase)
+		return funk.IndexOf(statusOrder, pods[i].Status.Phase) < funk.IndexOf(statusOrder, pods[j].Status.Phase)
 	})
 	return
 }

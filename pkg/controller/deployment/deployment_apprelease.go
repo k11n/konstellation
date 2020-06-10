@@ -192,12 +192,19 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 	// TODO: when there are canaries, compute remaining percentage here
 	desiredInstances := at.DesiredInstances()
 	targetTrafficPercentage := targetRelease.Spec.TrafficPercentage
+
+	increment := float32(rampIncrement)
+	if !at.NeedsService() {
+		// for apps without services, there's no need to slowly ramp
+		increment = 1.0
+	}
+
 	if targetRelease == activeRelease {
 		targetTrafficPercentage = 100
 		targetRelease.Spec.NumDesired = desiredInstances
 	} else {
 		// increase by up to rampIncrement
-		maxIncrement := int32(float32(desiredInstances) * rampIncrement)
+		maxIncrement := int32(float32(desiredInstances) * increment)
 		if maxIncrement < 1 {
 			maxIncrement = 1
 		}
@@ -219,7 +226,7 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		targetTrafficPercentage = int32(ratioDeployed * 100)
 
 		// should not increment more than ramp increment% at a time
-		rampPercentage := int32(100 * rampIncrement)
+		rampPercentage := int32(100 * increment)
 		if targetTrafficPercentage-targetRelease.Spec.TrafficPercentage > rampPercentage {
 			targetTrafficPercentage = targetRelease.Spec.TrafficPercentage + rampPercentage
 		}

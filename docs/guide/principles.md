@@ -1,8 +1,8 @@
-# Principals
+# Principles
 
 ## Why Konstellation
 
-Kubernetes is quickly becoming the de-facto standard for running workloads on machines. It's been embraced by Fortune 500s as well as fast-growing startups. It's got a vibrant ecosystem, with many wonderful projects that are built on top of Kubernetes, solving [these](https://github.com/kubernetes/autoscaler) [important](https://istio.io/) [problems](https://github.com/kubernetes-sigs/aws-alb-ingress-controller).
+Kubernetes is quickly becoming the de-facto standard for running workloads on machines. It's been embraced by Fortune 500s as well as startups alike. There's a vibrant ecosystem around it, with many wonderful projects that are built on top of Kubernetes, solving [these](https://github.com/kubernetes/autoscaler) [important](https://istio.io/) [problems](https://github.com/kubernetes-sigs/aws-alb-ingress-controller).
 
 However, the learning curve remains steep for developers. For many, using kubernetes means spending days learning about various components, and copying YAML definitions from Medium articles to make it all work. Even when it's set up, it remains a challenge to operate it: from things like rolling back a bad release, to figuring out how to update components to a new version. These are outside of scope of Kubernetes itself, and yet are important problems when operating a production cluster.
 
@@ -16,7 +16,7 @@ With that thought, I wrote the first line of code for Konstellation in November 
 
 Konstellation provides its functionality as a controller running inside of Kubernetes. It doesn't take away or hide any functionality from standard Kubernetes. You could continue to use standard tools like kubectl, and work with any resources that Kubernetes supports natively.
 
-You may also install any standard Kubernetes components to a Konstellation managed cluster. However, you should avoid installing other service meshes, or anything that uses sidecars to enhance routing. Konstellation already deploys Istio, and is tightly integrated with it. Other service meshes would interfere with this setup.
+You may also install any standard Kubernetes components to a Konstellation managed cluster. However, you should avoid installing other service meshes, or anything that uses sidecars to enhance routing. Konstellation uses Istio as the underlying service mesh. Other service meshes would interfere with this setup.
 
 ## Reproducibility and undo
 
