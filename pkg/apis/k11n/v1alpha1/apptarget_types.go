@@ -122,6 +122,9 @@ func (at *AppTarget) DesiredInstances() int32 {
 	if at.Status.NumDesired > instances {
 		instances = at.Status.NumDesired
 	}
+	if instances > at.Spec.Scale.Max {
+		instances = at.Spec.Scale.Max
+	}
 	return instances
 }
 
