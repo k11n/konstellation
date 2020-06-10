@@ -419,16 +419,22 @@ func appDeploy(c *cli.Context) error {
 	build, err := resources.GetBuildByName(kclient, appTarget.Spec.Build)
 	if err != nil && !errors.IsNotFound(err) {
 		return err
-	} else if err == nil {
+	} else if err == nil && build.Spec.Tag == tag {
 		return fmt.Errorf("Build %s already exists", build.ShortName())
 	}
 
 	// create new build
 	build = v1alpha1.NewBuild(appTarget.Labels[resources.BuildRegistryLabel], appTarget.Labels[resources.BuildImageLabel], tag)
+	build.Labels = resources.LabelsForBuild(build)
 	build.Labels[resources.BuildTypeLabel] = resources.BuildTypeLatest
 
 	_, err = resources.UpdateResource(kclient, build, nil, nil)
-	return err
+
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Build %s has been successfully created.\n", build.ShortName())
+	return nil
 }
 
 type appInfo struct {

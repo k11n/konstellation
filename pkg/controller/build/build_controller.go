@@ -39,7 +39,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource App
-	err = c.Watch(&source.Kind{Type: &v1alpha1.App{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &v1alpha1.Build{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
