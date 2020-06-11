@@ -19,6 +19,10 @@ type CertificateRefSpec struct {
 
 // CertificateRef is the Schema for the certificates API
 // +kubebuilder:resource:path=certificaterefs,scope=Cluster
+// +kubebuilder:printcolumn:name="Domain",type=string,JSONPath=`.spec.domain`
+// +kubebuilder:printcolumn:name="Issuer",type=string,JSONPath=`.spec.issuer`
+// +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.spec.status`
+// +kubebuilder:printcolumn:name="ExpiresAt",type=string,JSONPath=`.spec.expiresAt`
 type CertificateRef struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

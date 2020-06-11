@@ -31,6 +31,9 @@ type BuildStatus struct {
 // Build is the Schema for the builds API
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=builds,scope=Cluster
+// +kubebuilder:printcolumn:name="Registry",type=string,JSONPath=`.spec.registry`
+// +kubebuilder:printcolumn:name="Image",type=string,JSONPath=`.spec.image`
+// +kubebuilder:printcolumn:name="Tag",type=string,JSONPath=`.spec.tag`
 type Build struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

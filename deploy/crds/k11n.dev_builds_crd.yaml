@@ -3,6 +3,16 @@ kind: CustomResourceDefinition
 metadata:
   name: builds.k11n.dev
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.registry
+    name: Registry
+    type: string
+  - JSONPath: .spec.image
+    name: Image
+    type: string
+  - JSONPath: .spec.tag
+    name: Tag
+    type: string
   group: k11n.dev
   names:
     kind: Build

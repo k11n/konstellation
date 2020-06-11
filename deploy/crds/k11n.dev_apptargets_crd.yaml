@@ -4,14 +4,20 @@ metadata:
   name: apptargets.k11n.dev
 spec:
   additionalPrinterColumns:
+  - JSONPath: .spec.build
+    name: Build
+    type: string
   - JSONPath: .status.numDesired
     name: NumDesired
     type: integer
   - JSONPath: .status.numReady
     name: NumReady
     type: integer
-  - JSONPath: .status.numAvailable
-    name: NumAvailable
+  - JSONPath: .spec.scale.min
+    name: Min
+    type: integer
+  - JSONPath: .spec.scale.max
+    name: Max
     type: integer
   - JSONPath: .status.hostname
     name: Hostname

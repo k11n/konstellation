@@ -3,6 +3,19 @@ kind: CustomResourceDefinition
 metadata:
   name: certificaterefs.k11n.dev
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.domain
+    name: Domain
+    type: string
+  - JSONPath: .spec.issuer
+    name: Issuer
+    type: string
+  - JSONPath: .spec.status
+    name: Status
+    type: string
+  - JSONPath: .spec.expiresAt
+    name: ExpiresAt
+    type: string
   group: k11n.dev
   names:
     kind: CertificateRef
@@ -10,6 +23,7 @@ spec:
     plural: certificaterefs
     singular: certificateref
   scope: Cluster
+  subresources: {}
   validation:
     openAPIV3Schema:
       description: CertificateRef is the Schema for the certificates API

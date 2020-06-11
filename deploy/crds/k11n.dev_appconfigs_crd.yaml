@@ -3,6 +3,10 @@ kind: CustomResourceDefinition
 metadata:
   name: appconfigs.k11n.dev
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .type
+    name: Type
+    type: string
   group: k11n.dev
   names:
     kind: AppConfig
@@ -10,6 +14,7 @@ spec:
     plural: appconfigs
     singular: appconfig
   scope: Cluster
+  subresources: {}
   validation:
     openAPIV3Schema:
       description: AppConfig is the Schema for the appconfigs API

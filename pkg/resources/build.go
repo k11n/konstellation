@@ -26,3 +26,19 @@ func GetBuildByName(kclient client.Client, name string) (*v1alpha1.Build, error)
 	}
 	return &r, nil
 }
+
+func GetLatestBuild(kclient client.Client, registry, image string) (build *v1alpha1.Build, err error) {
+	err = ForEach(kclient, &v1alpha1.BuildList{}, func(item interface{}) error {
+		b := item.(v1alpha1.Build)
+		build = &b
+		return nil
+	}, client.MatchingLabels{
+		BuildRegistryLabel: registry,
+		BuildImageLabel:    image,
+		BuildTypeLabel:     BuildTypeLatest,
+	})
+	if err == nil && build == nil {
+		err = ErrNotFound
+	}
+	return
+}

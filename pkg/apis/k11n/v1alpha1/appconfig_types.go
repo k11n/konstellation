@@ -27,6 +27,7 @@ const (
 
 // AppConfig is the Schema for the appconfigs API
 // +kubebuilder:resource:path=appconfigs,scope=Cluster
+// +kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.type`
 type AppConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
