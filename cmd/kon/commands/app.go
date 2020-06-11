@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -133,6 +134,11 @@ var AppCommands = []*cli.Command{
 						Name:    "follow",
 						Aliases: []string{"f"},
 						Usage:   "follow logs",
+					},
+					&cli.IntFlag{
+						Name:  "tail",
+						Usage: "number of lines to include from tail (default 100, -1 for all)",
+						Value: 100,
 					},
 					podFlag,
 					targetFlag,
@@ -737,6 +743,7 @@ func appLogs(c *cli.Context) error {
 	namespace := pc.target
 	args := []string{
 		"logs", pc.pod, "-n", namespace, "-c", "app",
+		"--tail", strconv.Itoa(c.Int("tail")),
 	}
 	if c.Bool("follow") {
 		args = append(args, "-f")
