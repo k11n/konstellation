@@ -8,7 +8,7 @@ Your app needs to be hosted by a container registry in order to be used with Kub
 
 The simplest option is to use [Amazon ECR](https://aws.amazon.com/ecr/). When Konstellation sets up the IAM role for the cluster, it included read-only access to your repos on ECR.
 
-Once your images are pushed to ECR, set the registry field your ECR URL. That's it.
+Once your images are pushed to ECR, set the registry field to your ECR URL. That's it.
 
 ## Targets
 
