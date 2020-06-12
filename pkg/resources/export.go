@@ -258,10 +258,6 @@ func (i *Importer) ImportApps(appsDir string) error {
 		}
 
 		app := obj.(*v1alpha1.App)
-		app.Generation = 0
-		app.ResourceVersion = ""
-		app.UID = ""
-		app.SetSelfLink("")
 
 		// load into cluster
 		if _, err = UpdateResource(i.client, app, nil, nil); err != nil {
@@ -295,10 +291,6 @@ func (i *Importer) ImportBuilds(buildsDir string) error {
 		}
 
 		build := obj.(*v1alpha1.Build)
-		build.Generation = 0
-		build.ResourceVersion = ""
-		build.UID = ""
-		build.SetSelfLink("")
 
 		// load into cluster
 		if _, err = UpdateResource(i.client, build, nil, nil); err != nil {
