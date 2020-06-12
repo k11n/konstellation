@@ -280,8 +280,11 @@ func (r *ReconcileAppRelease) newReplicaSetForAR(ar *v1alpha1.AppRelease, build 
 
 func labelsForAppRelease(ar *v1alpha1.AppRelease) map[string]string {
 	return map[string]string{
-		resources.AppLabel:        ar.Spec.App,
-		resources.TargetLabel:     ar.Spec.Target,
-		resources.AppReleaseLabel: ar.Name,
+		resources.AppLabel:             ar.Spec.App,
+		resources.TargetLabel:          ar.Spec.Target,
+		resources.AppReleaseLabel:      ar.Name,
+		resources.KubeManagedByLabel:   resources.Konstellation,
+		resources.KubeAppInstanceLabel: ar.Name,
+		resources.KubeAppVersionLabel:  ar.Spec.Build,
 	}
 }

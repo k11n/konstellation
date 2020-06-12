@@ -96,9 +96,9 @@ func (r *ReconcileClusterConfig) ensureNamespaceCreated(cc *v1alpha1.ClusterConf
 		ObjectMeta: metav1.ObjectMeta{
 			Name: target,
 			Labels: map[string]string{
-				resources.IstioInjectLabel: "enabled",
-				resources.TargetLabel:      target,
-				resources.ManagedByLabel:   resources.Konstellation,
+				resources.IstioInjectLabel:   "enabled",
+				resources.TargetLabel:        target,
+				resources.KubeManagedByLabel: resources.Konstellation,
 			},
 		},
 	}

@@ -254,6 +254,9 @@ func (r *ReconcileDeployment) reconcileConfigMap(at *v1alpha1.AppTarget) (config
 		return
 	}
 	configMap = resources.CreateConfigMap(at.Spec.App, ac, sharedConfigs)
+	for key, val := range labelsForAppTarget(at) {
+		configMap.Labels[key] = val
+	}
 	_, err = resources.GetConfigMap(r.client, at.TargetNamespace(), configMap.Name)
 	if errors.IsNotFound(err) {
 		log.Info("Creating ConfigMap", "app", at.Spec.App, "target", at.Spec.Target)
@@ -266,7 +269,9 @@ func (r *ReconcileDeployment) reconcileConfigMap(at *v1alpha1.AppTarget) (config
 
 func labelsForAppTarget(at *v1alpha1.AppTarget) map[string]string {
 	return map[string]string{
-		resources.AppLabel:    at.Spec.App,
-		resources.TargetLabel: at.Spec.Target,
+		resources.AppLabel:           at.Spec.App,
+		resources.TargetLabel:        at.Spec.Target,
+		resources.KubeManagedByLabel: resources.Konstellation,
+		resources.KubeAppLabel:       at.Spec.App,
 	}
 }
