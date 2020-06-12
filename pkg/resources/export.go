@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -99,6 +100,7 @@ func (e *Exporter) Export() error {
 		return err
 	}
 	defer f.Close()
+	e.cleanupMeta(&cc.ObjectMeta)
 	if err := e.encoder.Encode(cc, f); err != nil {
 		return err
 	}
@@ -116,6 +118,7 @@ func (e *Exporter) Export() error {
 			return err
 		}
 		defer f.Close()
+		e.cleanupMeta(&np.ObjectMeta)
 		if err := e.encoder.Encode(np, f); err != nil {
 			return err
 		}
@@ -140,6 +143,7 @@ func (e *Exporter) ExportApps(appsDir string) error {
 		}
 		defer f.Close()
 
+		e.cleanupMeta(&app.ObjectMeta)
 		err = e.encoder.Encode(&app, f)
 		if err == nil && e.printStatus {
 			fmt.Println("exported app", app.Name)
@@ -162,6 +166,7 @@ func (e *Exporter) ExportBuilds(buildsDir string) error {
 		}
 		defer f.Close()
 
+		e.cleanupMeta(&build.ObjectMeta)
 		err = e.encoder.Encode(&build, f)
 		if err == nil && e.printStatus {
 			fmt.Println("exported build", build.Name)
@@ -205,6 +210,13 @@ func (e *Exporter) ExportConfigs(configsDir string) error {
 	})
 
 	return err
+}
+
+func (e *Exporter) cleanupMeta(meta *metav1.ObjectMeta) {
+	meta.ResourceVersion = ""
+	meta.Generation = 0
+	meta.UID = ""
+	meta.SetSelfLink("")
 }
 
 func (i *Importer) Import() error {
