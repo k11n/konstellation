@@ -22,9 +22,8 @@ func (d *KubeDash) Name() string {
 	return "kube.dashboard"
 }
 
-func (d *KubeDash) Version() string {
-	// TODO: should we match Kube versions
-	return "2.0.0"
+func (d *KubeDash) VersionForKube(version string) string {
+	return "2.0.1"
 }
 
 func (d *KubeDash) InstallComponent(kclient client.Client) error {

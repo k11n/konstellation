@@ -22,6 +22,10 @@ import (
 	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
+const (
+	istioVersion = "1.6.2"
+)
+
 func init() {
 	components.RegisterComponent(&IstioInstaller{})
 }
@@ -33,8 +37,8 @@ func (i *IstioInstaller) Name() string {
 	return "istio"
 }
 
-func (i *IstioInstaller) Version() string {
-	return "1.5.1"
+func (i *IstioInstaller) VersionForKube(version string) string {
+	return istioVersion
 }
 
 // returns true if CLI is needed and has not yet been installed
@@ -50,7 +54,7 @@ func (i *IstioInstaller) NeedsCLI() bool {
 		return true
 	}
 
-	return !strings.HasPrefix(string(output), i.Version())
+	return !strings.HasPrefix(string(output), istioVersion)
 }
 
 // installs CLI locally
@@ -80,7 +84,7 @@ func (i *IstioInstaller) InstallCLI() error {
 	cmd := exec.Command(installCmd)
 	cmd.Dir = parentDir
 	cmd.Env = []string{
-		fmt.Sprintf("ISTIO_VERSION=%s", i.Version()),
+		fmt.Sprintf("ISTIO_VERSION=%s", istioVersion),
 	}
 	if err = cmd.Run(); err != nil {
 		return err
@@ -102,8 +106,6 @@ func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 		"--set", "components.citadel.enabled=true", // citadel is required by the sidecar injector
 		"--set", "components.sidecarInjector.enabled=true",
 		"--set", "addonComponents.kiali.enabled=true",
-		"--set", "addonComponents.grafana.enabled=true",
-		"--set", "values.kiali.dashboard.grafanaURL=http://grafana:3000",
 		"--set", "values.gateways.istio-ingressgateway.type=NodePort",
 		"--set", "values.gateways.enabled=true",
 	)
@@ -151,5 +153,5 @@ func (i *IstioInstaller) cliPath() string {
 }
 
 func (i *IstioInstaller) installRoot() string {
-	return path.Join(cli.GetRootDir(), fmt.Sprintf("istio-%s", i.Version()))
+	return path.Join(cli.GetRootDir(), fmt.Sprintf("istio-%s", istioVersion))
 }

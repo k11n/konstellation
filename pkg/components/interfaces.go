@@ -6,7 +6,7 @@ import (
 
 type ComponentInstaller interface {
 	Name() string
-	Version() string
+	VersionForKube(version string) string
 
 	// installs the component onto the kube cluster
 	InstallComponent(client.Client) error

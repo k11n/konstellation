@@ -650,17 +650,18 @@ func (c *activeCluster) installComponents() error {
 		fmt.Println("\nInstalling Kubernetes components for", compInstaller.Name())
 
 		// TODO: better handle versions
-		if compInstaller.Version() != comp.Version {
-			return fmt.Errorf("Version mismatch for %s: specified: %s, current: %s",
-				compInstaller.Name(), comp.Version, compInstaller.Version())
-		}
+		compVersion := compInstaller.VersionForKube(cc.Spec.KubeVersion)
+		//if compVersion != comp.Version {
+		//	return fmt.Errorf("Version mismatch for %s: specified: %s, current: %s",
+		//		compInstaller.Name(), comp.Version, compVersion)
+		//}
 
 		err = compInstaller.InstallComponent(kclient)
 		if err != nil {
 			return err
 		}
 
-		installed[compInstaller.Name()] = compInstaller.Version()
+		installed[compInstaller.Name()] = compVersion
 	}
 
 	// mark it as installed

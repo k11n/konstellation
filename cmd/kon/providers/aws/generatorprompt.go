@@ -59,15 +59,6 @@ func (g *PromptConfigGenerator) CreateClusterConfig() (cc *v1alpha1.ClusterConfi
 	cc.Spec.Cloud = "aws"
 	cc.Spec.Region = g.region
 	cc.Spec.Version = version.Version
-	comps := append(kube.KubeComponents, &ingress.AWSALBIngress{})
-	for _, comp := range comps {
-		cc.Spec.Components = append(cc.Spec.Components, v1alpha1.ClusterComponent{
-			ComponentSpec: v1alpha1.ComponentSpec{
-				Name:    comp.Name(),
-				Version: comp.Version(),
-			},
-		})
-	}
 
 	// cluster name
 	prompt := promptui.Prompt{
@@ -82,6 +73,23 @@ func (g *PromptConfigGenerator) CreateClusterConfig() (cc *v1alpha1.ClusterConfi
 	if conf.Clusters[cc.Name] != nil {
 		err = fmt.Errorf("Cluster name already in use")
 		return
+	}
+
+	// kube version
+	versionSelect := utils.NewPromptSelect("Kubernetes version", kaws.EKSAvailableVersions)
+	if _, cc.Spec.KubeVersion, err = versionSelect.Run(); err != nil {
+		return
+	}
+
+	// AWS only component
+	comps := append(kube.KubeComponents, &ingress.AWSALBIngress{})
+	for _, comp := range comps {
+		cc.Spec.Components = append(cc.Spec.Components, v1alpha1.ClusterComponent{
+			ComponentSpec: v1alpha1.ComponentSpec{
+				Name:    comp.Name(),
+				Version: comp.VersionForKube(cc.Spec.KubeVersion),
+			},
+		})
 	}
 
 	// VPC

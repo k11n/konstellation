@@ -17,8 +17,9 @@ import (
 )
 
 const (
-	albIngressName    = "alb-ingress-controller"
-	albRoleAnnotation = "eks.amazonaws.com/role-arn"
+	albIngressName       = "alb-ingress-controller"
+	albRoleAnnotation    = "eks.amazonaws.com/role-arn"
+	albControllerVersion = "1.1.8"
 )
 
 func init() {
@@ -32,13 +33,13 @@ func (i *AWSALBIngress) Name() string {
 	return "ingress.awsalb"
 }
 
-func (i *AWSALBIngress) Version() string {
-	return "1.1.6"
+func (i *AWSALBIngress) VersionForKube(version string) string {
+	return albControllerVersion
 }
 
 func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
-	// deploy roles xml
-	url := fmt.Sprintf("https://raw.githubusercontent.com/kubernetes-sigs/aws-alb-ingress-controller/v%s/docs/examples/rbac-role.yaml", i.Version())
+	// deploy roles yaml
+	url := fmt.Sprintf("https://raw.githubusercontent.com/kubernetes-sigs/aws-alb-ingress-controller/v%s/docs/examples/rbac-role.yaml", albControllerVersion)
 	err := cli.KubeApply(url)
 	if err != nil {
 		return nil
@@ -115,7 +116,7 @@ func (i *AWSALBIngress) deploymentForIngress(cc *v1alpha1.ClusterConfig) *appsv1
 								"--ingress-class=alb",
 								fmt.Sprintf("--cluster-name=%s", cc.Name),
 							},
-							Image: "docker.io/amazon/aws-alb-ingress-controller:v1.1.6",
+							Image: "docker.io/amazon/aws-alb-ingress-controller:v" + albControllerVersion,
 						},
 					},
 					ServiceAccountName: albIngressName,

@@ -13,6 +13,10 @@ func init() {
 	components.RegisterComponent(&MetricsServer{})
 }
 
+const (
+	version = "0.3.6"
+)
+
 type MetricsServer struct {
 }
 
@@ -20,14 +24,14 @@ func (m *MetricsServer) Name() string {
 	return "metrics-server"
 }
 
-func (m *MetricsServer) Version() string {
-	return "0.3.6"
+func (m *MetricsServer) VersionForKube(version string) string {
+	return version
 }
 
 // installs the component onto the kube cluster
 func (m *MetricsServer) InstallComponent(kclient client.Client) error {
 	u := fmt.Sprintf("https://github.com/kubernetes-sigs/metrics-server/releases/download/v%s/components.yaml",
-		m.Version())
+		version)
 
 	return cli.KubeApply(u)
 }

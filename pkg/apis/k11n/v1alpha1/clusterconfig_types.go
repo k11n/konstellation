@@ -18,9 +18,10 @@ type ComponentSpec struct {
 
 // ClusterConfigSpec defines the desired state of ClusterConfig
 type ClusterConfigSpec struct {
-	Version string `json:"version"`
-	Cloud   string `json:"cloud"`
-	Region  string `json:"region"`
+	Version     string `json:"version"`
+	KubeVersion string `json:"kubeVersion"`
+	Cloud       string `json:"cloud"`
+	Region      string `json:"region"`
 	// +kubebuilder:validation:Optional
 	// +nullable
 	AWS *AWSClusterSpec `json:"aws"`

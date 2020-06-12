@@ -47,6 +47,10 @@ func NewEKSService(s *session.Session) *EKSService {
 	}
 }
 
+func (s *EKSService) GetAvailableVersions(ctx context.Context) ([]string, error) {
+	return EKSAvailableVersions, nil
+}
+
 func (s *EKSService) ListClusters(ctx context.Context) (clusters []*types.Cluster, err error) {
 	var clusterNames []*string
 	err = s.EKS.ListClustersPagesWithContext(ctx, &eks.ListClustersInput{}, func(output *eks.ListClustersOutput, b bool) bool {

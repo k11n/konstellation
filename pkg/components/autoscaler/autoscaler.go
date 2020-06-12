@@ -17,18 +17,29 @@ func init() {
 	components.RegisterComponent(&ClusterAutoScaler{})
 }
 
+var (
+	versionMap = map[string]string{
+		"1.14": "1.14.8",
+		"1.15": "1.15.6",
+		"1.16": "1.16.5",
+		"1.17": "1.17.2",
+		"1.18": "1.18.1",
+	}
+)
+
 type ClusterAutoScaler struct {
 }
 
 func (s *ClusterAutoScaler) Name() string {
 	return "cluster-autoscaler"
 }
-func (s *ClusterAutoScaler) Version() string {
-	return "1.18"
+func (s *ClusterAutoScaler) VersionForKube(version string) string {
+	return versionMap[version]
 }
 
 type autoScalerConfig struct {
 	ClusterName string
+	Version     string
 }
 
 func (s *ClusterAutoScaler) InstallComponent(kclient client.Client) error {
@@ -56,6 +67,7 @@ func (s *ClusterAutoScaler) InstallComponent(kclient client.Client) error {
 
 	conf := autoScalerConfig{
 		ClusterName: cc.Name,
+		Version:     s.VersionForKube(cc.Spec.KubeVersion),
 	}
 	buf := bytes.NewBuffer(nil)
 	err = tmpl.Execute(buf, conf)

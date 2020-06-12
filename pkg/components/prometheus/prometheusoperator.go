@@ -8,6 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const version = "0.38"
+
 func init() {
 	components.RegisterComponent(&PrometheusOperator{})
 }
@@ -19,12 +21,12 @@ func (d *PrometheusOperator) Name() string {
 	return "prometheus-operator"
 }
 
-func (d *PrometheusOperator) Version() string {
-	return "0.38"
+func (d *PrometheusOperator) VersionForKube(version string) string {
+	return version
 }
 
 func (d *PrometheusOperator) InstallComponent(kclient client.Client) error {
 	url := fmt.Sprintf("https://raw.githubusercontent.com/coreos/prometheus-operator/release-%s/bundle.yaml",
-		d.Version())
+		version)
 	return cli.KubeApply(url)
 }

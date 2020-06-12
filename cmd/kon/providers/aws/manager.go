@@ -24,6 +24,7 @@ import (
 	kaws "github.com/k11n/konstellation/pkg/cloud/aws"
 	"github.com/k11n/konstellation/pkg/resources"
 	"github.com/k11n/konstellation/pkg/utils/tls"
+	"github.com/k11n/konstellation/version"
 )
 
 type AWSManager struct {
@@ -44,6 +45,8 @@ func NewAWSManager(region string) *AWSManager {
 
 func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	awsConf := cc.Spec.AWS
+	cc.Spec.Region = a.region
+	cc.Spec.Version = version.Version
 
 	// TODO: Validate input
 	var inventory []string
