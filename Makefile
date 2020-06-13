@@ -21,7 +21,7 @@ generate:
 	operator-sdk generate crds
 
 jsonnet:
-	#cd prometheus/0.4; ./build.sh
+	cd prometheus/0.4; ./build.sh
 	mkdir -p deploy/kube-prometheus/0.4
 	mv prometheus/0.4/manifests deploy/kube-prometheus/0.4
 
