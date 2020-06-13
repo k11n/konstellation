@@ -754,6 +754,17 @@ func generateKubeConfig() error {
 	}
 
 	kconf := resources.NewKubeConfig()
+	if _, err := os.Stat(target); err == nil {
+		data, err := ioutil.ReadFile(target)
+		if err != nil {
+			return errors.Wrap(err, "Could not read existing kube config")
+		}
+		obj, _, err := kube.GetKubeDecoder().Decode(data, nil, &cliv1.Config{})
+		if err != nil {
+			return errors.Wrap(err, "Could not decode kube config")
+		}
+		kconf = obj.(*cliv1.Config)
+	}
 	if isExternalKubeConfig(target) {
 		// already exists.. warn user
 		prompt := promptui.Prompt{
@@ -767,16 +778,6 @@ func generateKubeConfig() error {
 			fmt.Println("Konstellation requires updating ~/.kube/config. Please try this again")
 			return fmt.Errorf("select aborted")
 		}
-
-		data, err := ioutil.ReadFile(target)
-		if err != nil {
-			return errors.Wrap(err, "Could not read existing kube config")
-		}
-		obj, _, err := kube.GetKubeDecoder().Decode(data, nil, &cliv1.Config{})
-		if err != nil {
-			return errors.Wrap(err, "Could not decode kube config")
-		}
-		kconf = obj.(*cliv1.Config)
 	}
 
 	fmt.Printf("configuring kubectl: generating %s\n", target)
