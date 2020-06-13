@@ -122,8 +122,18 @@ func NewDestroyVPCTFAction(bucket, bucketRegion, region, vpcCidr string, topolog
 	return
 }
 
-func NewCreateEKSClusterTFAction(bucket, bucketRegion, region, vpcId string, name string, securityGroupIds []string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
-	targetDir := path.Join(config.TerraformDir(), "aws", "cluster", name)
+type eksClusterInput struct {
+	bucket           string
+	bucketRegion     string
+	region           string
+	vpcId            string
+	name             string
+	kubeVersion      string
+	securityGroupIds []string
+}
+
+func NewCreateEKSClusterTFAction(input eksClusterInput, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+	targetDir := path.Join(config.TerraformDir(), "aws", "cluster", input.name)
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, clusterFiles...)
 	if err != nil {
 		return
@@ -131,14 +141,15 @@ func NewCreateEKSClusterTFAction(bucket, bucketRegion, region, vpcId string, nam
 
 	opts = append(opts,
 		terraform.TerraformVars{
-			"region":             region,
-			"vpc_id":             vpcId,
-			"cluster":            name,
-			"security_group_ids": securityGroupIds,
+			"cluster":            input.name,
+			"kube_version":       input.kubeVersion,
+			"region":             input.region,
+			"security_group_ids": input.securityGroupIds,
+			"vpc_id":             input.vpcId,
 		},
 		terraform.TerraformTemplateVars{
-			"state_bucket":        bucket,
-			"state_bucket_region": bucketRegion,
+			"state_bucket":        input.bucket,
+			"state_bucket_region": input.bucketRegion,
 		},
 		getAWSCredentials(),
 	)

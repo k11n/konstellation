@@ -15,6 +15,10 @@ variable "security_group_ids" {
   type = list(string)
 }
 
+variable "kube_version" {
+  type = string
+}
+
 output "cluster_name" {
   value = aws_eks_cluster.main.id
 }

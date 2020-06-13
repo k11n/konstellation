@@ -11,6 +11,7 @@ resource "aws_eks_cluster" "main" {
   name = var.cluster
   role_arn = aws_iam_role.eks_service_role.arn
 
+  version = var.kube_version
   vpc_config {
     subnet_ids = data.aws_subnet_ids.selected.ids
     security_group_ids = var.security_group_ids

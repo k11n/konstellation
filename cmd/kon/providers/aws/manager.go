@@ -122,8 +122,16 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	}
 
 	// create cluster
-	clusterTf, err := NewCreateEKSClusterTFAction(a.stateBucket, a.stateBucketRegion, a.region, awsConf.Vpc, cc.Name,
-		awsConf.SecurityGroups, terraform.OptionDisplayOutput)
+	eksInput := eksClusterInput{
+		bucket:           a.stateBucket,
+		bucketRegion:     a.stateBucketRegion,
+		kubeVersion:      cc.Spec.KubeVersion,
+		name:             cc.Name,
+		region:           a.region,
+		securityGroupIds: awsConf.SecurityGroups,
+		vpcId:            awsConf.Vpc,
+	}
+	clusterTf, err := NewCreateEKSClusterTFAction(eksInput, terraform.OptionDisplayOutput)
 	if err != nil {
 		return err
 	}
