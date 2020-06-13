@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cast"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

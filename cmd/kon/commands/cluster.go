@@ -18,7 +18,7 @@ import (
 	"github.com/urfave/cli/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	k8sJson "k8s.io/apimachinery/pkg/runtime/serializer/json"
+	cliv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	metrics "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -753,10 +753,11 @@ func generateKubeConfig() error {
 		return err
 	}
 
+	kconf := resources.NewKubeConfig()
 	if isExternalKubeConfig(target) {
 		// already exists.. warn user
 		prompt := promptui.Prompt{
-			Label:     fmt.Sprintf("%s already exists, overwrite", target),
+			Label:     fmt.Sprintf("Konstellation will append new cluster info into Kube config at %s. Ok to continue", target),
 			IsConfirm: true,
 		}
 		utils.FixPromptBell(&prompt)
@@ -766,10 +767,20 @@ func generateKubeConfig() error {
 			fmt.Println("Konstellation requires updating ~/.kube/config. Please try this again")
 			return fmt.Errorf("select aborted")
 		}
-	}
-	fmt.Printf("configuring kubectl: generating %s\n", target)
 
-	kubeConf := resources.GenerateKubeConfig(cmdPath, clusterConfs, selectedIdx)
+		data, err := ioutil.ReadFile(target)
+		if err != nil {
+			return errors.Wrap(err, "Could not read existing kube config")
+		}
+		obj, _, err := kube.GetKubeDecoder().Decode(data, nil, &cliv1.Config{})
+		if err != nil {
+			return errors.Wrap(err, "Could not decode kube config")
+		}
+		kconf = obj.(*cliv1.Config)
+	}
+
+	fmt.Printf("configuring kubectl: generating %s\n", target)
+	resources.UpdateKubeConfig(kconf, cmdPath, clusterConfs, selectedIdx)
 	file, err := os.Create(target)
 	if err != nil {
 		return err
@@ -780,8 +791,7 @@ func generateKubeConfig() error {
 		}
 	}()
 
-	serializer := k8sJson.NewYAMLSerializer(k8sJson.DefaultMetaFactory, nil, nil)
-	err = serializer.Encode(kubeConf, file)
+	err = kube.GetKubeEncoder().Encode(kconf, file)
 	if err != nil {
 		return err
 	}

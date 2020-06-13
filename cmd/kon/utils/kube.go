@@ -65,17 +65,3 @@ func LoadKubeObject(decoder runtime.Decoder, objType runtime.Object, target stri
 	obj, _, err = decoder.Decode(data, nil, objType)
 	return
 }
-
-//
-//type PortForwarder struct {
-//	KubeForwarder *portforward.PortForwarder
-//	LocalPort     int
-//	StopChan      chan struct{}
-//	ReadyChan     <-chan struct{}
-//}
-//
-//func NewPortForwarderForService(kclient client.Client, namespace string, service string) (pf *PortForwarder, err error) {
-//	// find service and one of the pods
-//	kclient.
-//	return
-//}

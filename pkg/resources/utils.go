@@ -11,6 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -164,4 +166,17 @@ func ForEach(kclient client.Client, listObj runtime.Object, eachFunc func(item i
 
 func ToEnvVar(s string) string {
 	return strings.ToUpper(strings.ReplaceAll(s, "-", "_"))
+}
+
+func NewYAMLEncoder() runtime.Encoder {
+	return json.NewSerializerWithOptions(json.DefaultMetaFactory, nil, nil,
+		json.SerializerOptions{
+			Yaml:   true,
+			Pretty: true,
+			Strict: false,
+		})
+}
+
+func NewYAMLDecoder() runtime.Decoder {
+	return clientgoscheme.Codecs.UniversalDeserializer()
 }

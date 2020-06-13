@@ -39,7 +39,7 @@ require (
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.1.0 // indirect
 	gopkg.in/ini.v1 v1.55.0
-	gopkg.in/yaml.v2 v2.2.8
+	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 	istio.io/api v0.0.0-20200417223136-90a960729620
 	istio.io/client-go v0.0.0-20200417172857-74af6f52f3d9
 	istio.io/gogo-genproto v0.0.0-20200416215531-c23ae6ad14f9 // indirect

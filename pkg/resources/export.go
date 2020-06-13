@@ -10,15 +10,13 @@ import (
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
-// handles exports and importing cluster settings to files
+// handles exporting and importing cluster settings to files
 // the exported data should be in this structure
 // target/
 //   apps/
@@ -52,14 +50,9 @@ type Importer struct {
 func NewExporter(kclient client.Client, targetPath string) *Exporter {
 	// the schemes should be created prior to creating this
 	return &Exporter{
-		client:     kclient,
-		targetPath: targetPath,
-		encoder: json.NewSerializerWithOptions(json.DefaultMetaFactory, nil, nil,
-			json.SerializerOptions{
-				Yaml:   true,
-				Pretty: true,
-				Strict: false,
-			}),
+		client:      kclient,
+		targetPath:  targetPath,
+		encoder:     NewYAMLEncoder(),
 		printStatus: true,
 	}
 }
@@ -68,7 +61,7 @@ func NewImporter(kclient client.Client, sourcePath string) *Importer {
 	return &Importer{
 		client:      kclient,
 		sourcePath:  sourcePath,
-		decoder:     clientgoscheme.Codecs.UniversalDeserializer(),
+		decoder:     NewYAMLDecoder(),
 		printStatus: true,
 	}
 }
