@@ -13,10 +13,10 @@ import (
 	koncli "github.com/k11n/konstellation/pkg/utils/cli"
 )
 
-var DashboardCommands = []*cli.Command{
+var LaunchCommands = []*cli.Command{
 	{
-		Name:     "dashboard",
-		Usage:    "Launch various dashboards",
+		Name:     "launch",
+		Usage:    "Launch management webapps",
 		Category: "Cluster",
 		Before: func(c *cli.Context) error {
 			return ensureClusterSelected()
@@ -26,20 +26,35 @@ var DashboardCommands = []*cli.Command{
 		},
 		Subcommands: []*cli.Command{
 			{
-				Name:   "kube",
+				Name:   "alertmanager",
+				Usage:  "Launch Alert Manager",
+				Action: launchAlertManager,
+			},
+			{
+				Name:   "grafana",
+				Usage:  "Launch Grafana",
+				Action: launchGrafana,
+			},
+			{
+				Name:   "kubedash",
 				Usage:  "Launch Kubernetes Dashboard",
-				Action: kubeDashboard,
+				Action: launchKubeDash,
 			},
 			{
 				Name:   "kiali",
 				Usage:  "Launch Kiali (mesh)",
-				Action: kialiDashboard,
+				Action: launchKiali,
+			},
+			{
+				Name:   "prometheus",
+				Usage:  "Launch Prometheus UI",
+				Action: launchPrometheus,
 			},
 		},
 	},
 }
 
-func kubeDashboard(c *cli.Context) error {
+func launchKubeDash(c *cli.Context) error {
 	ac, err := getActiveCluster()
 	if err != nil {
 		return err
@@ -70,7 +85,7 @@ func kubeDashboard(c *cli.Context) error {
 	return nil
 }
 
-func kialiDashboard(c *cli.Context) error {
+func launchKiali(c *cli.Context) error {
 	ac, err := getActiveCluster()
 	if err != nil {
 		return err
@@ -90,11 +105,56 @@ func kialiDashboard(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	err = proxy.Start()
+	return startProxyAndWait(proxy, "Kiali")
+}
+
+func launchPrometheus(c *cli.Context) error {
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+
+	proxy, err := koncli.NewKubeProxyForService(ac.kubernetesClient(), resources.KonSystemNamespace, "prometheus-k8s", 9090)
+	if err != nil {
+		return err
+	}
+	return startProxyAndWait(proxy, "Prometheus")
+}
+
+func launchGrafana(c *cli.Context) error {
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+
+	proxy, err := koncli.NewKubeProxyForService(ac.kubernetesClient(), resources.KonSystemNamespace, "grafana", 3000)
+	if err != nil {
+		return err
+	}
+	return startProxyAndWait(proxy, "Grafana")
+}
+
+func launchAlertManager(c *cli.Context) error {
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+
+	proxy, err := koncli.NewKubeProxyForService(ac.kubernetesClient(), resources.KonSystemNamespace, "alertmanager-main", 9093)
+	if err != nil {
+		return err
+	}
+	return startProxyAndWait(proxy, "Alert Manager")
+}
+
+func startProxyAndWait(proxy *koncli.KubeProxy, name string) error {
+	err := proxy.Start()
 	if err != nil {
 		return errors.Wrap(err, "failed to start kubernetes proxy")
 	}
-	fmt.Printf("Launching Kiali Dashboard: %s\n", proxy.URL())
+	if name != "" {
+		fmt.Printf("Launching %s: %s\n", name, proxy.URL())
+	}
 
 	// launch web browser after delay
 	time.Sleep(2 * time.Second)

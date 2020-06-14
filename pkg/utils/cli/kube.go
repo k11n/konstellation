@@ -16,10 +16,14 @@ import (
 	"github.com/k11n/konstellation/pkg/resources"
 )
 
+var KubeDisplayOutput = false
+
 func KubeCtl(args ...string) error {
 	cmd := exec.Command("kubectl", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	if KubeDisplayOutput {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
 	return cmd.Run()
 }
 
@@ -29,8 +33,10 @@ func KubeApplyReader(reader io.Reader) error {
 	}
 	cmd := exec.Command("kubectl", args...)
 	cmd.Stdin = reader
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	if KubeDisplayOutput {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
 	return cmd.Run()
 }
 
@@ -39,8 +45,10 @@ func KubeApply(url string) error {
 		"apply", "-f", url,
 	}
 	cmd := exec.Command("kubectl", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	if KubeDisplayOutput {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
 	return cmd.Run()
 }
 
@@ -92,8 +100,13 @@ func (p *KubeProxy) Start() error {
 		return fmt.Errorf("Proxy is already started")
 	}
 
+	defPort := 7001
+	if p.Service != "" {
+		defPort = p.ServicePort
+	}
+
 	// find unused port
-	port, err := p.findUnusedPort(7001)
+	port, err := p.findUnusedPort(defPort)
 	if err != nil {
 		return err
 	}

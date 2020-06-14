@@ -22,7 +22,7 @@ func main() {
 		commands.SetupCommands,
 		commands.ClusterCommands,
 		commands.CertificateCommands,
-		commands.DashboardCommands,
+		commands.LaunchCommands,
 		commands.VPCCommands,
 	}
 	for _, cmds := range commandSets {
