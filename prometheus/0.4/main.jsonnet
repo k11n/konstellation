@@ -3,6 +3,7 @@ local kp =
   (import 'kube-prometheus/kube-prometheus-anti-affinity.libsonnet') +
   (import 'kube-prometheus/kube-prometheus-kube-aws.libsonnet') +
   (import 'kube-prometheus/kube-prometheus-all-namespaces.libsonnet') +
+  (import '../grafana.jsonnet') +
   {
     _config+:: {
       namespace: 'kon-system',

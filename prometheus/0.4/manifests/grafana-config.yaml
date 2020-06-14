@@ -1,0 +1,8 @@
+apiVersion: v1
+data:
+  grafana.ini: W2F1dGguYW5vbnltb3VzXQplbmFibGVkID0gdHJ1ZQo=
+kind: Secret
+metadata:
+  name: grafana-config
+  namespace: kon-system
+type: Opaque

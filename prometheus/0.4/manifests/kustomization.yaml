@@ -6,6 +6,7 @@ resources:
 - alertmanager-service.yaml
 - alertmanager-serviceAccount.yaml
 - alertmanager-serviceMonitor.yaml
+- grafana-config.yaml
 - grafana-dashboardDatasources.yaml
 - grafana-dashboardDefinitions.yaml
 - grafana-dashboardSources.yaml

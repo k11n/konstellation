@@ -33291,6 +33291,15 @@ type: Opaque
 ---
 apiVersion: v1
 data:
+  grafana.ini: W2F1dGguYW5vbnltb3VzXQplbmFibGVkID0gdHJ1ZQo=
+kind: Secret
+metadata:
+  name: grafana-config
+  namespace: kon-system
+type: Opaque
+---
+apiVersion: v1
+data:
   datasources.yaml: ewogICAgImFwaVZlcnNpb24iOiAxLAogICAgImRhdGFzb3VyY2VzIjogWwogICAgICAgIHsKICAgICAgICAgICAgImFjY2VzcyI6ICJwcm94eSIsCiAgICAgICAgICAgICJlZGl0YWJsZSI6IGZhbHNlLAogICAgICAgICAgICAibmFtZSI6ICJwcm9tZXRoZXVzIiwKICAgICAgICAgICAgIm9yZ0lkIjogMSwKICAgICAgICAgICAgInR5cGUiOiAicHJvbWV0aGV1cyIsCiAgICAgICAgICAgICJ1cmwiOiAiaHR0cDovL3Byb21ldGhldXMtazhzLmtvbi1zeXN0ZW0uc3ZjOjkwOTAiLAogICAgICAgICAgICAidmVyc2lvbiI6IDEKICAgICAgICB9CiAgICBdCn0=
 kind: Secret
 metadata:
@@ -33546,6 +33555,9 @@ spec:
         - mountPath: /grafana-dashboard-definitions/0/workload-total
           name: grafana-dashboard-workload-total
           readOnly: false
+        - mountPath: /etc/grafana
+          name: grafana-config
+          readOnly: false
       nodeSelector:
         beta.kubernetes.io/os: linux
       securityContext:
@@ -33633,6 +33645,9 @@ spec:
       - configMap:
           name: grafana-dashboard-workload-total
         name: grafana-dashboard-workload-total
+      - name: grafana-config
+        secret:
+          secretName: grafana-config
 ---
 apiVersion: apps/v1
 kind: Deployment
