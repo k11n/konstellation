@@ -1,8 +1,28 @@
+local k = import 'ksonnet/ksonnet.beta.4/k.libsonnet';
+
 local kp =
   (import 'kube-prometheus/kube-prometheus.libsonnet') +
   (import 'kube-prometheus/kube-prometheus-anti-affinity.libsonnet') +
   (import 'kube-prometheus/kube-prometheus-kube-aws.libsonnet') +
-  (import 'kube-prometheus/kube-prometheus-all-namespaces.libsonnet') +
+  // create cluster role, as 0.3 doesn't support it yet
+  {
+    prometheus+:: {
+        clusterRole+: {
+            rules+:
+            local role = k.rbac.v1.role;
+            local policyRule = role.rulesType;
+            local rule = policyRule.new() +
+                            policyRule.withApiGroups(['']) +
+                            policyRule.withResources([
+                            'services',
+                            'endpoints',
+                            'pods',
+                            ]) +
+                            policyRule.withVerbs(['get', 'list', 'watch']);
+            [rule]
+      },
+    }
+  } +
   {
     _config+:: {
       namespace: 'kon-system',

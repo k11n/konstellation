@@ -39,7 +39,7 @@ var (
 		&autoscaler.ClusterAutoScaler{},
 		&istio.IstioInstaller{},
 		&kubedash.KubeDash{},
-		&prometheus.PrometheusOperator{},
+		&prometheus.KubePrometheus{},
 		// TODO: this might not be required on some installs
 		&metricsserver.MetricsServer{},
 	}

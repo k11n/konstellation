@@ -20,10 +20,15 @@ generate:
 	operator-sdk generate k8s
 	operator-sdk generate crds
 
-jsonnet:
+prometheus-0.4:
 	cd prometheus/0.4; ./build.sh
 	mkdir -p deploy/kube-prometheus/0.4
-	mv prometheus/0.4/manifests deploy/kube-prometheus/0.4
+	mv prometheus/0.4/*.yaml deploy/kube-prometheus/0.4/
+
+prometheus-0.3:
+	cd prometheus/0.3; ./build.sh
+	mkdir -p deploy/kube-prometheus/0.3
+	mv prometheus/0.3/*.yaml deploy/kube-prometheus/0.3/
 
 test:
 	go test ./...

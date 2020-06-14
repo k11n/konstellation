@@ -6,7 +6,7 @@ build/bin/*
 rice-box.go
 # jsonnet deps
 prometheus/0.4/vendor
-prometheus/0.4/.vscode
+prometheus/0.3/vendor
 # bin files
 cmd/kon/kon
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
@@ -80,7 +80,7 @@ Session.vim
 # auto-generated tag files
 tags
 ### VisualStudioCode ###
-.vscode/*
+.vscode
 .history
 # End of https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 .idea/*
