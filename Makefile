@@ -21,14 +21,14 @@ generate:
 	operator-sdk generate crds
 
 prometheus-0.4:
-	cd prometheus/0.4; ./build.sh
+	cd components/prometheus/0.4; ./build.sh
 	mkdir -p deploy/kube-prometheus/0.4
-	mv prometheus/0.4/*.yaml deploy/kube-prometheus/0.4/
+	mv components/prometheus/0.4/*.yaml deploy/kube-prometheus/0.4/
 
 prometheus-0.3:
-	cd prometheus/0.3; ./build.sh
+	cd components/prometheus/0.3; ./build.sh
 	mkdir -p deploy/kube-prometheus/0.3
-	mv prometheus/0.3/*.yaml deploy/kube-prometheus/0.3/
+	mv components/prometheus/0.3/*.yaml deploy/kube-prometheus/0.3/
 
 test:
 	go test ./...

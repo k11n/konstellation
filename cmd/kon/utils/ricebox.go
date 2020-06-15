@@ -16,7 +16,7 @@ func DeployResourcesBox() *rice.Box {
 }
 
 func TFResourceBox() *rice.Box {
-	return rice.MustFindBox("../../../terraform")
+	return rice.MustFindBox("../../../components/terraform")
 }
 
 func ExtractBoxFiles(box *rice.Box, target string, items ...string) error {
