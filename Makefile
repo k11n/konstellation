@@ -32,8 +32,9 @@ prometheus-0.3:
 
 grafana:
 	# build grafana-operator
-	kustomize build components/grafana/operator > deploy/grafana/grafana-operator.yaml
-	cp components/grafana/grafana-instance.yaml deploy/grafana/
+	kustomize build components/grafana/operator > deploy/grafana/operator.yaml
+	components/grafana/generate-resources.py components/prometheus/0.4/manifests/grafana-dashboardDefinitions.yaml
+	kustomize build components/grafana > deploy/grafana/dashboards.yaml
 
 components: prometheus-0.3 prometheus-0.4 grafana
 

@@ -26,14 +26,14 @@ func (d *GrafanaOperator) VersionForKube(version string) string {
 
 func (d *GrafanaOperator) InstallComponent(kclient client.Client) error {
 	err := utils.Retry(func() error {
-		return utils.KubeApplyFile("grafana/grafana-operator.yaml", "")
+		return utils.KubeApplyFile("grafana/operator.yaml", "")
 	}, 8, 0)
 	if err != nil {
 		return err
 	}
 
 	err = utils.Retry(func() error {
-		return utils.KubeApplyFile("grafana/grafana-instance.yaml", "")
+		return utils.KubeApplyFile("grafana/dashboards.yaml", "")
 	}, 8, 0)
 	if err != nil {
 		return err
