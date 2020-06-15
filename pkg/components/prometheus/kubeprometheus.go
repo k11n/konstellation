@@ -41,12 +41,15 @@ func (d *KubePrometheus) InstallComponent(kclient client.Client) error {
 
 	version := d.VersionForKube(cc.Spec.KubeVersion)
 
-	// TODO: install retry?
-	err = utils.KubeApplyFile(fmt.Sprintf("kube-prometheus/%s/prometheus-operator.yaml", version), "")
+	err = utils.Retry(func() error {
+		return utils.KubeApplyFile(fmt.Sprintf("kube-prometheus/%s/prometheus-operator.yaml", version), "")
+	}, 8, 0)
 	if err != nil {
 		return err
 	}
 
-	err = utils.KubeApplyFile(fmt.Sprintf("kube-prometheus/%s/prometheus-k8s.yaml", version), "")
+	err = utils.Retry(func() error {
+		return utils.KubeApplyFile(fmt.Sprintf("kube-prometheus/%s/prometheus-k8s.yaml", version), "")
+	}, 8, 0)
 	return err
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/k11n/konstellation/cmd/kon/commands"
+	utilscli "github.com/k11n/konstellation/pkg/utils/cli"
 	"github.com/k11n/konstellation/version"
 )
 
@@ -16,6 +17,17 @@ func main() {
 	app.Usage = "Konstellation CLI. Manage Kubernetes clusters and deploy apps"
 	app.EnableBashCompletion = true
 	app.Version = version.Version
+	app.Flags = []cli.Flag{
+		&cli.BoolFlag{
+			Name: "verbose",
+		},
+	}
+	app.Before = func(c *cli.Context) error {
+		if c.Bool("verbose") {
+			utilscli.KubeDisplayOutput = true
+		}
+		return nil
+	}
 	commandSets := [][]*cli.Command{
 		commands.AppCommands,
 		commands.ConfigCommands,

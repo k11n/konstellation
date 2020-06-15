@@ -9,7 +9,6 @@ require (
 	github.com/GeertJohan/go.rice v1.0.0
 	github.com/apparentlymart/go-cidr v1.0.1
 	github.com/aws/aws-sdk-go v1.30.9
-	github.com/brancz/gojsontoyaml v0.0.0-20200602132005-3697ded27e8c // indirect
 	github.com/coreos/prometheus-operator v0.38.1 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/daaku/go.zipexe v1.0.1 // indirect
@@ -20,7 +19,6 @@ require (
 	github.com/hako/durafmt v0.0.0-20200605151348-3a43fc422dd9
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/imdario/mergo v0.3.9
-	github.com/jsonnet-bundler/jsonnet-bundler v0.4.0 // indirect
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/lytics/base62 v0.0.0-20180808010106-0ee4de5a5d6d
 	github.com/manifoldco/promptui v0.7.0
@@ -41,6 +39,7 @@ require (
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.1.0 // indirect
 	gopkg.in/ini.v1 v1.55.0
+	gopkg.in/yaml.v2 v2.3.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200605160147-a5ece683394c
 	istio.io/api v0.0.0-20200417223136-90a960729620
 	istio.io/client-go v0.0.0-20200417172857-74af6f52f3d9

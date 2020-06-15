@@ -1,0 +1,389 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: grafana
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: grafanadashboards.integreatly.org
+spec:
+  group: integreatly.org
+  names:
+    kind: GrafanaDashboard
+    listKind: GrafanaDashboardList
+    plural: grafanadashboards
+    singular: grafanadashboard
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          properties:
+            datasources:
+              items:
+                description: Input datasources to resolve before importing
+                type: object
+              type: array
+            json:
+              type: string
+            name:
+              type: string
+            plugins:
+              items:
+                description: Grafana Plugin Object
+                type: object
+              type: array
+            url:
+              description: URL to dashboard json
+              type: string
+  version: v1alpha1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: grafanadatasources.integreatly.org
+spec:
+  group: integreatly.org
+  names:
+    kind: GrafanaDataSource
+    listKind: GrafanaDataSourceList
+    plural: grafanadatasources
+    singular: grafanadatasource
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          type: string
+        kind:
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            datasources:
+              items:
+                description: Grafana Datasource Object
+                type: object
+              type: array
+            name:
+              minimum: 1
+              type: string
+          required:
+          - datasources
+          - name
+  version: v1alpha1
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: grafanas.integreatly.org
+spec:
+  group: integreatly.org
+  names:
+    kind: Grafana
+    listKind: GrafanaList
+    plural: grafanas
+    singular: grafana
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          properties:
+            adminPassword:
+              description: Default admin password
+              type: string
+            adminUser:
+              description: Default admin user name
+              type: string
+            anonymous:
+              description: Anonymous auth enabled
+              type: boolean
+            basicAuth:
+              description: Basic auth enabled
+              type: boolean
+            client:
+              description: Grafana client settings
+              type: object
+            compat:
+              description: Backwards compatibility switches
+              type: object
+            config:
+              description: Grafana config
+              type: object
+            configMaps:
+              items:
+                description: Config map to be mounted as volume into the grafana deployment
+                type: string
+              type: array
+            containers:
+              items:
+                description: Additional container to add to the grafana pod
+                type: object
+              type: array
+            dashboardLabelSelectors:
+              items:
+                description: Label selector or match expressions
+                type: object
+              type: array
+            deployment:
+              properties:
+                affinity:
+                  description: Additonal labels for running grafana pods with affinity
+                    properties.
+                  type: object
+                annotations:
+                  description: Additional annotations for the service
+                  type: object
+                labels:
+                  description: Additional labels for the service
+                  type: object
+                nodeSelector:
+                  description: Additional labels for the running grafana pods in a
+                    labeled node.
+                  type: object
+                tolerations:
+                  description: Additonal labels for running grafana pods in tained
+                    nodes.
+                  type: array
+              type: object
+            disableLoginForm:
+              description: Disable login form
+              type: boolean
+            disableSignoutMenu:
+              description: Disable signout menu
+              type: boolean
+            ingress:
+              properties:
+                annotations:
+                  description: Additional annotations for the ingress / route
+                  type: object
+                enabled:
+                  description: Create an ingress / route
+                  type: boolean
+                hostname:
+                  description: The hostname of the ingress / route
+                  type: string
+                labels:
+                  description: Additional labels for the ingress / route
+                  type: object
+                path:
+                  description: Ingress path
+                  type: string
+                targetPort:
+                  description: Override port to target in the grafana service
+                  type: string
+              type: object
+            logLevel:
+              description: Log level of the grafana instance, defaults to info
+              type: string
+            secrets:
+              items:
+                description: Secret to be mounted as volume into the grafana deployment
+                type: string
+              type: array
+            service:
+              properties:
+                annotations:
+                  description: Additional annotations for the service
+                  type: object
+                labels:
+                  description: Additional labels for the service
+                  type: object
+                ports:
+                  description: Override default ports
+                  items:
+                    description: A port to add to the grafana service
+                    type: object
+                  type: array
+                type:
+                  description: Service type (NodePort, ClusterIP or LoadBalancer)
+                  type: string
+              type: object
+            serviceAccount:
+              properties:
+                annotations:
+                  description: Additional annotations for the serviceaccount
+                  type: object
+                labels:
+                  description: Additional labels for the serviceaccount
+                  type: object
+              type: object
+      required:
+      - spec
+  version: v1alpha1
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: grafana-operator
+  namespace: grafana
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: grafana-operator
+  namespace: grafana
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - services
+  - endpoints
+  - persistentvolumeclaims
+  - configmaps
+  - secrets
+  - serviceaccounts
+  - configmaps
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - deletecollection
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+  - update
+  - patch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - daemonsets
+  - replicasets
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - deletecollection
+  - watch
+- apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  - routes/custom-host
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - deletecollection
+  - watch
+  - create
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - deletecollection
+  - watch
+- apiGroups:
+  - integreatly.org
+  resources:
+  - grafanas
+  - grafanas/status
+  - grafanas/finalizers
+  - grafanadashboards
+  - grafanadashboards/status
+  - grafanadatasources
+  - grafanadatasources/status
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - deletecollection
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: grafana-operator
+  namespace: grafana
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: grafana-operator
+subjects:
+- kind: ServiceAccount
+  name: grafana-operator
+  namespace: grafana
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-operator
+  namespace: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: grafana-operator
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        name: grafana-operator
+    spec:
+      containers:
+      - command:
+        - grafana-operator
+        env:
+        - name: TEMPLATE_PATH
+          value: /usr/local/bin/templates
+        - name: WATCH_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: OPERATOR_NAME
+          value: grafana-operator
+        image: quay.io/integreatly/grafana-operator:v3.3.0
+        imagePullPolicy: Always
+        name: grafana-operator
+        ports:
+        - containerPort: 60000
+          name: metrics
+        readinessProbe:
+          exec:
+            command:
+            - stat
+            - /tmp/operator-sdk-ready
+          failureThreshold: 1
+          initialDelaySeconds: 4
+          periodSeconds: 10
+      serviceAccountName: grafana-operator

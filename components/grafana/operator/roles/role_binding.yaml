@@ -1,0 +1,12 @@
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: grafana-operator
+  namespace: grafana
+subjects:
+- kind: ServiceAccount
+  name: grafana-operator
+roleRef:
+  kind: Role
+  name: grafana-operator
+  apiGroup: rbac.authorization.k8s.io

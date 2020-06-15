@@ -12,6 +12,7 @@ const (
 	IstioNamespace      = "istio-system"
 	KubeSystemNamespace = "kube-system"
 	KonSystemNamespace  = "kon-system"
+	GrafanaNamespace    = "grafana"
 )
 
 func GetNamespace(kclient client.Client, namespace string) (*corev1.Namespace, error) {

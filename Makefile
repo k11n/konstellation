@@ -30,6 +30,13 @@ prometheus-0.3:
 	mkdir -p deploy/kube-prometheus/0.3
 	mv components/prometheus/0.3/*.yaml deploy/kube-prometheus/0.3/
 
+grafana:
+	# build grafana-operator
+	kustomize build components/grafana/operator > deploy/grafana/grafana-operator.yaml
+	cp components/grafana/grafana-instance.yaml deploy/grafana/
+
+components: prometheus-0.3 prometheus-0.4 grafana
+
 test:
 	go test ./...
 

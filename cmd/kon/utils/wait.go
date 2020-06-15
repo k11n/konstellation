@@ -34,3 +34,19 @@ func WaitUntilComplete(timeoutSec int, checkInterval int, checkFunc func() (bool
 	}
 	return nil
 }
+
+func Retry(retryFunc func() error, numTimes int, backoff int) error {
+	if backoff == 0 {
+		backoff = MediumCheckInterval
+	}
+	delay := backoff
+	var lastErr error
+	for i := 0; i < numTimes; i++ {
+		if lastErr = retryFunc(); lastErr == nil {
+			return nil
+		}
+		time.Sleep(time.Duration(delay) * time.Millisecond)
+		delay += backoff
+	}
+	return lastErr
+}

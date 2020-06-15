@@ -127,7 +127,7 @@ func launchGrafana(c *cli.Context) error {
 		return err
 	}
 
-	proxy, err := koncli.NewKubeProxyForService(ac.kubernetesClient(), resources.KonSystemNamespace, "grafana", 3000)
+	proxy, err := koncli.NewKubeProxyForService(ac.kubernetesClient(), resources.GrafanaNamespace, "grafana-service", 3000)
 	if err != nil {
 		return err
 	}

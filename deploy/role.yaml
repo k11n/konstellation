@@ -127,3 +127,21 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - integreatly.org
+  resources:
+  - grafanas
+  - grafanas/status
+  - grafanas/finalizers
+  - grafanadashboards
+  - grafanadashboards/status
+  - grafanadatasources
+  - grafanadatasources/status
+  verbs:
+  - get
+  - list
+  - create
+  - update
+  - delete
+  - deletecollection
+  - watch
