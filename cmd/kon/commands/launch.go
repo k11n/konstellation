@@ -76,10 +76,11 @@ func launchKubeDash(c *cli.Context) error {
 	}
 
 	// launch web browser after delay
-	fmt.Printf("Launching Kubernetes Dashboard: %s\n", proxy.URL())
+	url := proxy.URL() + kubedash.ProxyPath
+	fmt.Printf("Launching Kubernetes Dashboard: %s\n", url)
 
 	time.Sleep(2 * time.Second)
-	browser.OpenURL(proxy.URL() + kubedash.ProxyPath)
+	browser.OpenURL(url)
 
 	proxy.WaitUntilDone()
 	return nil
