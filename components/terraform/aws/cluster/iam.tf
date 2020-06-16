@@ -200,7 +200,7 @@ resource "aws_iam_policy" "alb_policy" {
         "elasticloadbalancing:SetIpAddressType",
         "elasticloadbalancing:SetSecurityGroups",
         "elasticloadbalancing:SetSubnets",
-        "elasticloadbalancing:SetWebACL"
+        "elasticloadbalancing:SetWebACL",
       ],
       "Resource": "*"
     },
@@ -241,7 +241,11 @@ resource "aws_iam_policy" "alb_policy" {
     {
       "Effect": "Allow",
       "Action": [
-        "waf:GetWebACL"
+        "waf:GetWebACL",
+        "wafv2:GetWebACL",
+				"wafv2:GetWebACLForResource",
+				"wafv2:AssociateWebACL",
+				"wafv2:DisassociateWebACL"
       ],
       "Resource": "*"
     },
