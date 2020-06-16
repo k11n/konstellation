@@ -27,3 +27,10 @@ resources:
 - dashboards/scheduler.yaml
 - dashboards/statefulset.yaml
 - dashboards/workload-total.yaml
+- dashboards/istio-workload-dashboard.yaml
+- dashboards/istio-service-dashboard.yaml
+- dashboards/istio-gallery-dashboard.yaml
+- dashboards/istio-performance-dashboard.yaml
+- dashboards/istio-pilot-dashboard.yaml
+- dashboards/istio-mesh-dashboard.yaml
+- dashboards/istio-mixer-dashboard.yaml

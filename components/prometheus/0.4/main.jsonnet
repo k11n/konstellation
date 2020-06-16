@@ -4,6 +4,7 @@ local kp =
   (import 'kube-prometheus/kube-prometheus-kube-aws.libsonnet') +
   (import 'kube-prometheus/kube-prometheus-all-namespaces.libsonnet') +
   (import '../grafana.jsonnet') +
+  (import '../istio/istio.libsonnet') +
   {
     _config+:: {
       namespace: 'kon-system',

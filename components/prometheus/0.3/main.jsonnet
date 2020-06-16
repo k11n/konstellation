@@ -5,6 +5,7 @@ local kp =
   (import 'kube-prometheus/kube-prometheus-anti-affinity.libsonnet') +
   (import 'kube-prometheus/kube-prometheus-kube-aws.libsonnet') +
   (import '../grafana.jsonnet') +
+  (import '../istio/istio.libsonnet') +
   // create cluster role, as 0.3 doesn't support it yet
   {
     prometheus+:: {

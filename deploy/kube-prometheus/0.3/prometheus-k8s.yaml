@@ -876,6 +876,37 @@ spec:
   version: v0.18.0
 ---
 apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  labels:
+    istio: proxy
+  name: istio-proxy
+  namespace: istio-system
+spec:
+  jobLabel: component
+  namespaceSelector:
+    any: true
+  podMetricsEndpoints:
+  - path: /stats/prometheus
+    port: http-envoy-prom
+    relabelings:
+    - action: labeldrop
+      regex: __meta_kubernetes_pod_label_skaffold_dev.*
+    - action: labeldrop
+      regex: __meta_kubernetes_pod_label_pod_template_hash.*
+    - action: labelmap
+      regex: __meta_kubernetes_pod_label_(.+)
+  selector:
+    matchExpressions:
+    - key: migration
+      operator: NotIn
+      values:
+      - "true"
+      - "1"
+    matchLabels:
+      security.istio.io/tlsMode: istio
+---
+apiVersion: monitoring.coreos.com/v1
 kind: Prometheus
 metadata:
   labels:
@@ -2208,6 +2239,88 @@ spec:
       for: 10m
       labels:
         severity: warning
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    monitoring: istio-proxies
+  name: envoy-stats-monitor
+  namespace: istio-system
+spec:
+  endpoints:
+  - interval: 30s
+    path: /stats/prometheus
+    relabelings:
+    - action: keep
+      regex: .*-envoy-prom
+      sourceLabels:
+      - __meta_kubernetes_pod_container_port_name
+    - action: labelmap
+      regex: __meta_kubernetes_pod_label_(.+)
+    - action: replace
+      sourceLabels:
+      - __meta_kubernetes_namespace
+      targetLabel: namespace
+    - action: replace
+      sourceLabels:
+      - __meta_kubernetes_pod_name
+      targetLabel: pod_name
+    targetPort: 15090
+  jobLabel: envoy-stats
+  namespaceSelector:
+    any: true
+  selector:
+    matchExpressions:
+    - key: istio-prometheus-ignore
+      operator: DoesNotExist
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    monitoring: istio-components
+  name: istio-component-monitor
+  namespace: istio-system
+spec:
+  endpoints:
+  - interval: 30s
+    port: http-monitoring
+  - interval: 30s
+    port: http-policy-monitoring
+  jobLabel: istio
+  namespaceSelector:
+    any: true
+  selector:
+    matchExpressions:
+    - key: istio
+      operator: In
+      values:
+      - mixer
+      - pilot
+      - gallery
+      - citadel
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    monitoring: istio-mesh
+  name: istio-mesh-monitor
+  namespace: istio-system
+spec:
+  endpoints:
+  - interval: 30s
+    port: prometheus
+  namespaceSelector:
+    matchNames:
+    - istio-system
+  selector:
+    matchExpressions:
+    - key: istio
+      operator: In
+      values:
+      - mixer
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor

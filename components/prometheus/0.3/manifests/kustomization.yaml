@@ -50,3 +50,8 @@ resources:
 - prometheus-serviceMonitorKubeControllerManager.yaml
 - prometheus-serviceMonitorKubeScheduler.yaml
 - prometheus-serviceMonitorKubelet.yaml
+# added for istio
+- prometheus-serviceMonitorIstioComponents.yaml
+- prometheus-serviceMonitorIstioEnvoyStats.yaml
+- prometheus-serviceMonitorIstioMesh.yaml
+- prometheus-podMonitorIstio.yaml

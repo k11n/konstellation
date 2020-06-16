@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 import sys
+from glob import glob
 from os import path
 
 import ruamel.yaml
 from ruamel.yaml import YAML
-
 
 __namespace__ = "grafana"
 yaml = YAML(typ='safe')
@@ -18,6 +18,7 @@ def main():
 
     source = sys.argv[1]
     target_dir = path.join(path.dirname(__file__), "dashboards")
+    istio_dir = path.join(target_dir, 'istio')
 
     f = open(source, "rb")
     content = yaml.load(f)
@@ -31,7 +32,22 @@ def main():
         'dashboards/datasource.yaml',
     ]
     for item in content['items']:
-        filename = generate_dash(target_dir, item)
+        json_name = list(item['data'].keys())[0]
+        value = item['data'][json_name]
+        filename = generate_dash(target_dir, json_name, value)
+        files.append(path.join('dashboards', filename))
+
+    # generate istio json dash
+    json_files = glob(path.join(istio_dir, "*.json"))
+    for json_file in json_files:
+        f = open(json_file)
+        content = f.read()
+        f.close()
+        # replace datasource
+        content = content.replace('"datasource": "Prometheus"',
+                                  '"datasource": "prometheus"')
+        json_name = path.basename(json_file)
+        filename = generate_dash(target_dir, json_name, content)
         files.append(path.join('dashboards', filename))
 
     # generate kustomization file
@@ -45,10 +61,8 @@ def main():
         ruamel.yaml.round_trip_dump(kustomization, f)
 
 
-def generate_dash(target_dir, item) -> str:
-    key_name = list(item['data'].keys())[0]
-    value = item['data'][key_name]
-    name = key_name.split('.')[0]
+def generate_dash(target_dir, json_name, value) -> str:
+    name = json_name.split('.')[0]
     target_file = path.join(target_dir, name + ".yaml")
 
     dash = {
@@ -62,7 +76,7 @@ def generate_dash(target_dir, item) -> str:
             }
         },
         "spec": {
-            "name": key_name,
+            "name": json_name,
             "json": ruamel.yaml.scalarstring.PreservedScalarString(value),
         }
     }

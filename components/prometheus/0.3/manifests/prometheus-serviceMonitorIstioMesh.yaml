@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    monitoring: istio-mesh
+  name: istio-mesh-monitor
+  namespace: istio-system
+spec:
+  endpoints:
+  - interval: 30s
+    port: prometheus
+  namespaceSelector:
+    matchNames:
+    - istio-system
+  selector:
+    matchExpressions:
+    - key: istio
+      operator: In
+      values:
+      - mixer
