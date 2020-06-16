@@ -221,7 +221,7 @@
           jobLabel: 'component',
           selector: {
             matchLabels: {
-              'security.istio.io/tlsMode': "istio"
+              'security.istio.io/tlsMode': 'istio'
             },
             matchExpressions: [
               {
