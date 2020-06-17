@@ -14,6 +14,10 @@ features:
   details: Konstellation has been optimized to work with AWS. It helps you to set up and manage EKS clusters, nodepools, VPCs, and load balancers. It integrates with other AWS services to provide a secure and robust apps platform.
 footer: Apache 2.0 Licensed | Copyright © 2019-2020 David Zhao
 ---
+## An operator for Apps
+
+Konstellation is a Kubernetes controller that manages the full lifecycle of an App. It also comes with a full featured CLI that lets you manage your apps as well as the Kubernetes clusters that they run on.
+
 ## App to deployment in minutes
 
 Your time is precious, and it shouldn't be spent on messing the deployment stack. While Kubernetes provides the scale and efficient resource utilization, it's *raw*, forcing users to think in resources. Konstellation is a layer on top of Kubernetes focused around apps.
@@ -35,7 +39,7 @@ myapp-20200421-1228-c495    registry/myapp:2     2020-04-21 12:28:11    0       
 myapp-20200421-1102-b723    registry/myapp:1     2020-04-21 11:02:03    0       retired   0%
 ```
 
-## One config to rule them all
+## One manifest to rule them all
 
 Konstellation provides high level custom resources and then manages native Kubernetes resources behind the scenes. This means the end of copying and pasting resource templates that you don't understand. The following app manifest would set up ReplicaSets, Service, Autoscaler, Ingress, along with the necessary resources for the service mesh.
 
