@@ -1,6 +1,7 @@
 package kube
 
 import (
+	istiov1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -57,6 +58,7 @@ func init() {
 	apis.AddToScheme(scheme)
 	clientgoscheme.AddToScheme(scheme)
 	metrics.AddToScheme(scheme)
+	istiov1alpha3.AddToScheme(scheme)
 }
 
 func KubernetesClientWithContext(contextName string) (client.Client, error) {

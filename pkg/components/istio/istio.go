@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lytics/base62"
+	istio "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -106,6 +107,8 @@ func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 		"--set", "components.citadel.enabled=true", // citadel is required by the sidecar injector
 		"--set", "components.sidecarInjector.enabled=true",
 		"--set", "addonComponents.kiali.enabled=true",
+		"--set", "addonComponents.prometheus.enabled=false",
+		"--set", "addonComponents.grafana.enabled=false",
 		"--set", "values.gateways.istio-ingressgateway.type=NodePort",
 		"--set", "values.gateways.enabled=true",
 	)
@@ -145,7 +148,22 @@ func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 		}
 	}
 	err = kclient.Update(context.TODO(), &secret)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// delete default gateway
+	defGateway := &istio.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: resources.IstioNamespace,
+			Name:      "ingressgateway",
+		},
+	}
+	if err = kclient.Delete(context.TODO(), defGateway); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (i *IstioInstaller) cliPath() string {
