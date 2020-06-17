@@ -16,6 +16,8 @@ With that thought, I wrote the first line of code for Konstellation in November 
 
 Konstellation provides its functionality as a controller running inside of Kubernetes. It doesn't take away or hide any functionality from standard Kubernetes. You could continue to use standard tools like kubectl, and work with any resources that Kubernetes supports natively.
 
+When using Konstellation, you are not forced to use the higher level resources. Any resources that you already have could be used with clusters created with Konstellation.
+
 You may also install any standard Kubernetes components to a Konstellation managed cluster. However, you should avoid installing other service meshes, or anything that uses sidecars to enhance routing. Konstellation uses Istio as the underlying service mesh. Other service meshes would interfere with this setup.
 
 ## Reproducibility and undo

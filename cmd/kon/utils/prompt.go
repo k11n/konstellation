@@ -77,16 +77,20 @@ func NewPromptSelect(label interface{}, items interface{}) promptui.Select {
 	}
 }
 
-func ExplicitConfirmationPrompt(label interface{}) error {
+func ExplicitConfirmationPrompt(label interface{}, confirmTexts ...string) error {
+	confirmText := "yes"
+	if len(confirmTexts) > 0 {
+		confirmText = confirmTexts[0]
+	}
 	p := promptui.Prompt{
-		Label:  fmt.Sprintf("%s (type yes to confirm)", label),
+		Label:  fmt.Sprintf("%s (type %s to confirm)", label, confirmText),
 		Stdout: BellSkipper,
 	}
 	res, err := p.Run()
 	if err != nil {
 		return err
 	}
-	if res != "yes" {
+	if res != confirmText {
 		return fmt.Errorf("User canceled")
 	}
 	return nil

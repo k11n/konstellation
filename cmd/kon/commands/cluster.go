@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -20,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	cliv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	metrics "k8s.io/metrics/pkg/apis/metrics/v1beta1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/cmd/kon/config"
 	"github.com/k11n/konstellation/cmd/kon/kube"
@@ -28,7 +26,6 @@ import (
 	"github.com/k11n/konstellation/cmd/kon/utils"
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/cloud/types"
-	"github.com/k11n/konstellation/pkg/components"
 	"github.com/k11n/konstellation/pkg/resources"
 	"github.com/k11n/konstellation/pkg/utils/files"
 	"github.com/k11n/konstellation/version"
@@ -103,21 +100,30 @@ var ClusterCommands = []*cli.Command{
 				Action: clusterList,
 			},
 			{
-				Name:   "reset",
-				Usage:  "resets current active cluster",
-				Action: clusterReset,
-			},
-			{
 				Name:      "select",
 				Usage:     "select an active cluster to work with",
 				ArgsUsage: "<cluster>",
 				Action: func(c *cli.Context) error {
+					if c.Bool("reset") {
+						return clusterReset()
+					}
 					if c.NArg() == 0 {
 						cli.ShowSubcommandHelp(c)
 						return nil
 					}
 					return clusterSelect(c.Args().Get(0))
 				},
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:  "reset",
+						Usage: "unset current selected cluster",
+					},
+				},
+			},
+			{
+				Name:   "reinstall",
+				Usage:  "reinstalls Konstellation components",
+				Action: clusterReinstall,
 			},
 			{
 				Name:   "get-token",
@@ -470,14 +476,14 @@ func clusterSelect(clusterName string) error {
 		}
 	}
 
-	if err = ac.installComponents(); err != nil {
+	if err = ac.installComponents(false); err != nil {
 		return err
 	}
 	fmt.Println("Switched active cluster to", clusterName)
 	return nil
 }
 
-func clusterReset(c *cli.Context) error {
+func clusterReset() error {
 	conf := config.GetConfig()
 	conf.SelectedCluster = ""
 	err := conf.Persist()
@@ -517,186 +523,152 @@ func clusterGetToken(c *cli.Context) error {
 	return nil
 }
 
-func getActiveCluster() (*activeCluster, error) {
-	if err := ensureClusterSelected(); err != nil {
-		return nil, err
+func clusterReinstall(c *cli.Context) error {
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
 	}
 
+	// print warning
+	fmt.Println("Reinstalling all Konstellation components onto the current cluster. This is NOT recommended as newer versions of components may be incompatible with your cluster.")
+	if err := utils.ExplicitConfirmationPrompt("Sure you want to proceed?"); err != nil {
+		return err
+	}
+
+	// reinstall configs
+	if err = ac.loadResourcesIntoKube(); err != nil {
+		return err
+	}
+
+	if err = ac.installComponents(true); err != nil {
+		return err
+	}
+
+	fmt.Println("Successfully reinstalled Konstellation")
+	return nil
+}
+
+func ensureClusterSelected() error {
 	conf := config.GetConfig()
-	cm, err := ClusterManagerForCluster(conf.SelectedCluster)
-	if err != nil {
-		return nil, err
+	if conf.SelectedCluster == "" {
+		return fmt.Errorf("Cluster not selected yet. Select one with 'kon cluster select ...'")
 	}
-
-	ac := activeCluster{
-		Manager: cm,
-		Cluster: conf.SelectedCluster,
-	}
-
-	err = ac.initClient()
-	if err != nil {
-		return nil, err
-	}
-	return &ac, nil
-}
-
-type activeCluster struct {
-	Manager providers.ClusterManager
-	Cluster string
-	kclient client.Client
-}
-
-func (c *activeCluster) loadResourcesIntoKube() error {
-	// load new resources into kube
-	fmt.Println("Loading custom resource definitions into Kubernetes...")
-	contextName := resources.ContextNameForCluster(c.Manager.Cloud(), c.Cluster)
-	for _, file := range kube.KUBE_RESOURCES {
-		err := utils.KubeApplyFile(file, contextName)
-		if err != nil {
-			return errors.Wrapf(err, "Unable to apply config %s", file)
-		}
-	}
-
-	err := utils.WaitUntilComplete(utils.ShortTimeoutSec, utils.MediumCheckInterval, func() (bool, error) {
-		// use a new kclient to avoid caching
-		kclient, err := kube.KubernetesClientWithContext(contextName)
-		if err != nil {
-			return false, err
-		}
-		_, err = resources.GetClusterConfig(kclient)
-		if err == nil || err == resources.ErrNotFound {
-			// object already there or type created
-			return true, nil
-		}
-
-		// likely it hasn't loaded the type yet
-		log.Printf("Custom resources still not created. %v", err)
-		return false, nil
-	})
-	if err != nil {
-		return errors.Wrap(err, "Failed to load required resources into Kube")
-	}
-	// need to reset after resources are just loaded to avoid caching
-	c.kclient = nil
-
 	return nil
 }
 
-// check nodepool status, if ready continue
-func (c *activeCluster) configureNodepool() error {
-	kclient := c.kubernetesClient()
+func printClusterSection(section providers.ClusterManager, clusters []*clusterInfo) {
+	fmt.Printf("\n%s (%s)\n", section.Cloud(), section.Region())
 
-	// cluster config must be present now, load it and pass it into nodegroups
-	cc, err := resources.GetClusterConfig(kclient)
-	if err != nil {
-		return err
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Cluster", "Version", "Status", "Konstellation", "Targets", "Nodes", "CPU", "Memory"})
+	for _, ci := range clusters {
+		c := ci.Cluster
+		targets := make([]string, 0)
+		konVersion := ""
+		if ci.Config != nil {
+			targets = ci.Config.Spec.Targets
+			konVersion = ci.Config.Spec.Version
+			if konVersion != version.Version {
+				konVersion = fmt.Sprintf("%s (current %s)", konVersion, version.Version)
+			}
+		} else {
+			if c.Status == types.StatusActive {
+				c.Status = types.StatusUnconfigured
+			}
+		}
+
+		var nodeStr, cpuStr, memoryStr string
+
+		maxNodes := int64(0)
+		for _, np := range ci.Nodepools {
+			maxNodes += np.Spec.MaxSize
+		}
+		if maxNodes > 0 {
+			nodeStr = fmt.Sprintf("%d (max %d)", len(ci.Nodes), maxNodes)
+		}
+
+		var cpuTotal, memoryTotal resource.Quantity
+		var cpuUsed, memoryUsed resource.Quantity
+
+		for _, node := range ci.Nodes {
+			cpuTotal.Add(*node.Status.Allocatable.Cpu())
+			memoryTotal.Add(*node.Status.Allocatable.Memory())
+		}
+		for _, nm := range ci.NodeMetrics {
+			cpuUsed.Add(*nm.Usage.Cpu())
+			memoryUsed.Add(*nm.Usage.Memory())
+		}
+		if cpuTotal.Value() != 0 {
+			cpuStr = fmt.Sprintf("%d/%d (%d%%)", cpuUsed.Value(), cpuTotal.Value(), cpuUsed.Value()*100/cpuTotal.Value())
+		}
+		if memoryTotal.Value() != 0 {
+			mb := int64(1000 * 1000)
+			memoryStr = fmt.Sprintf("%d/%dMi (%d%%)", memoryUsed.Value()/mb, memoryTotal.Value()/mb, memoryUsed.Value()*100/memoryTotal.Value())
+		}
+
+		// node metrics
+		table.Append([]string{
+			c.Name,
+			c.Version,
+			c.Status.String(),
+			konVersion,
+			strings.Join(targets, ","),
+			nodeStr,
+			cpuStr,
+			memoryStr,
+		})
 	}
-
-	cloud := GetCloud(cc.Spec.Cloud)
-	generator, err := PromptClusterGenerator(cloud, cc.Spec.Region)
-	if err != nil {
-		return err
-	}
-
-	// prompt for nodepool config
-	np, err := generator.CreateNodepoolConfig(cc)
-	if err != nil {
-		return err
-	}
-
-	cm := NewClusterManager(cc.Spec.Cloud, cc.Spec.Region)
-
-	err = cm.CreateNodepool(cc, np)
-	if err != nil {
-		return err
-	}
-
-	// save spec to Kube
-	if _, err = resources.UpdateResource(kclient, np, nil, nil); err != nil {
-		return err
-	}
-
-	fmt.Printf("Successfully created nodepool %s\n", np.GetObjectMeta().GetName())
-	return nil
+	utils.FormatTable(table)
+	table.Render()
 }
 
-func (c *activeCluster) installComponents() error {
-	kclient := c.kubernetesClient()
-	cc, err := resources.GetClusterConfig(kclient)
+func loadExistingConfigs(ccPath, npPath string) (cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool, err error) {
+	cc = &v1alpha1.ClusterConfig{}
+	np = &v1alpha1.Nodepool{}
+	ccObj, err := utils.LoadKubeObject(kube.GetKubeDecoder(), cc, ccPath)
 	if err != nil {
-		return err
+		return
+	}
+	cc, ok := ccObj.(*v1alpha1.ClusterConfig)
+	if !ok {
+		err = fmt.Errorf("type mismatch")
+		return
 	}
 
-	messagesPrinted := false
-	// now install all these resources
-	installed := make(map[string]string)
-	for _, comp := range cc.Status.InstalledComponents {
-		installed[comp.Name] = comp.Version
+	npObj, err := utils.LoadKubeObject(kube.GetKubeDecoder(), np, npPath)
+	if err != nil {
+		return
 	}
+	np, ok = npObj.(*v1alpha1.Nodepool)
+	if !ok {
+		err = fmt.Errorf("type mismatch")
+		return
+	}
+	return
+}
 
-	for _, comp := range cc.Spec.Components {
-		if installed[comp.Name] != "" {
+func updateClusterLocations() error {
+	conf := config.GetConfig()
+	conf.Clusters = make(map[string]*config.ClusterLocation)
+
+	for _, cm := range GetClusterManagers() {
+		ksvc := cm.KubernetesProvider()
+		if ksvc == nil {
 			continue
 		}
-		compInstaller := components.GetComponentByName(comp.Name)
-		if compInstaller == nil {
-			return fmt.Errorf("Cluster requires %s, which is no longer available", comp.Name)
-		}
-
-		if !messagesPrinted {
-			messagesPrinted = true
-			fmt.Println("\nInstalling required components onto the current cluster...")
-		}
-		fmt.Println("\nInstalling Kubernetes components for", compInstaller.Name())
-
-		// TODO: better handle versions
-		compVersion := compInstaller.VersionForKube(cc.Spec.KubeVersion)
-		//if compVersion != comp.Version {
-		//	return fmt.Errorf("Version mismatch for %s: specified: %s, current: %s",
-		//		compInstaller.Name(), comp.Version, compVersion)
-		//}
-
-		err = compInstaller.InstallComponent(kclient)
+		clusters, err := ksvc.ListClusters(context.Background())
 		if err != nil {
 			return err
 		}
 
-		installed[compInstaller.Name()] = compVersion
-	}
-
-	// mark it as installed
-	cc.Status.InstalledComponents = make([]v1alpha1.ComponentSpec, 0, len(installed))
-	for key, val := range installed {
-		cc.Status.InstalledComponents = append(cc.Status.InstalledComponents, v1alpha1.ComponentSpec{
-			Name:    key,
-			Version: val,
-		})
-	}
-
-	err = kclient.Status().Update(context.Background(), cc)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *activeCluster) kubernetesClient() client.Client {
-	if c.kclient == nil {
-		err := c.initClient()
-		if err != nil {
-			log.Fatalf("Unable to acquire client to Kubernetes, err: %v", err)
+		for _, cluster := range clusters {
+			conf.Clusters[cluster.Name] = &config.ClusterLocation{
+				Cloud:  cm.Cloud(),
+				Region: cm.Region(),
+			}
 		}
 	}
-	return c.kclient
-}
-
-func (c *activeCluster) initClient() error {
-	kclient, err := kube.KubernetesClientWithContext(resources.ContextNameForCluster(c.Manager.Cloud(), c.Cluster))
-	if err != nil {
-		return errors.Wrap(err, "Unable to create Kubernetes Client")
-	}
-	c.kclient = kclient
-	return nil
+	return conf.Persist()
 }
 
 func generateKubeConfig() error {
@@ -808,105 +780,6 @@ func generateKubeConfig() error {
 	return ioutil.WriteFile(cp, []byte(checksum), files.DefaultFileMode)
 }
 
-func ensureClusterSelected() error {
-	conf := config.GetConfig()
-	if conf.SelectedCluster == "" {
-		return fmt.Errorf("Cluster not selected yet. Select one with 'kon cluster select ...'")
-	}
-	return nil
-}
-
-func printClusterSection(section providers.ClusterManager, clusters []*clusterInfo) {
-	fmt.Printf("\n%s (%s)\n", section.Cloud(), section.Region())
-
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Cluster", "Version", "Status", "Konstellation", "Targets", "Nodes", "CPU", "Memory"})
-	for _, ci := range clusters {
-		c := ci.Cluster
-		targets := make([]string, 0)
-		konVersion := ""
-		if ci.Config != nil {
-			targets = ci.Config.Spec.Targets
-			konVersion = ci.Config.Spec.Version
-			if konVersion != version.Version {
-				konVersion = fmt.Sprintf("%s (current %s)", konVersion, version.Version)
-			}
-		} else {
-			if c.Status == types.StatusActive {
-				c.Status = types.StatusUnconfigured
-			}
-		}
-
-		var nodeStr, cpuStr, memoryStr string
-
-		maxNodes := int64(0)
-		for _, np := range ci.Nodepools {
-			maxNodes += np.Spec.MaxSize
-		}
-		if maxNodes > 0 {
-			nodeStr = fmt.Sprintf("%d (max %d)", len(ci.Nodes), maxNodes)
-		}
-
-		var cpuTotal, memoryTotal resource.Quantity
-		var cpuUsed, memoryUsed resource.Quantity
-
-		for _, node := range ci.Nodes {
-			cpuTotal.Add(*node.Status.Allocatable.Cpu())
-			memoryTotal.Add(*node.Status.Allocatable.Memory())
-		}
-		for _, nm := range ci.NodeMetrics {
-			cpuUsed.Add(*nm.Usage.Cpu())
-			memoryUsed.Add(*nm.Usage.Memory())
-		}
-		if cpuTotal.Value() != 0 {
-			cpuStr = fmt.Sprintf("%d/%d (%d%%)", cpuUsed.Value(), cpuTotal.Value(), cpuUsed.Value()*100/cpuTotal.Value())
-		}
-		if memoryTotal.Value() != 0 {
-			mb := int64(1000 * 1000)
-			memoryStr = fmt.Sprintf("%d/%dMi (%d%%)", memoryUsed.Value()/mb, memoryTotal.Value()/mb, memoryUsed.Value()*100/memoryTotal.Value())
-		}
-
-		// node metrics
-		table.Append([]string{
-			c.Name,
-			c.Version,
-			c.Status.String(),
-			konVersion,
-			strings.Join(targets, ","),
-			nodeStr,
-			cpuStr,
-			memoryStr,
-		})
-	}
-	utils.FormatTable(table)
-	table.Render()
-}
-
-func loadExistingConfigs(ccPath, npPath string) (cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool, err error) {
-	cc = &v1alpha1.ClusterConfig{}
-	np = &v1alpha1.Nodepool{}
-	ccObj, err := utils.LoadKubeObject(kube.GetKubeDecoder(), cc, ccPath)
-	if err != nil {
-		return
-	}
-	cc, ok := ccObj.(*v1alpha1.ClusterConfig)
-	if !ok {
-		err = fmt.Errorf("type mismatch")
-		return
-	}
-
-	npObj, err := utils.LoadKubeObject(kube.GetKubeDecoder(), np, npPath)
-	if err != nil {
-		return
-	}
-	np, ok = npObj.(*v1alpha1.Nodepool)
-	if !ok {
-		err = fmt.Errorf("type mismatch")
-		return
-	}
-	return
-}
-
 func isExternalKubeConfig(configPath string) bool {
 	if _, err := os.Stat(configPath); err == nil {
 		// see if it's already managed by konstellation
@@ -934,28 +807,4 @@ func checksumPath(configPath string) string {
 	configDir := path.Dir(configPath)
 	configName := path.Base(configPath)
 	return path.Join(configDir, fmt.Sprintf(".%s.konsha", configName))
-}
-
-func updateClusterLocations() error {
-	conf := config.GetConfig()
-	conf.Clusters = make(map[string]*config.ClusterLocation)
-
-	for _, cm := range GetClusterManagers() {
-		ksvc := cm.KubernetesProvider()
-		if ksvc == nil {
-			continue
-		}
-		clusters, err := ksvc.ListClusters(context.Background())
-		if err != nil {
-			return err
-		}
-
-		for _, cluster := range clusters {
-			conf.Clusters[cluster.Name] = &config.ClusterLocation{
-				Cloud:  cm.Cloud(),
-				Region: cm.Region(),
-			}
-		}
-	}
-	return conf.Persist()
 }
