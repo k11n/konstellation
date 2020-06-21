@@ -825,7 +825,7 @@ func generateKubeConfig() error {
 		}
 	}
 
-	fmt.Printf("configuring kubectl: generating %s\n", target)
+	fmt.Printf("configuring kubectl: updating %s\n", target)
 	resources.UpdateKubeConfig(kconf, cmdPath, clusterConfs, selectedIdx)
 	file, err := os.Create(target)
 	if err != nil {
