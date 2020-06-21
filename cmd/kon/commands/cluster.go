@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/manifoldco/promptui"
 	"github.com/olekukonko/tablewriter"
@@ -19,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	cliv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	metrics "k8s.io/metrics/pkg/apis/metrics/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/cmd/kon/config"
 	"github.com/k11n/konstellation/cmd/kon/kube"
@@ -117,6 +121,22 @@ var ClusterCommands = []*cli.Command{
 					&cli.BoolFlag{
 						Name:  "reset",
 						Usage: "unset current selected cluster",
+					},
+				},
+			},
+			{
+				Name:   "shell",
+				Usage:  "shell into a pod created for debugging. (deleted after terminating)",
+				Action: clusterShell,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:  "image",
+						Usage: "docker image to use for the pod",
+						Value: "debian:latest",
+					},
+					&cli.BoolFlag{
+						Name:  "force",
+						Usage: "deletes an existing debugging image if exists",
 					},
 				},
 			},
@@ -481,6 +501,48 @@ func clusterSelect(clusterName string) error {
 	}
 	fmt.Println("Switched active cluster to", clusterName)
 	return nil
+}
+
+func clusterShell(c *cli.Context) error {
+	image := c.String("image")
+	force := c.Bool("force")
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+	kclient := ac.kubernetesClient()
+
+	usr, err := user.Current()
+	if err != nil {
+		return err
+	}
+
+	podName := fmt.Sprintf("kon-debug-%s", usr.Username)
+	pod := &corev1.Pod{}
+	err = kclient.Get(context.Background(), client.ObjectKey{Name: podName, Namespace: "default"}, pod)
+
+	if err == nil {
+		if force {
+			if err = kclient.Delete(context.Background(), pod); err != nil {
+				return err
+			}
+			// TODO: this is ugly, should wait till deletion confirmed
+			time.Sleep(5 * time.Second)
+		} else {
+			fmt.Printf("Debugging pod %s already exists. Use --force to delete it and create a new one\n", podName)
+			return nil
+		}
+	} else if client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	// not found, create
+	fmt.Println("Creating new debugging pod", podName)
+	cmd := exec.Command("kubectl", "run", "--rm", "-it", podName, "--image", image, "--restart=Never")
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func clusterReset() error {
