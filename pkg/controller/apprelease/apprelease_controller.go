@@ -208,6 +208,7 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 func (r *ReconcileAppRelease) newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build, cm *corev1.ConfigMap) *appsv1.ReplicaSet {
 	labels := labelsForAppRelease(ar)
 	labels[resources.BuildLabel] = build.Name
+	labels[resources.KubeAppLabel] = ar.Spec.App
 
 	container := corev1.Container{
 		Name:      "app",

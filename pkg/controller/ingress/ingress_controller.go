@@ -3,8 +3,6 @@ package ingress
 import (
 	"context"
 
-	istionetworking "istio.io/api/networking/v1alpha3"
-	istio "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -133,12 +131,8 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 		return res, err
 	}
 
-	// create gateway, shared across all domains
-	gw := gatewayForRequests(requestList.Items)
-
 	if len(requestList.Items) == 0 {
 		// kill everything
-		r.client.Delete(context.TODO(), gw)
 		r.client.Delete(context.TODO(), &netv1beta1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: resources.IstioNamespace,
@@ -146,11 +140,6 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 			},
 		})
 		return reconcile.Result{}, nil
-	}
-
-	_, err = resources.UpdateResource(r.client, gw, nil, nil)
-	if err != nil {
-		return res, err
 	}
 
 	// create ingress, one for all hosts
@@ -196,37 +185,6 @@ func (r *ReconcileIngressRequest) Reconcile(request reconcile.Request) (reconcil
 	return res, err
 }
 
-func gatewayForRequests(requests []v1alpha1.IngressRequest) *istio.Gateway {
-	var hosts []string
-	for _, r := range requests {
-		for _, h := range r.Spec.Hosts {
-			hosts = append(hosts, h)
-		}
-	}
-	gw := &istio.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: resources.IstioNamespace,
-			Name:      resources.GatewayName,
-		},
-		Spec: istionetworking.Gateway{
-			Selector: map[string]string{
-				"istio": "ingressgateway",
-			},
-			Servers: []*istionetworking.Server{
-				{
-					Hosts: hosts,
-					Port: &istionetworking.Port{
-						Number:   80,
-						Protocol: "HTTP",
-						Name:     "kon-http",
-					},
-				},
-			},
-		},
-	}
-	return gw
-}
-
 func (r *ReconcileIngressRequest) ingressForRequests(requests []v1alpha1.IngressRequest) (*netv1beta1.Ingress, error) {
 	cc, err := resources.GetClusterConfig(r.client)
 	if err != nil {
@@ -240,9 +198,25 @@ func (r *ReconcileIngressRequest) ingressForRequests(requests []v1alpha1.Ingress
 			Name:      resources.IngressName,
 		},
 		Spec: netv1beta1.IngressSpec{
-			Rules: []netv1beta1.IngressRule{},
+			Rules: []netv1beta1.IngressRule{
+				{
+					IngressRuleValue: netv1beta1.IngressRuleValue{
+						HTTP: &netv1beta1.HTTPIngressRuleValue{
+							Paths: []netv1beta1.HTTPIngressPath{
+								{
+									Path: "/*",
+									Backend: netv1beta1.IngressBackend{
+										ServiceName: "istio-ingressgateway",
+										ServicePort: intstr.FromInt(80),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 			Backend: &netv1beta1.IngressBackend{
-				ServiceName: "istio-ingressgateway",
+				ServiceName: resources.IngressBackendName,
 				ServicePort: intstr.FromInt(80),
 			},
 		},
@@ -251,27 +225,6 @@ func (r *ReconcileIngressRequest) ingressForRequests(requests []v1alpha1.Ingress
 	hostsUsed := map[string]bool{}
 	for _, req := range requests {
 		for _, host := range req.Spec.Hosts {
-			if hostsUsed[host] {
-				continue
-			}
-
-			rule := netv1beta1.IngressRule{
-				Host: host,
-				IngressRuleValue: netv1beta1.IngressRuleValue{
-					HTTP: &netv1beta1.HTTPIngressRuleValue{
-						Paths: []netv1beta1.HTTPIngressPath{
-							{
-								Path: "/*",
-								Backend: netv1beta1.IngressBackend{
-									ServiceName: "istio-ingressgateway",
-									ServicePort: intstr.FromInt(80),
-								},
-							},
-						},
-					},
-				},
-			}
-			ingress.Spec.Rules = append(ingress.Spec.Rules, rule)
 			hostsUsed[host] = true
 		}
 	}

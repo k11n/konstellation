@@ -11,8 +11,13 @@ import (
 )
 
 const (
-	IngressName = "kon-ingress"
-	GatewayName = "kon-gateway"
+	IngressName        = "kon-ingress"
+	GatewayName        = "ingressgateway"
+	IngressBackendName = "istio-ingressgateway"
+
+	// the port opened by istio-ingressgateway Service for health checks
+	IngressHealthPort = "31819"
+	IngressHealthPath = "/healthz/ready"
 )
 
 func GetIngressRequests(kclient client.Client) (requestList *v1alpha1.IngressRequestList, err error) {

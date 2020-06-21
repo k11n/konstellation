@@ -275,3 +275,10 @@ func labelsForAppTarget(at *v1alpha1.AppTarget) map[string]string {
 		resources.KubeAppLabel:       at.Spec.App,
 	}
 }
+
+func selectorsForAppTarget(at *v1alpha1.AppTarget) map[string]string {
+	return map[string]string{
+		resources.AppLabel:    at.Spec.App,
+		resources.TargetLabel: at.Spec.Target,
+	}
+}
