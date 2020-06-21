@@ -163,6 +163,26 @@ func (a *TerraformAction) Apply() error {
 	return a.runAction(args...)
 }
 
+func (a *TerraformAction) GetOutput() (content []byte, err error) {
+	// first initialize terraform
+	if err = a.initIfNeeded(); err != nil {
+		return
+	}
+
+	buf := bytes.NewBuffer(nil)
+	cmd := exec.Command("terraform", "output", "-json")
+	cmd.Dir = a.WorkingDir
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = buf
+	cmd.Env = a.getEnvVars()
+
+	if err = cmd.Run(); err != nil {
+		return
+	}
+	content = buf.Bytes()
+	return
+}
+
 func (a *TerraformAction) Destroy() error {
 	args := []string{
 		"destroy",
@@ -171,6 +191,10 @@ func (a *TerraformAction) Destroy() error {
 		args = append(args, "-auto-approve")
 	}
 	return a.runAction(args...)
+}
+
+func (a *TerraformAction) RemoveDir() error {
+	return os.RemoveAll(a.WorkingDir)
 }
 
 func (a *TerraformAction) runAction(args ...string) error {
@@ -224,26 +248,6 @@ func (a *TerraformAction) initIfNeeded() error {
 
 	a.initialized = true
 	return nil
-}
-
-func (a *TerraformAction) GetOutput() (content []byte, err error) {
-	// first initialize terraform
-	if err = a.initIfNeeded(); err != nil {
-		return
-	}
-
-	buf := bytes.NewBuffer(nil)
-	cmd := exec.Command("terraform", "output", "-json")
-	cmd.Dir = a.WorkingDir
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = buf
-	cmd.Env = a.getEnvVars()
-
-	if err = cmd.Run(); err != nil {
-		return
-	}
-	content = buf.Bytes()
-	return
 }
 
 func (a *TerraformAction) getEnvVars() []string {

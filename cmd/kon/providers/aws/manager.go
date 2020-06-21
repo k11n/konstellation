@@ -114,6 +114,9 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 			return err
 		}
 		awsConf.Vpc = tfOut.VpcId
+
+		// ignore errors
+		tfVpc.RemoveDir()
 	}
 
 	err = a.updateVPCInfo(awsConf)
@@ -143,6 +146,8 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	if err != nil {
 		return err
 	}
+	// ignore errors
+	clusterTf.RemoveDir()
 
 	clusterTfOut, err := ParseClusterTFOutput(out)
 	if err != nil {
@@ -324,7 +329,12 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 		return err
 	}
 
-	return tf.Destroy()
+	if err = tf.Destroy(); err != nil {
+		return err
+	}
+	tf.RemoveDir()
+
+	return nil
 }
 
 func (a *AWSManager) DestroyVPC(vpcId string) error {
@@ -360,7 +370,12 @@ func (a *AWSManager) DestroyVPC(vpcId string) error {
 		return err
 	}
 
-	return tf.Destroy()
+	if err = tf.Destroy(); err != nil {
+		return err
+	}
+	tf.RemoveDir()
+
+	return nil
 }
 
 func (a *AWSManager) getAlbRole(cluster string) (*iam.Role, error) {
