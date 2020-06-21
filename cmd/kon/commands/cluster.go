@@ -606,6 +606,17 @@ func clusterReinstall(c *cli.Context) error {
 		return err
 	}
 
+	// set operator version
+	kclient := ac.kubernetesClient()
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return err
+	}
+	cc.Spec.Version = version.Version
+	if _, err = resources.UpdateResource(kclient, cc, nil, nil); err != nil {
+		return err
+	}
+
 	fmt.Println("Successfully reinstalled Konstellation")
 	return nil
 }
