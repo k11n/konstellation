@@ -41,11 +41,6 @@ var LaunchCommands = []*cli.Command{
 				Action: launchKubeDash,
 			},
 			{
-				Name:   "kiali",
-				Usage:  "Launch Kiali (mesh)",
-				Action: launchKiali,
-			},
-			{
 				Name:   "prometheus",
 				Usage:  "Launch Prometheus UI",
 				Action: launchPrometheus,
@@ -84,29 +79,6 @@ func launchKubeDash(c *cli.Context) error {
 
 	proxy.WaitUntilDone()
 	return nil
-}
-
-func launchKiali(c *cli.Context) error {
-	ac, err := getActiveCluster()
-	if err != nil {
-		return err
-	}
-
-	// print token
-	secret, err := resources.GetSecret(ac.kubernetesClient(), resources.IstioNamespace, "kiali")
-	if err != nil {
-		return errors.Wrap(err, "failed to get authentication token")
-	}
-
-	fmt.Printf("Username: %s\n", secret.Data["username"])
-	fmt.Printf("Passphrase: %s\n\n", secret.Data["passphrase"])
-
-	// run proxy
-	proxy, err := koncli.NewKubeProxyForService(ac.kubernetesClient(), "istio-system", "kiali", 0)
-	if err != nil {
-		return err
-	}
-	return startProxyAndWait(proxy, "Kiali")
 }
 
 func launchPrometheus(c *cli.Context) error {

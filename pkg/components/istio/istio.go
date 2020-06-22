@@ -1,7 +1,6 @@
 package istio
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,15 +8,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/google/uuid"
-	"github.com/lytics/base62"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/pkg/components"
-	"github.com/k11n/konstellation/pkg/resources"
 	"github.com/k11n/konstellation/pkg/utils/cli"
 	"github.com/k11n/konstellation/pkg/utils/files"
 )
@@ -105,7 +98,7 @@ func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 		"--skip-confirmation",
 		"--set", "components.citadel.enabled=true", // citadel is required by the sidecar injector
 		"--set", "components.sidecarInjector.enabled=true",
-		"--set", "addonComponents.kiali.enabled=true",
+		"--set", "addonComponents.kiali.enabled=false",
 		"--set", "addonComponents.prometheus.enabled=false",
 		"--set", "addonComponents.grafana.enabled=false",
 		"--set", "values.gateways.istio-ingressgateway.type=NodePort",
@@ -114,53 +107,6 @@ func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 	if err != nil {
 		return err
 	}
-
-	// create a secret for kiali
-	data, _ := uuid.New().MarshalBinary()
-	base62.StdEncoding.EncodeToString(data)
-	secret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: resources.IstioNamespace,
-			Name:      "kiali",
-			Labels: map[string]string{
-				"app": "kiali",
-			},
-		},
-		Type: corev1.SecretTypeOpaque,
-		Data: map[string][]byte{
-			"username":   []byte("kiali"),
-			"passphrase": []byte("kiali"),
-		},
-	}
-
-	existing := corev1.Secret{}
-	key, err := client.ObjectKeyFromObject(&secret)
-	err = kclient.Get(context.TODO(), key, &existing)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			err = kclient.Create(context.TODO(), &secret)
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	}
-	err = kclient.Update(context.TODO(), &secret)
-	if err != nil {
-		return err
-	}
-
-	//// delete default gateway
-	//defGateway := &istio.Gateway{
-	//	ObjectMeta: metav1.ObjectMeta{
-	//		Namespace: resources.IstioNamespace,
-	//		Name:      "ingressgateway",
-	//	},
-	//}
-	//if err = kclient.Delete(context.TODO(), defGateway); err != nil {
-	//	return err
-	//}
 
 	return nil
 }
