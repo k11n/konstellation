@@ -36,7 +36,6 @@ resources:
 - prometheus-kubeControllerManagerPrometheusDiscoveryService.yaml
 - prometheus-kubeSchedulerPrometheusDiscoveryService.yaml
 - prometheus-operator-serviceMonitor.yaml
-- prometheus-prometheus.yaml
 - prometheus-roleBindingConfig.yaml
 - prometheus-roleBindingSpecificNamespaces.yaml
 - prometheus-roleConfig.yaml

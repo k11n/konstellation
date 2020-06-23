@@ -2,11 +2,19 @@ package clusterconfig
 
 import (
 	"context"
+	"fmt"
+
+	promv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/k11n/konstellation/pkg/components/prometheus"
 	"github.com/k11n/konstellation/pkg/resources"
 
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -21,6 +29,11 @@ import (
 )
 
 var log = logf.Log.WithName("controller.ClusterConfig")
+
+const (
+	prometheusName = "prometheus"
+	k8sName        = "k8s"
+)
 
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
@@ -82,6 +95,11 @@ func (r *ReconcileClusterConfig) Reconcile(request reconcile.Request) (reconcile
 			return reconcile.Result{}, err
 		}
 	}
+
+	if err := r.reconcilePrometheus(cc); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	return reconcile.Result{}, nil
 }
 
@@ -109,4 +127,138 @@ func (r *ReconcileClusterConfig) ensureNamespaceCreated(cc *v1alpha1.ClusterConf
 	}
 
 	return r.client.Create(context.TODO(), &n)
+}
+
+func (r *ReconcileClusterConfig) reconcilePrometheus(cc *v1alpha1.ClusterConfig) error {
+	// find default storage class
+	var storageClass *storagev1.StorageClass
+	err := resources.ForEach(r.client, &storagev1.StorageClassList{}, func(obj interface{}) error {
+		sc := obj.(storagev1.StorageClass)
+		if sc.Annotations["storageclass.kubernetes.io/is-default-class"] == "true" || storageClass == nil {
+			storageClass = &sc
+		}
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if storageClass == nil {
+		return fmt.Errorf("No default storageClass defined")
+	}
+
+	// find prometheus component and get config
+	compConf := cc.GetComponentConfig(prometheus.ComponentName)
+	if compConf == nil {
+		// component not yet installed
+		return nil
+	}
+
+	pm := newPrometheus(compConf, storageClass.Name)
+	op, err := resources.UpdateResource(r.client, pm, cc, r.scheme)
+	if err != nil {
+		return err
+	}
+	resources.LogUpdates(log, op, "Updated Prometheus")
+	return nil
+}
+
+func newPrometheus(config map[string]string, storageClass string) *promv1.Prometheus {
+	volumeMode := corev1.PersistentVolumeFilesystem
+	diskSize := prometheus.DefaultDiskSize
+	if val, ok := config[prometheus.DiskSizeKey]; ok {
+		if _, err := resource.ParseQuantity(val); err == nil {
+			diskSize = val
+		}
+	}
+	prom := &promv1.Prometheus{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: resources.KonSystemNamespace,
+			Name:      k8sName,
+			Labels: map[string]string{
+				prometheusName: k8sName,
+			},
+		},
+		Spec: promv1.PrometheusSpec{
+			Affinity: &corev1.Affinity{
+				PodAntiAffinity: &corev1.PodAntiAffinity{
+					PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+						{
+							Weight: 100,
+							PodAffinityTerm: corev1.PodAffinityTerm{
+								LabelSelector: &metav1.LabelSelector{
+									MatchExpressions: []metav1.LabelSelectorRequirement{
+										{
+											Key:      prometheusName,
+											Operator: metav1.LabelSelectorOpIn,
+											Values:   []string{k8sName},
+										},
+									},
+								},
+								Namespaces:  []string{resources.KonSystemNamespace},
+								TopologyKey: "kubernetes.io/hostname",
+							},
+						},
+					},
+				},
+			},
+			Alerting: &promv1.AlertingSpec{
+				Alertmanagers: []promv1.AlertmanagerEndpoints{
+					{
+						Namespace: resources.KonSystemNamespace,
+						Name:      "alertmanager-main",
+						Port:      intstr.FromString("web"),
+					},
+				},
+			},
+			//BaseImage: "quay.io/prometheus/prometheus",
+			NodeSelector: map[string]string{
+				"kubernetes.io/os": "linux",
+			},
+			PodMonitorNamespaceSelector: &metav1.LabelSelector{},
+			PodMonitorSelector:          &metav1.LabelSelector{},
+			Replicas:                    pointer.Int32Ptr(2),
+			Resources: corev1.ResourceRequirements{
+				Requests: map[corev1.ResourceName]resource.Quantity{
+					corev1.ResourceMemory: resource.MustParse("400Mi"),
+				},
+			},
+			RuleSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					prometheusName: k8sName,
+					"role":         "alert-rules",
+				},
+			},
+			SecurityContext: &corev1.PodSecurityContext{
+				FSGroup:      pointer.Int64Ptr(2000),
+				RunAsNonRoot: pointer.BoolPtr(true),
+				RunAsUser:    pointer.Int64Ptr(1000),
+			},
+			ServiceAccountName:              "prometheus-k8s",
+			ServiceMonitorNamespaceSelector: &metav1.LabelSelector{},
+			ServiceMonitorSelector:          &metav1.LabelSelector{},
+			Storage: &promv1.StorageSpec{
+				VolumeClaimTemplate: corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "prometheus-pvc",
+						Namespace: resources.KonSystemNamespace,
+					},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+						VolumeMode:  &volumeMode,
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								// TODO: make this configurable
+								corev1.ResourceStorage: resource.MustParse(diskSize),
+							},
+						},
+						StorageClassName: &storageClass,
+					},
+				},
+			},
+			Version: "v2.11.0",
+		},
+	}
+	return prom
 }

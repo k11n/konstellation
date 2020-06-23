@@ -17,6 +17,12 @@ var (
 	}
 )
 
+const (
+	ComponentName   = "kube-prometheus"
+	DiskSizeKey     = "disk-size"
+	DefaultDiskSize = "100Gi"
+)
+
 func init() {
 	components.RegisterComponent(&KubePrometheus{})
 }
@@ -25,7 +31,7 @@ type KubePrometheus struct {
 }
 
 func (d *KubePrometheus) Name() string {
-	return "kube-prometheus"
+	return ComponentName
 }
 
 func (d *KubePrometheus) VersionForKube(version string) string {

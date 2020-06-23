@@ -8,7 +8,7 @@ type ClusterComponent struct {
 	ComponentSpec `json:",inline"`
 	// +kubebuilder:validation:Optional
 	// +nullable
-	Config map[string]string `json:"config"`
+	Config map[string]string `json:"config,omitempty"`
 }
 
 type ComponentSpec struct {
@@ -47,6 +47,32 @@ type ClusterConfig struct {
 
 	Spec   ClusterConfigSpec   `json:"spec,omitempty"`
 	Status ClusterConfigStatus `json:"status,omitempty"`
+}
+
+func (c *ClusterConfig) GetComponentConfig(name string) map[string]string {
+	// check status, if not installed, return nil
+	installed := false
+	for _, comp := range c.Status.InstalledComponents {
+		if comp.Name == name {
+			installed = true
+			break
+		}
+	}
+
+	if !installed {
+		return nil
+	}
+
+	for _, comp := range c.Spec.Components {
+		if comp.Name == name {
+			if comp.Config != nil {
+				return comp.Config
+			} else {
+				return map[string]string{}
+			}
+		}
+	}
+	return nil
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
