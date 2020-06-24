@@ -52,7 +52,7 @@ var (
 var ClusterCommands = []*cli.Command{
 	{
 		Name:     "cluster",
-		Usage:    "Kubernetes cluster management",
+		Usage:    "Cluster commands",
 		Before:   ensureSetup,
 		Category: "Cluster",
 		Subcommands: []*cli.Command{
