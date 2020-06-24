@@ -5,6 +5,7 @@ deps:
 
 cli: deps
 	./cmd/kon/build.sh
+	go install ./cmd/kon
 
 operator:
 	operator-sdk build "k11n/operator:v$(version)"
