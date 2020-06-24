@@ -127,12 +127,34 @@ func (a *AWSProvider) Setup() error {
 	}
 
 	iamSvc := iam.New(sess)
-	_, err = iamSvc.GetUser(&iam.GetUserInput{})
+	user, err := iamSvc.GetUser(&iam.GetUserInput{})
 	if err != nil {
 		return errors.Wrapf(err, "Couldn't make authenticated calls using provided credentials")
 	}
 
-	// TODO: ensure that the permissions we need are accessible
+	p := func(s string) *string { return &s }
+	resp, err := iamSvc.SimulatePrincipalPolicy(&iam.SimulatePrincipalPolicyInput{
+		ActionNames: []*string{
+			// State bucket
+			p("s3:GetObject"),
+			p("s3:CreateBucket"),
+			p("s3:ListBucket"),
+			p("s3:GetBucketLocation"),
+			// Cluster info
+			p("eks:ListClusters"),
+			p("eks:DescribeCluster"),
+			p("eks:DescribeNodegroup"),
+		},
+		PolicySourceArn: user.User.Arn,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "Failed to check AWS permissions")
+	}
+	for _, res := range resp.EvaluationResults {
+		if *res.EvalDecision != iam.PolicyEvaluationDecisionTypeAllowed {
+			return fmt.Errorf("missing %s permission", *res.EvalActionName)
+		}
+	}
 
 	// ask for a bucket to store state
 	awsConf.StateS3Bucket, awsConf.StateS3BucketRegion, err = a.createStateBucket(sess, awsConf.StateS3Bucket)
