@@ -20,10 +20,12 @@ type ClusterManager interface {
 	Cloud() string
 	Region() string
 
+	CheckCreatePermissions() error
+	CheckDestroyPermissions() error
+
 	CreateCluster(cc *v1alpha1.ClusterConfig) error
 	CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) error
 	DeleteCluster(name string) error
-
 	DestroyVPC(vpcId string) error
 
 	// utils

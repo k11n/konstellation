@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/manifoldco/promptui"
+	"github.com/pkg/errors"
 
 	"github.com/k11n/konstellation/cmd/kon/config"
 	"github.com/k11n/konstellation/cmd/kon/kube"
@@ -41,6 +42,75 @@ func NewAWSManager(region string) *AWSManager {
 		stateBucket:       config.GetConfig().Clouds.AWS.StateS3Bucket,
 		stateBucketRegion: config.GetConfig().Clouds.AWS.StateS3BucketRegion,
 	}
+}
+
+func (a *AWSManager) CheckCreatePermissions() error {
+	sess, err := a.awsSession()
+	if err != nil {
+		return errors.Wrap(err, "Couldn't get aws session")
+	}
+	iamSvc := iam.New(sess)
+	user, err := iamSvc.GetUser(&iam.GetUserInput{})
+	if err != nil {
+		return errors.Wrapf(err, "Couldn't make authenticated calls using provided credentials")
+	}
+
+	p := func(s string) *string { return &s }
+	resp, err := iamSvc.SimulatePrincipalPolicy(&iam.SimulatePrincipalPolicyInput{
+		ActionNames: []*string{
+			p("autoscaling:*"),
+			p("ec2:*"),
+			p("eks:*"),
+			p("iam:*"),
+			p("pricing:*"),
+			p("s3:*"),
+		},
+		PolicySourceArn: user.User.Arn,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "Failed to check AWS permissions")
+	}
+	return checkPermissions(resp.EvaluationResults)
+}
+
+func (a *AWSManager) CheckDestroyPermissions() error {
+	sess, err := a.awsSession()
+	if err != nil {
+		return errors.Wrap(err, "Couldn't get aws session")
+	}
+	iamSvc := iam.New(sess)
+	user, err := iamSvc.GetUser(&iam.GetUserInput{})
+	if err != nil {
+		return errors.Wrapf(err, "Couldn't make authenticated calls using provided credentials")
+	}
+
+	p := func(s string) *string { return &s }
+	resp, err := iamSvc.SimulatePrincipalPolicy(&iam.SimulatePrincipalPolicyInput{
+		ActionNames: []*string{
+			p("ec2:*"),
+			p("eks:*"),
+			p("iam:*"),
+			p("s3:*"),
+		},
+		PolicySourceArn: user.User.Arn,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "Failed to check AWS permissions")
+	}
+	return checkPermissions(resp.EvaluationResults)
+}
+
+func checkPermissions(resp []*iam.EvaluationResult) error {
+	missing := make([]string, 0)
+	for _, res := range resp {
+		if *res.EvalDecision != iam.PolicyEvaluationDecisionTypeAllowed {
+			missing = append(missing, *res.EvalActionName)
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("unauthorized: missing %s permissions", strings.Join(missing, ", "))
+	}
+	return nil
 }
 
 func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {

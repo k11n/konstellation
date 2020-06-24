@@ -264,6 +264,10 @@ func clusterCreate(c *cli.Context) error {
 		if _, err := prompt.Run(); err == nil {
 			useExistingConfig = true
 			cm = NewClusterManager(cc.Spec.Cloud, cc.Spec.Region)
+			err = cm.CheckCreatePermissions()
+			if err != nil {
+				return err
+			}
 		} else if err != promptui.ErrAbort {
 			return err
 		}
@@ -275,6 +279,12 @@ func clusterCreate(c *cli.Context) error {
 		if err != nil {
 			return err
 		}
+
+		err = cm.CheckCreatePermissions()
+		if err != nil {
+			return err
+		}
+
 		cloud := GetCloud(cm.Cloud())
 		generator, err := PromptClusterGenerator(cloud, cm.Region())
 		if err != nil {
@@ -383,6 +393,11 @@ func clusterDestroy(c *cli.Context) error {
 		return err
 	}
 	cm, err := ClusterManagerForCluster(clusterName)
+	if err != nil {
+		return err
+	}
+
+	err = cm.CheckDestroyPermissions()
 	if err != nil {
 		return err
 	}
