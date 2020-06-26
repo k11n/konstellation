@@ -23,10 +23,17 @@ type ClusterManager interface {
 	CheckCreatePermissions() error
 	CheckDestroyPermissions() error
 
+	// Cluster
 	CreateCluster(cc *v1alpha1.ClusterConfig) error
 	CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) error
 	DeleteCluster(name string) error
+
+	// VPC
 	DestroyVPC(vpcId string) error
+
+	// LinkedServiceAccount
+	SyncLinkedServiceAccount(cluster string, lsa *v1alpha1.LinkedServiceAccount) error
+	DeleteLinkedServiceAccount(cluster string, lsa *v1alpha1.LinkedServiceAccount) error
 
 	// utils
 	KubernetesProvider() cloud.KubernetesProvider

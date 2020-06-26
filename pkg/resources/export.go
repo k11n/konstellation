@@ -32,6 +32,8 @@ import (
 //       name.yaml
 //       target/
 //         app-name.yaml
+//   linkedaccounts/
+//     account-name.yaml
 
 type Exporter struct {
 	client      client.Client
@@ -80,6 +82,10 @@ func (e *Exporter) Export() error {
 	}
 
 	if err := e.ExportConfigs(path.Join(e.targetPath, "configs")); err != nil {
+		return err
+	}
+
+	if err := e.ExportLinkedAccounts(path.Join(e.targetPath, "linkedaccounts")); err != nil {
 		return err
 	}
 
@@ -205,6 +211,32 @@ func (e *Exporter) ExportConfigs(configsDir string) error {
 	return err
 }
 
+func (e *Exporter) ExportLinkedAccounts(dir string) error {
+	err := os.MkdirAll(dir, files.DefaultDirectoryMode)
+	if err != nil {
+		return err
+	}
+
+	err = ForEach(e.client, &v1alpha1.LinkedServiceAccountList{}, func(item interface{}) error {
+		lsa := item.(v1alpha1.LinkedServiceAccount)
+		f, err := os.Create(path.Join(dir, lsa.Name+".yaml"))
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		e.cleanupMeta(&lsa.ObjectMeta)
+		// don't store annotations with these
+		lsa.Annotations = nil
+		err = e.encoder.Encode(&lsa, f)
+		if err == nil && e.printStatus {
+			fmt.Println("exported linked service account", lsa.Name)
+		}
+		return err
+	})
+	return err
+}
+
 func (e *Exporter) cleanupMeta(meta *metav1.ObjectMeta) {
 	meta.ResourceVersion = ""
 	meta.Generation = 0
@@ -224,6 +256,10 @@ func (i *Importer) Import() error {
 		return err
 	}
 
+	if err := i.ImportLinkedAccounts(path.Join(i.sourcePath, "linkedaccounts")); err != nil {
+		return err
+	}
+
 	if err := i.ImportApps(path.Join(i.sourcePath, "apps")); err != nil {
 		return err
 	}
@@ -233,7 +269,8 @@ func (i *Importer) Import() error {
 func (i *Importer) ImportApps(appsDir string) error {
 	files, err := ioutil.ReadDir(appsDir)
 	if err != nil {
-		return err
+		// if dir isn't there, ignore
+		return nil
 	}
 
 	for _, f := range files {
@@ -266,7 +303,8 @@ func (i *Importer) ImportApps(appsDir string) error {
 func (i *Importer) ImportBuilds(buildsDir string) error {
 	files, err := ioutil.ReadDir(buildsDir)
 	if err != nil {
-		return err
+		// if dir isn't there, ignore
+		return nil
 	}
 
 	for _, f := range files {
@@ -351,6 +389,41 @@ func (i *Importer) ImportConfigs(configsDir string) error {
 					fmt.Printf("Imported %s config %s\n", ci.confType, f.Name())
 				}
 			}
+		}
+	}
+	return nil
+}
+
+func (i *Importer) ImportLinkedAccounts(dir string) error {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		// if dir isn't there, ignore
+		return nil
+	}
+
+	for _, f := range files {
+		if f.IsDir() {
+			fmt.Println("Unexpected directory", f.Name())
+			continue
+		}
+
+		content, err := ioutil.ReadFile(path.Join(dir, f.Name()))
+		if err != nil {
+			return err
+		}
+		obj, _, err := i.decoder.Decode(content, nil, &v1alpha1.LinkedServiceAccount{})
+		if err != nil {
+			return err
+		}
+
+		lsa := obj.(*v1alpha1.LinkedServiceAccount)
+
+		// load into cluster
+		if _, err = UpdateResource(i.client, lsa, nil, nil); err != nil {
+			return err
+		}
+		if i.printStatus {
+			fmt.Println("Imported linked service account", lsa.Name)
 		}
 	}
 	return nil

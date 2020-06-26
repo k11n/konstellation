@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/manifoldco/promptui"
+	"github.com/pkg/errors"
 	"github.com/thoas/go-funk"
 
 	"github.com/k11n/konstellation/cmd/kon/utils"
@@ -77,6 +78,12 @@ func (c *activeCluster) addTargetPrompt(cc *v1alpha1.ClusterConfig) error {
 		cc.Spec.Targets = append(cc.Spec.Targets, p)
 	}
 
+	// update linked service accounts before saving targets
+	err = reconcileAccounts(c, cc.Spec.Targets)
+	if err != nil {
+		return errors.Wrap(err, "failed to reconcile linked service accounts")
+	}
+
 	_, err = resources.UpdateResource(c.kubernetesClient(), cc, nil, nil)
 	if err != nil {
 		return err
@@ -97,6 +104,13 @@ func (c *activeCluster) removeTargetPrompt(cc *v1alpha1.ClusterConfig) error {
 	}
 
 	cc.Spec.Targets = append(cc.Spec.Targets[:idx], cc.Spec.Targets[idx+1:]...)
+
+	// update linked service accounts before saving targets
+	err = reconcileAccounts(c, cc.Spec.Targets)
+	if err != nil {
+		return errors.Wrap(err, "failed to reconcile linked service accounts")
+	}
+
 	_, err = resources.UpdateResource(c.kubernetesClient(), cc, nil, nil)
 	if err != nil {
 		return err

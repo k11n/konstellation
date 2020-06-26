@@ -445,6 +445,8 @@ spec:
                   format: int32
                   type: integer
               type: object
+            serviceAccount:
+              type: string
             target:
               type: string
           required:

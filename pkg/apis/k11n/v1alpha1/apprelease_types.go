@@ -22,6 +22,9 @@ type AppReleaseSpec struct {
 	// +optional
 	Dependencies []AppReference `json:"dependencies,omitempty"`
 	// +kubebuilder:validation:Optional
+	// +optional
+	ServiceAccount string `json:"serviceAccount,omitempty"`
+	// +kubebuilder:validation:Optional
 	// +nullable
 	// +optional
 	Ports []PortSpec `json:"ports,omitempty"`

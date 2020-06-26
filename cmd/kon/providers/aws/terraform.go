@@ -1,9 +1,10 @@
 package aws
 
 import (
-	"fmt"
 	"os"
 	"path"
+
+	"github.com/spf13/cast"
 
 	"github.com/k11n/konstellation/cmd/kon/config"
 	"github.com/k11n/konstellation/cmd/kon/terraform"
@@ -25,6 +26,28 @@ var (
 		"aws/cluster/tags.tf",
 		"aws/cluster/vars.tf",
 	}
+	linkedAccountFiles = []string{
+		"aws/linkedaccount/iam.tf",
+		"aws/linkedaccount/main.tf",
+		"aws/linkedaccount/tags.tf",
+		"aws/linkedaccount/vars.tf",
+	}
+
+	TFStateBucket       = terraform.Var{Name: "state_bucket", TemplateOnly: true}
+	TFStateBucketRegion = terraform.Var{Name: "state_bucket_region", TemplateOnly: true}
+	TFRegion            = terraform.Var{Name: "region"}
+	TFVPCCidr           = terraform.Var{Name: "vpc_cidr"}
+	TFAZSuffixes        = terraform.Var{Name: "az_suffixes", CreationOnly: true}
+	TFTopology          = terraform.Var{Name: "topology"}
+	TFCluster           = terraform.Var{Name: "cluster"}
+	TFKubeVersion       = terraform.Var{Name: "kube_version", CreationOnly: true}
+	TFSecurityGroupIds  = terraform.Var{Name: "security_group_ids", CreationOnly: true}
+	TFVPCId             = terraform.Var{Name: "vpc_id", CreationOnly: true}
+	TFAccount           = terraform.Var{Name: "account"}
+	TFTargets           = terraform.Var{Name: "targets", CreationOnly: true}
+	TFPolicies          = terraform.Var{Name: "policies", CreationOnly: true}
+	TFOIDCUrl           = terraform.Var{Name: "oidc_url", CreationOnly: true}
+	TFOIDCArn           = terraform.Var{Name: "oidc_arn", CreationOnly: true}
 )
 
 type ObjContainer struct {
@@ -60,11 +83,22 @@ type TFClusterOutput struct {
 	NodeRoleArn       string
 }
 
-func NewCreateVPCTFAction(bucket, bucketRegion, region, vpcCidr string, zones []string, topology string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
+func NewVPCTFAction(values terraform.Values, zones []string, opts ...terraform.Option) (a *terraform.Action, err error) {
+	vars := []terraform.Var{
+		TFStateBucket,
+		TFStateBucketRegion,
+		TFRegion,
+		TFTopology,
+		TFVPCCidr,
+
+		// creation only
+		TFAZSuffixes,
+	}
+
 	targetDir := path.Join(config.TerraformDir(), "aws", "vpc")
 	tfFiles := make([]string, 0, len(vpcFiles))
 	tfFiles = append(tfFiles, vpcFiles...)
-	if topology == "public_private" {
+	if values[TFTopology].(string) == "public_private" {
 		tfFiles = append(tfFiles, "aws/vpc/vpc_private_subnet.tf")
 	}
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, tfFiles...)
@@ -72,53 +106,20 @@ func NewCreateVPCTFAction(bucket, bucketRegion, region, vpcCidr string, zones []
 		return
 	}
 
-	var zoneSuffixes []string
-	regionLen := len(region)
-	for _, zone := range zones {
-		zoneSuffixes = append(zoneSuffixes, zone[regionLen:])
+	if len(zones) > 0 {
+		var zoneSuffixes []string
+		regionLen := len(cast.ToString(values[TFRegion]))
+		for _, zone := range zones {
+			zoneSuffixes = append(zoneSuffixes, zone[regionLen:])
+		}
+		values[TFAZSuffixes] = zoneSuffixes
 	}
 
 	opts = append(opts,
-		terraform.TerraformVars{
-			"region":      region,
-			"vpc_cidr":    vpcCidr,
-			"az_suffixes": zoneSuffixes,
-			"topology":    topology,
-		},
-		terraform.TerraformTemplateVars{
-			"state_bucket":        bucket,
-			"state_bucket_region": bucketRegion,
-		},
+		values,
 		getAWSCredentials(),
 	)
-	a = terraform.NewTerraformAction(targetDir, opts...)
-	return
-}
-
-func NewDestroyVPCTFAction(bucket, bucketRegion, region, vpcCidr string, topology string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
-	targetDir := path.Join(config.TerraformDir(), "aws", "vpc")
-	tfFiles := make([]string, 0, len(vpcFiles))
-	tfFiles = append(tfFiles, vpcFiles...)
-	if topology == "public_private" {
-		tfFiles = append(tfFiles, "aws/vpc/vpc_private_subnet.tf")
-	}
-	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, tfFiles...)
-	if err != nil {
-		return
-	}
-	opts = append(opts,
-		terraform.TerraformVars{
-			"region":   region,
-			"vpc_cidr": vpcCidr,
-			"topology": topology,
-		},
-		terraform.TerraformTemplateVars{
-			"state_bucket":        bucket,
-			"state_bucket_region": bucketRegion,
-		},
-		getAWSCredentials(),
-	)
-	a = terraform.NewTerraformAction(targetDir, opts...)
+	a = terraform.NewTerraformAction(targetDir, vars, opts...)
 	return
 }
 
@@ -132,54 +133,34 @@ type eksClusterInput struct {
 	securityGroupIds []string
 }
 
-func NewCreateEKSClusterTFAction(input eksClusterInput, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
-	targetDir := path.Join(config.TerraformDir(), "aws", "cluster", input.name)
+func NewEKSClusterTFAction(values terraform.Values, opts ...terraform.Option) (a *terraform.Action, err error) {
+	vars := []terraform.Var{
+		TFStateBucket,
+		TFStateBucketRegion,
+		TFRegion,
+		TFCluster,
+
+		// creation only
+		TFKubeVersion,
+		TFSecurityGroupIds,
+		TFVPCId,
+	}
+
+	targetDir := path.Join(config.TerraformDir(), "aws", "cluster", values[TFCluster].(string))
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, clusterFiles...)
 	if err != nil {
 		return
 	}
 
 	opts = append(opts,
-		terraform.TerraformVars{
-			"cluster":            input.name,
-			"kube_version":       input.kubeVersion,
-			"region":             input.region,
-			"security_group_ids": input.securityGroupIds,
-			"vpc_id":             input.vpcId,
-		},
-		terraform.TerraformTemplateVars{
-			"state_bucket":        input.bucket,
-			"state_bucket_region": input.bucketRegion,
-		},
+		values,
 		getAWSCredentials(),
 	)
-	a = terraform.NewTerraformAction(targetDir, opts...)
+	a = terraform.NewTerraformAction(targetDir, vars, opts...)
 	return
 }
 
-func NewDestroyEKSClusterTFAction(bucket, bucketRegion, region string, cluster string, opts ...terraform.TerraformOption) (a *terraform.TerraformAction, err error) {
-	targetDir := path.Join(config.TerraformDir(), "aws", "cluster", fmt.Sprintf("%s_destroy", cluster))
-	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, "aws/cluster/main.tf")
-	if err != nil {
-		return
-	}
-
-	opts = append(opts,
-		terraform.TerraformVars{
-			"region":  region,
-			"cluster": cluster,
-		},
-		terraform.TerraformTemplateVars{
-			"state_bucket":        bucket,
-			"state_bucket_region": bucketRegion,
-		},
-		getAWSCredentials(),
-	)
-	a = terraform.NewTerraformAction(targetDir, opts...)
-	return
-}
-
-func ParseNetworkingTFOutput(data []byte) (tf *TFVPCOutput, err error) {
+func ParseVPCTFOutput(data []byte) (tf *TFVPCOutput, err error) {
 	oc, err := terraform.ParseOutput(data)
 	if err != nil {
 		return
@@ -209,6 +190,42 @@ func ParseClusterTFOutput(data []byte) (tf *TFClusterOutput, err error) {
 		NodeRoleArn:       oc.GetString("cluster_node_role_arn"),
 	}
 	return
+}
+
+func NewLinkedAccountTFAction(values terraform.Values, opts ...terraform.Option) (a *terraform.Action, err error) {
+	vars := []terraform.Var{
+		TFStateBucket,
+		TFStateBucketRegion,
+		TFRegion,
+		TFCluster,
+		TFAccount,
+
+		// create only
+		TFTargets,
+		TFPolicies,
+		TFOIDCUrl,
+		TFOIDCArn,
+	}
+	targetDir := path.Join(config.TerraformDir(), "aws", "cluster", values[TFCluster].(string), values[TFAccount].(string))
+	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, linkedAccountFiles...)
+	if err != nil {
+		return
+	}
+
+	opts = append(opts,
+		values,
+		getAWSCredentials(),
+	)
+	a = terraform.NewTerraformAction(targetDir, vars, opts...)
+	return
+}
+
+func ParseLinkedAccountOutput(data []byte) (roleArn string, err error) {
+	oc, err := terraform.ParseOutput(data)
+	if err != nil {
+		return
+	}
+	return oc.GetString("role_arn"), nil
 }
 
 func getAWSCredentials() terraform.EnvVar {

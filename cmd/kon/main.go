@@ -31,10 +31,11 @@ func main() {
 	commandSets := [][]*cli.Command{
 		commands.AppCommands,
 		commands.ConfigCommands,
-		commands.SetupCommands,
+		commands.AccountCommands,
 		commands.ClusterCommands,
 		commands.CertificateCommands,
 		commands.LaunchCommands,
+		commands.SetupCommands,
 		commands.VPCCommands,
 	}
 	for _, cmds := range commandSets {

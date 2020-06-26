@@ -1,6 +1,5 @@
 variable "region" {
   type = string
-  default = "us-west-2"
 }
 
 variable "cluster" {
@@ -9,14 +8,17 @@ variable "cluster" {
 
 variable "vpc_id" {
   type = string
+  default = ""
 }
 
 variable "security_group_ids" {
   type = list(string)
+  default = []
 }
 
 variable "kube_version" {
   type = string
+  default = ""
 }
 
 output "cluster_name" {

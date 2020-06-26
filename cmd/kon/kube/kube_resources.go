@@ -33,6 +33,7 @@ var (
 		"crds/k11n.dev_certificaterefs_crd.yaml",
 		"crds/k11n.dev_clusterconfigs_crd.yaml",
 		"crds/k11n.dev_ingressrequests_crd.yaml",
+		"crds/k11n.dev_linkedserviceaccounts_crd.yaml",
 		"crds/k11n.dev_nodepools_crd.yaml",
 		"operator.yaml",
 	}

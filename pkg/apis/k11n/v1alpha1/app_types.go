@@ -50,6 +50,10 @@ type AppSpec struct {
 
 	// +kubebuilder:validation:Optional
 	// +optional
+	ServiceAccount string `json:"serviceAccount,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// +kubebuilder:validation:Optional

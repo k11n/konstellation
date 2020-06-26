@@ -1,0 +1,11 @@
+apiVersion: k11n.dev/v1alpha1
+kind: LinkedServiceAccount
+metadata:
+  name: {{.AccountName}}
+spec:
+  aws:
+    # List IAM Policies that the service account should be linked to. Konstellation will create the service account
+    # for each target and linking them to the policies that are listed below
+    policyArns:
+      - arn:aws:iam::account_id:policy/Policy1
+      - arn:aws:iam::account_id:policy/Policy2

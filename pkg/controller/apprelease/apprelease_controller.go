@@ -256,6 +256,10 @@ func (r *ReconcileAppRelease) newReplicaSetForAR(ar *v1alpha1.AppRelease, build 
 		},
 	}
 
+	if ar.Spec.ServiceAccount != "" {
+		podSpec.ServiceAccountName = ar.Spec.ServiceAccount
+	}
+
 	// release name would use build creation timestamp
 	rs := &appsv1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{

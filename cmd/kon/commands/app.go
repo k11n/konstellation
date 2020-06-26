@@ -54,7 +54,7 @@ var (
 var AppCommands = []*cli.Command{
 	{
 		Name:  "app",
-		Usage: "App management",
+		Usage: "App commands",
 		Before: func(c *cli.Context) error {
 			return ensureClusterSelected()
 		},

@@ -52,7 +52,7 @@ var (
 var ClusterCommands = []*cli.Command{
 	{
 		Name:     "cluster",
-		Usage:    "Kubernetes cluster management",
+		Usage:    "Cluster commands",
 		Before:   ensureSetup,
 		Category: "Cluster",
 		Subcommands: []*cli.Command{
@@ -376,9 +376,20 @@ func clusterImport(c *cli.Context) error {
 		return err
 	}
 
-	importer := resources.NewImporter(ac.kubernetesClient(), source)
+	kclient := ac.kubernetesClient()
+
+	importer := resources.NewImporter(kclient, source)
 	err = importer.Import()
 	if err != nil {
+		return err
+	}
+
+	// reconcile linked accounts
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return err
+	}
+	if err = reconcileAccounts(ac, cc.Spec.Targets); err != nil {
 		return err
 	}
 
@@ -446,6 +457,14 @@ func clusterDestroy(c *cli.Context) error {
 		if err == nil {
 			kclient.Delete(context.TODO(), ingress)
 		}
+
+		// delete all linked accounts
+		resources.ForEach(kclient, &v1alpha1.LinkedServiceAccountList{}, func(obj interface{}) error {
+			lsa := obj.(v1alpha1.LinkedServiceAccount)
+			fmt.Println("Cleaning up LinkedServiceAccount", lsa.Name)
+			cm.DeleteLinkedServiceAccount(clusterName, &lsa)
+			return nil
+		})
 	}
 
 	return cm.DeleteCluster(clusterName)
