@@ -366,9 +366,20 @@ func clusterImport(c *cli.Context) error {
 		return err
 	}
 
-	importer := resources.NewImporter(ac.kubernetesClient(), source)
+	kclient := ac.kubernetesClient()
+
+	importer := resources.NewImporter(kclient, source)
 	err = importer.Import()
 	if err != nil {
+		return err
+	}
+
+	// reconcile linked accounts
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return err
+	}
+	if err = reconcileAccounts(ac, cc.Spec.Targets); err != nil {
 		return err
 	}
 

@@ -387,6 +387,8 @@ spec:
               type: object
             role:
               type: string
+            serviceAccount:
+              type: string
             target:
               type: string
             trafficPercentage:
