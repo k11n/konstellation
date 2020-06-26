@@ -199,6 +199,8 @@ func NewLinkedAccountTFAction(values terraform.Values, opts ...terraform.Option)
 		TFRegion,
 		TFCluster,
 		TFAccount,
+
+		// create only
 		TFTargets,
 		TFPolicies,
 		TFOIDCUrl,

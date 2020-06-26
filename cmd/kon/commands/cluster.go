@@ -431,6 +431,14 @@ func clusterDestroy(c *cli.Context) error {
 		if err == nil {
 			kclient.Delete(context.TODO(), ingress)
 		}
+
+		// delete all linked accounts
+		resources.ForEach(kclient, &v1alpha1.LinkedServiceAccountList{}, func(obj interface{}) error {
+			lsa := obj.(v1alpha1.LinkedServiceAccount)
+			fmt.Println("Cleaning up LinkedServiceAccount", lsa.Name)
+			cm.DeleteLinkedServiceAccount(clusterName, &lsa)
+			return nil
+		})
 	}
 
 	return cm.DeleteCluster(clusterName)

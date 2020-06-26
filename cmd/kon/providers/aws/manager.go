@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/iam"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/cmd/kon/config"
@@ -470,6 +471,45 @@ func (a *AWSManager) SyncLinkedServiceAccount(cluster string, lsa *v1alpha1.Link
 }
 
 func (a *AWSManager) DeleteLinkedServiceAccount(cluster string, lsa *v1alpha1.LinkedServiceAccount) error {
+	// removes all resources for the linked account
+	// run TF task
+	values := a.tfValues()
+	values[TFCluster] = cluster
+	values[TFAccount] = lsa.Name
+	tf, err := NewLinkedAccountTFAction(values, terraform.OptionDisplayOutput)
+	if err != nil {
+		return err
+	}
+	if err = tf.Destroy(); err != nil {
+		return err
+	}
+
+	kclient, err := a.kubernetesClient(cluster)
+	if err != nil {
+		return err
+	}
+	// annotate service account for each target
+	for _, target := range lsa.Spec.Targets {
+		// these accounts are already created, time to annotate them
+		sa := &corev1.ServiceAccount{}
+		err = kclient.Get(context.Background(), client.ObjectKey{Namespace: target, Name: lsa.Name}, sa)
+		if err != nil {
+			if errors.IsNotFound(err) {
+				continue
+			}
+			return err
+		}
+
+		if sa.Annotations != nil {
+			delete(sa.Annotations, roleArnAnnotation)
+			sa.Annotations = map[string]string{}
+		}
+		if err = kclient.Update(context.Background(), sa); err != nil {
+			return err
+		}
+	}
+	lsa.Status.LinkedTargets = []string{}
+
 	return nil
 }
 

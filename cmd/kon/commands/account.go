@@ -155,6 +155,36 @@ func accountEdit(name string, allowOverride bool) error {
 }
 
 func accountDelete(c *cli.Context) error {
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+
+	account := c.String("account")
+
+	kclient := ac.kubernetesClient()
+	lsa := &v1alpha1.LinkedServiceAccount{}
+	err = kclient.Get(context.Background(), client.ObjectKey{Name: account}, lsa)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	// remove
+	err = ac.Manager.DeleteLinkedServiceAccount(ac.Cluster, lsa)
+	if err != nil {
+		return err
+	}
+
+	// delete the obj
+	err = kclient.Delete(context.Background(), lsa)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Successfully deleted account", account)
 	return nil
 }
 
