@@ -8,7 +8,9 @@ import (
 	"text/template"
 
 	"github.com/urfave/cli/v2"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/cmd/kon/kube"
@@ -67,10 +69,6 @@ var AccountCommands = []*cli.Command{
 				Usage:  "lists accounts on this cluster",
 				Action: accountList,
 			},
-			//{
-			//	Name: "sync",
-			//	Usage: "sync account after changes",
-			//},
 		},
 	},
 }
@@ -135,20 +133,15 @@ func accountEdit(name string, allowOverride bool) error {
 		return err
 	}
 
-	// save it to cluster
 	obj, _, err := kube.GetKubeDecoder().Decode(accountBody, nil, lsa)
 	if err != nil {
 		return err
 	}
 
 	lsa = obj.(*v1alpha1.LinkedServiceAccount)
-	_, err = resources.UpdateResource(kclient, lsa, nil, nil)
-	if err != nil {
-		return err
-	}
 
 	// sync to cluster
-	if err = syncAccount(lsa); err != nil {
+	if err = reconcileAccount(ac, lsa); err != nil {
 		return err
 	}
 
@@ -164,6 +157,60 @@ func accountList(c *cli.Context) error {
 	return nil
 }
 
-func syncAccount(account *v1alpha1.LinkedServiceAccount) error {
+func reconcileAccount(ac *activeCluster, account *v1alpha1.LinkedServiceAccount) error {
+	needsReconcile, err := account.NeedsReconcile()
+	if err != nil {
+		return err
+	}
+
+	if !needsReconcile {
+		return nil
+	}
+
+	fmt.Printf("Syncing changes to %s\n", ac.Manager.Cloud())
+
+	kclient := ac.kubernetesClient()
+
+	// create service accounts for each target
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return err
+	}
+
+	for _, target := range cc.Spec.Targets {
+		// create account if it doesn't exist in the namespace
+		var existing corev1.ServiceAccount
+		err = kclient.Get(context.Background(), client.ObjectKey{Namespace: target, Name: account.Name}, &existing)
+		if err == nil {
+			// already exists
+			continue
+		} else if !errors.IsNotFound(err) {
+			return err
+		}
+
+		sa := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: target,
+				Name:      account.Name,
+			},
+		}
+		if err = kclient.Create(context.Background(), sa); err != nil {
+			return err
+		}
+	}
+
+	if err = ac.Manager.SyncLinkedServiceAccount(ac.Cluster, account); err != nil {
+		return err
+	}
+
+	if err = account.UpdateHash(); err != nil {
+		return err
+	}
+
+	_, err = resources.UpdateResource(kclient, account, nil, nil)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

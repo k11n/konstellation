@@ -15,17 +15,17 @@ import (
 	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
-type TerraformFlags string
+type Flags string
 
 const (
-	OptionDisplayOutput   TerraformFlags = "display_output"
-	OptionRequireApproval TerraformFlags = "require_approval"
+	OptionDisplayOutput   Flags = "display_output"
+	OptionRequireApproval Flags = "require_approval"
 )
 
-type TerraformAction struct {
+type Action struct {
 	WorkingDir      string
-	vars            map[string]string
-	templateVars    map[string]string
+	Vars            []Var
+	values          map[string]string
 	env             map[string]string
 	displayOutput   bool
 	requireApproval bool
@@ -33,11 +33,19 @@ type TerraformAction struct {
 	initialized bool
 }
 
-type TerraformOption interface {
-	Apply(*TerraformAction)
+type Var struct {
+	Name         string
+	CreationOnly bool
+	TemplateOnly bool
 }
 
-func (f TerraformFlags) Apply(a *TerraformAction) {
+type Values map[Var]interface{}
+
+type Option interface {
+	Apply(*Action)
+}
+
+func (f Flags) Apply(a *Action) {
 	switch f {
 	case OptionDisplayOutput:
 		a.displayOutput = true
@@ -46,43 +54,24 @@ func (f TerraformFlags) Apply(a *TerraformAction) {
 	}
 }
 
-type TerraformVars map[string]interface{}
-
-func (v TerraformVars) Apply(a *TerraformAction) {
-	if a.vars == nil {
-		a.vars = make(map[string]string)
+func (v Values) Apply(a *Action) {
+	if a.values == nil {
+		a.values = make(map[string]string)
 	}
 	for key, val := range v {
 		// if not a string, encode to json
 		if strVal, ok := val.(string); ok {
-			a.vars[key] = strVal
+			a.values[key.Name] = strVal
 		} else {
 			data, _ := json.Marshal(val)
-			a.vars[key] = string(data)
-		}
-	}
-}
-
-type TerraformTemplateVars map[string]interface{}
-
-func (v TerraformTemplateVars) Apply(a *TerraformAction) {
-	if a.templateVars == nil {
-		a.templateVars = make(map[string]string)
-	}
-	for key, val := range v {
-		// if not a string, encode to json
-		if strVal, ok := val.(string); ok {
-			a.templateVars[key] = strVal
-		} else {
-			data, _ := json.Marshal(val)
-			a.templateVars[key] = string(data)
+			a.values[key.Name] = string(data)
 		}
 	}
 }
 
 type EnvVar map[string]string
 
-func (v EnvVar) Apply(a *TerraformAction) {
+func (v EnvVar) Apply(a *Action) {
 	if a.env == nil {
 		a.env = make(map[string]string)
 	}
@@ -91,9 +80,10 @@ func (v EnvVar) Apply(a *TerraformAction) {
 	}
 }
 
-func NewTerraformAction(dir string, opts ...TerraformOption) *TerraformAction {
-	a := &TerraformAction{
+func NewTerraformAction(dir string, vars []Var, opts ...Option) *Action {
+	a := &Action{
 		WorkingDir: dir,
+		Vars:       vars,
 	}
 	for _, o := range opts {
 		o.Apply(a)
@@ -101,12 +91,12 @@ func NewTerraformAction(dir string, opts ...TerraformOption) *TerraformAction {
 	return a
 }
 
-func (a *TerraformAction) Option(opt TerraformOption) *TerraformAction {
+func (a *Action) Option(opt Option) *Action {
 	opt.Apply(a)
 	return a
 }
 
-func (a *TerraformAction) replaceTemplates() error {
+func (a *Action) replaceTemplates() error {
 	files, err := ioutil.ReadDir(a.WorkingDir)
 	if err != nil {
 		return err
@@ -121,21 +111,14 @@ func (a *TerraformAction) replaceTemplates() error {
 	return nil
 }
 
-func (a *TerraformAction) replaceTemplate(filePath string) error {
+func (a *Action) replaceTemplate(filePath string) error {
 	content, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return err
 	}
 	s := string(content)
 	hasReplacements := false
-	for key, val := range a.vars {
-		search := fmt.Sprintf("$${%s}", key)
-		if strings.Contains(s, search) {
-			hasReplacements = true
-			s = strings.ReplaceAll(s, search, val)
-		}
-	}
-	for key, val := range a.templateVars {
+	for key, val := range a.values {
 		search := fmt.Sprintf("$${%s}", key)
 		if strings.Contains(s, search) {
 			hasReplacements = true
@@ -148,7 +131,11 @@ func (a *TerraformAction) replaceTemplate(filePath string) error {
 	return nil
 }
 
-func (a *TerraformAction) Apply() error {
+func (a *Action) Apply() error {
+	if err := a.checkRequiredVars(true); err != nil {
+		return err
+	}
+
 	args := []string{
 		"apply",
 		"-compact-warnings",
@@ -156,14 +143,20 @@ func (a *TerraformAction) Apply() error {
 	if !a.requireApproval {
 		args = append(args, "-auto-approve")
 	}
-	for key, val := range a.vars {
+	for _, v := range a.Vars {
+		if v.TemplateOnly {
+			continue
+		}
 		args = append(args, "-var")
-		args = append(args, fmt.Sprintf("%s=%s", key, val))
+		args = append(args, fmt.Sprintf("%s=%s", v.Name, a.values[v.Name]))
 	}
-	return a.runAction(args...)
+	if err := a.runAction(args...); err != nil {
+		return errors.Wrap(err, "error with terraform apply")
+	}
+	return nil
 }
 
-func (a *TerraformAction) GetOutput() (content []byte, err error) {
+func (a *Action) GetOutput() (content []byte, err error) {
 	// first initialize terraform
 	if err = a.initIfNeeded(); err != nil {
 		return
@@ -183,21 +176,45 @@ func (a *TerraformAction) GetOutput() (content []byte, err error) {
 	return
 }
 
-func (a *TerraformAction) Destroy() error {
+func (a *Action) Destroy() error {
+	if err := a.checkRequiredVars(false); err != nil {
+		return err
+	}
+
 	args := []string{
 		"destroy",
 	}
 	if !a.requireApproval {
 		args = append(args, "-auto-approve")
 	}
+	for _, v := range a.Vars {
+		if v.CreationOnly || v.TemplateOnly {
+			continue
+		}
+		args = append(args, "-var")
+		args = append(args, fmt.Sprintf("%s=%s", v.Name, a.values[v.Name]))
+	}
 	return a.runAction(args...)
 }
 
-func (a *TerraformAction) RemoveDir() error {
+func (a *Action) RemoveDir() error {
 	return os.RemoveAll(a.WorkingDir)
 }
 
-func (a *TerraformAction) runAction(args ...string) error {
+func (a *Action) checkRequiredVars(creation bool) error {
+	for _, v := range a.Vars {
+		if v.CreationOnly && !creation {
+			// creation vars don't have to be passed in during destroys
+			continue
+		}
+		if _, ok := a.values[v.Name]; !ok {
+			return fmt.Errorf("value not found for required var: %s", v.Name)
+		}
+	}
+	return nil
+}
+
+func (a *Action) runAction(args ...string) error {
 	// first initialize terraform
 	if err := a.initIfNeeded(); err != nil {
 		return err
@@ -228,7 +245,7 @@ func (a *TerraformAction) runAction(args ...string) error {
 	return cmd.Run()
 }
 
-func (a *TerraformAction) initIfNeeded() error {
+func (a *Action) initIfNeeded() error {
 	if a.initialized {
 		return nil
 	}
@@ -250,7 +267,7 @@ func (a *TerraformAction) initIfNeeded() error {
 	return nil
 }
 
-func (a *TerraformAction) getEnvVars() []string {
+func (a *Action) getEnvVars() []string {
 	envVars := make([]string, 0, len(a.env))
 	for key, val := range a.env {
 		envVars = append(envVars, fmt.Sprintf("%s=%s", key, val))

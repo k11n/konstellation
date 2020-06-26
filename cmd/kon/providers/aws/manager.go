@@ -13,7 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/manifoldco/promptui"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/cmd/kon/config"
 	"github.com/k11n/konstellation/cmd/kon/kube"
@@ -25,6 +26,10 @@ import (
 	"github.com/k11n/konstellation/pkg/resources"
 	"github.com/k11n/konstellation/pkg/utils/tls"
 	"github.com/k11n/konstellation/version"
+)
+
+const (
+	roleArnAnnotation = "eks.amazonaws.com/role-arn"
 )
 
 type AWSManager struct {
@@ -80,22 +85,16 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	fmt.Println()
 
 	// explicit confirmation
-	confirmPrompt := promptui.Prompt{
-		Label: "Do you want to proceed? (type yes to continue)",
-	}
-	utils.FixPromptBell(&confirmPrompt)
-	res, err := confirmPrompt.Run()
-	if err != nil {
+	if err := utils.ExplicitConfirmationPrompt("Do you want to proceed?"); err != nil {
 		return err
-	}
-	if res != "yes" {
-		return fmt.Errorf("User canceled")
 	}
 
 	if awsConf.Vpc == "" {
 		// run terraform for VPC
-		tfVpc, err := NewCreateVPCTFAction(a.stateBucket, a.stateBucketRegion, a.region, awsConf.VpcCidr,
-			awsConf.AvailabilityZones, string(awsConf.Topology), terraform.OptionDisplayOutput)
+		values := a.tfValues()
+		values[TFVPCCidr] = awsConf.VpcCidr
+		values[TFTopology] = string(awsConf.Topology)
+		tfVpc, err := NewVPCTFAction(values, awsConf.AvailabilityZones, terraform.OptionDisplayOutput)
 		if err != nil {
 			return err
 		}
@@ -109,7 +108,7 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 		if err != nil {
 			return err
 		}
-		tfOut, err := ParseNetworkingTFOutput(out)
+		tfOut, err := ParseVPCTFOutput(out)
 		if err != nil {
 			return err
 		}
@@ -119,22 +118,18 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 		tfVpc.RemoveDir()
 	}
 
-	err = a.updateVPCInfo(awsConf)
+	err := a.updateVPCInfo(awsConf)
 	if err != nil {
 		return err
 	}
 
 	// create cluster
-	eksInput := eksClusterInput{
-		bucket:           a.stateBucket,
-		bucketRegion:     a.stateBucketRegion,
-		kubeVersion:      cc.Spec.KubeVersion,
-		name:             cc.Name,
-		region:           a.region,
-		securityGroupIds: awsConf.SecurityGroups,
-		vpcId:            awsConf.Vpc,
-	}
-	clusterTf, err := NewCreateEKSClusterTFAction(eksInput, terraform.OptionDisplayOutput)
+	values := a.tfValues()
+	values[TFCluster] = cc.Name
+	values[TFKubeVersion] = cc.Spec.KubeVersion
+	values[TFSecurityGroupIds] = awsConf.SecurityGroups
+	values[TFVPCId] = awsConf.Vpc
+	clusterTf, err := NewEKSClusterTFAction(values, terraform.OptionDisplayOutput)
 	if err != nil {
 		return err
 	}
@@ -269,8 +264,7 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 	eksSvc := kaws.NewEKSService(sess)
 
 	// find config and untag resources
-	contextName := resources.ContextNameForCluster(a.Cloud(), cluster)
-	if kclient, err := kube.KubernetesClientWithContext(contextName); err == nil {
+	if kclient, err := a.kubernetesClient(cluster); err == nil {
 		if cc, err := resources.GetClusterConfig(kclient); err == nil {
 			subnetIds := make([]string, 0)
 			for _, sub := range cc.Spec.AWS.PublicSubnets {
@@ -324,7 +318,9 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 	}
 
 	// done, load cluster config and delete cluster
-	tf, err := NewDestroyEKSClusterTFAction(a.stateBucket, a.stateBucketRegion, a.region, cluster, terraform.OptionDisplayOutput)
+	values := a.tfValues()
+	values[TFCluster] = cluster
+	tf, err := NewEKSClusterTFAction(values, terraform.OptionDisplayOutput)
 	if err != nil {
 		return err
 	}
@@ -365,7 +361,11 @@ func (a *AWSManager) DestroyVPC(vpcId string) error {
 		}
 	}
 
-	tf, err := NewDestroyVPCTFAction(a.stateBucket, a.stateBucketRegion, a.region, vpc.CIDRBlock, vpc.Topology, terraform.OptionDisplayOutput)
+	values := a.tfValues()
+	values[TFTopology] = vpc.Topology
+	values[TFVPCCidr] = vpc.CIDRBlock
+
+	tf, err := NewVPCTFAction(values, nil, terraform.OptionDisplayOutput)
 	if err != nil {
 		return err
 	}
@@ -375,6 +375,102 @@ func (a *AWSManager) DestroyVPC(vpcId string) error {
 	}
 	tf.RemoveDir()
 
+	return nil
+}
+
+func (a *AWSManager) SyncLinkedServiceAccount(cluster string, lsa *v1alpha1.LinkedServiceAccount) error {
+	kclient, err := a.kubernetesClient(cluster)
+	if err != nil {
+		return err
+	}
+	// get oidc info
+	cc, err := resources.GetClusterConfig(kclient)
+	sess := session.Must(a.awsSession())
+	iamSvc := iam.New(sess)
+	eksSvc := eks.New(sess)
+	// get current cluster and its oidc url
+	clusterRes, err := eksSvc.DescribeCluster(&eks.DescribeClusterInput{
+		Name: &cluster,
+	})
+	if err != nil {
+		return err
+	}
+	oidcUrl := *clusterRes.Cluster.Identity.Oidc.Issuer
+
+	var oidcArn string
+	providersRes, err := iamSvc.ListOpenIDConnectProviders(&iam.ListOpenIDConnectProvidersInput{})
+	if err != nil {
+		return err
+	}
+
+	// strip protocol
+	u, _ := url.Parse(oidcUrl)
+	oidcUrl = u.Host + u.Path // strip protocol
+	for _, provider := range providersRes.OpenIDConnectProviderList {
+		providerRes, err := iamSvc.GetOpenIDConnectProvider(&iam.GetOpenIDConnectProviderInput{
+			OpenIDConnectProviderArn: provider.Arn,
+		})
+		if err != nil {
+			return err
+		}
+		if *providerRes.Url == oidcUrl {
+			oidcArn = *provider.Arn
+			break
+		}
+	}
+
+	// run TF task
+	values := a.tfValues()
+	values[TFCluster] = cluster
+	values[TFAccount] = lsa.Name
+	values[TFTargets] = cc.Spec.Targets
+	values[TFPolicies] = lsa.Spec.AWS.PolicyARNs
+	values[TFOIDCArn] = oidcArn
+	values[TFOIDCUrl] = oidcUrl
+	tf, err := NewLinkedAccountTFAction(values, terraform.OptionDisplayOutput)
+	if err != nil {
+		return err
+	}
+
+	if err = tf.Apply(); err != nil {
+		return err
+	}
+
+	output, err := tf.GetOutput()
+	if err != nil {
+		return err
+	}
+
+	roleArn, err := ParseLinkedAccountOutput(output)
+	if err != nil {
+		return err
+	}
+
+	// annotate service account for each target
+	for _, target := range cc.Spec.Targets {
+		// these accounts are already created, time to annotate them
+		sa := &corev1.ServiceAccount{}
+		err = kclient.Get(context.Background(), client.ObjectKey{Namespace: target, Name: lsa.Name}, sa)
+		if err != nil {
+			return err
+		}
+
+		if sa.Annotations == nil {
+			sa.Annotations = map[string]string{}
+		}
+		sa.Annotations[roleArnAnnotation] = roleArn
+		if err = kclient.Update(context.Background(), sa); err != nil {
+			return err
+		}
+	}
+
+	// update synced label and LSA
+	lsa.Status.LinkedTargets = cc.Spec.Targets
+
+	return nil
+}
+
+func (a *AWSManager) DeleteLinkedServiceAccount(cluster string, lsa *v1alpha1.LinkedServiceAccount) error {
 	return nil
 }
 
@@ -570,6 +666,19 @@ func (a *AWSManager) quotaConsoleUrl() string {
 func (a *AWSManager) eksNodePoolUrl(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) string {
 	return fmt.Sprintf("https://%s.console.aws.amazon.com/eks/home?region=%s#/clusters/%s/nodegroups/%s",
 		a.Region(), a.Region(), cc.Name, np.Name)
+}
+
+func (a *AWSManager) tfValues() terraform.Values {
+	return terraform.Values{
+		TFStateBucket:       a.stateBucket,
+		TFStateBucketRegion: a.stateBucketRegion,
+		TFRegion:            a.region,
+	}
+}
+
+func (a *AWSManager) kubernetesClient(cluster string) (client.Client, error) {
+	contextName := resources.ContextNameForCluster(a.Cloud(), cluster)
+	return kube.KubernetesClientWithContext(contextName)
 }
 
 func sessionForRegion(region string) (*session.Session, error) {
