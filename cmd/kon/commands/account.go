@@ -139,6 +139,11 @@ func accountEdit(name string, allowOverride bool) error {
 	}
 
 	lsa = obj.(*v1alpha1.LinkedServiceAccount)
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return err
+	}
+	lsa.Spec.Targets = cc.Spec.Targets
 
 	// sync to cluster
 	if err = reconcileAccount(ac, lsa); err != nil {
@@ -167,17 +172,12 @@ func reconcileAccount(ac *activeCluster, account *v1alpha1.LinkedServiceAccount)
 		return nil
 	}
 
-	fmt.Printf("Syncing changes to %s\n", ac.Manager.Cloud())
+	fmt.Printf("Syncing account %s to %s\n", account.Name, ac.Manager.Cloud())
 
 	kclient := ac.kubernetesClient()
 
 	// create service accounts for each target
-	cc, err := resources.GetClusterConfig(kclient)
-	if err != nil {
-		return err
-	}
-
-	for _, target := range cc.Spec.Targets {
+	for _, target := range account.Spec.Targets {
 		// create account if it doesn't exist in the namespace
 		var existing corev1.ServiceAccount
 		err = kclient.Get(context.Background(), client.ObjectKey{Namespace: target, Name: account.Name}, &existing)
@@ -207,10 +207,27 @@ func reconcileAccount(ac *activeCluster, account *v1alpha1.LinkedServiceAccount)
 		return err
 	}
 
+	// unfortunately UpdateResource wipes out status updates.. so when status changes are made previously, they'd be gone
+	status := account.Status
 	_, err = resources.UpdateResource(kclient, account, nil, nil)
 	if err != nil {
 		return err
 	}
 
+	account.Status = status
+	return kclient.Status().Update(context.Background(), account)
+}
+
+func reconcileAccounts(ac *activeCluster, targets []string) error {
+	// reconcile all accounts with new targets (used when cluster targets change)
+	kclient := ac.kubernetesClient()
+	err := resources.ForEach(kclient, &v1alpha1.LinkedServiceAccountList{}, func(obj interface{}) error {
+		lsa := obj.(v1alpha1.LinkedServiceAccount)
+		lsa.Spec.Targets = targets
+		return reconcileAccount(ac, &lsa)
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }

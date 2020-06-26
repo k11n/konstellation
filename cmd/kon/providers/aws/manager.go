@@ -379,12 +379,7 @@ func (a *AWSManager) DestroyVPC(vpcId string) error {
 }
 
 func (a *AWSManager) SyncLinkedServiceAccount(cluster string, lsa *v1alpha1.LinkedServiceAccount) error {
-	kclient, err := a.kubernetesClient(cluster)
-	if err != nil {
-		return err
-	}
 	// get oidc info
-	cc, err := resources.GetClusterConfig(kclient)
 	sess := session.Must(a.awsSession())
 	iamSvc := iam.New(sess)
 	eksSvc := eks.New(sess)
@@ -423,7 +418,7 @@ func (a *AWSManager) SyncLinkedServiceAccount(cluster string, lsa *v1alpha1.Link
 	values := a.tfValues()
 	values[TFCluster] = cluster
 	values[TFAccount] = lsa.Name
-	values[TFTargets] = cc.Spec.Targets
+	values[TFTargets] = lsa.Spec.Targets
 	values[TFPolicies] = lsa.Spec.AWS.PolicyARNs
 	values[TFOIDCArn] = oidcArn
 	values[TFOIDCUrl] = oidcUrl
@@ -446,8 +441,12 @@ func (a *AWSManager) SyncLinkedServiceAccount(cluster string, lsa *v1alpha1.Link
 		return err
 	}
 
+	kclient, err := a.kubernetesClient(cluster)
+	if err != nil {
+		return err
+	}
 	// annotate service account for each target
-	for _, target := range cc.Spec.Targets {
+	for _, target := range lsa.Spec.Targets {
 		// these accounts are already created, time to annotate them
 		sa := &corev1.ServiceAccount{}
 		err = kclient.Get(context.Background(), client.ObjectKey{Namespace: target, Name: lsa.Name}, sa)
@@ -465,7 +464,7 @@ func (a *AWSManager) SyncLinkedServiceAccount(cluster string, lsa *v1alpha1.Link
 	}
 
 	// update synced label and LSA
-	lsa.Status.LinkedTargets = cc.Spec.Targets
+	lsa.Status.LinkedTargets = lsa.Spec.Targets
 
 	return nil
 }

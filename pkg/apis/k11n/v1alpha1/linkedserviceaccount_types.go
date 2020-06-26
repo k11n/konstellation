@@ -13,6 +13,7 @@ const (
 
 // LinkedServiceAccountSpec defines the desired state of LinkedServiceAccount
 type LinkedServiceAccountSpec struct {
+	Targets []string `json:"targets"`
 	// +kubebuilder:validation:Optional
 	AWS *LinkedServiceAccountAWSSpec `json:"aws,omitempty"`
 }
@@ -25,7 +26,7 @@ type LinkedServiceAccountAWSSpec struct {
 
 // ConnectedServiceAccountStatus defines the observed state of LinkedServiceAccount
 type LinkedServiceAccountStatus struct {
-	LinkedTargets []string `json:"linkedTargets"` // list of targets that are linked
+	LinkedTargets []string `json:"linkedTargets,omitempty"` // list of targets that are linked
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
