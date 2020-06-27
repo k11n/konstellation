@@ -5,8 +5,11 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"strings"
 	"text/template"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -189,6 +192,36 @@ func accountDelete(c *cli.Context) error {
 }
 
 func accountList(c *cli.Context) error {
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+	kclient := ac.kubernetesClient()
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{
+		"Linked Account",
+		"Targets Ready",
+		"Policies",
+	})
+
+	err = resources.ForEach(kclient, &v1alpha1.LinkedServiceAccountList{}, func(item interface{}) error {
+		lsa := item.(v1alpha1.LinkedServiceAccount)
+		table.Append([]string{
+			lsa.Name,
+			strings.Join(lsa.Status.LinkedTargets, ","),
+			strings.Join(lsa.GetPolicies(), "\n"),
+		})
+		return nil
+	})
+
+	utils.FormatTable(table)
+	table.Render()
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

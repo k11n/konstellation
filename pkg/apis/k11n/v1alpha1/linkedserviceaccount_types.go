@@ -76,6 +76,13 @@ func (l *LinkedServiceAccount) UpdateHash() error {
 	return nil
 }
 
+func (l *LinkedServiceAccount) GetPolicies() []string {
+	if l.Spec.AWS != nil {
+		return l.Spec.AWS.PolicyARNs
+	}
+	return []string{}
+}
+
 func init() {
 	SchemeBuilder.Register(&LinkedServiceAccount{}, &LinkedServiceAccountList{})
 }
