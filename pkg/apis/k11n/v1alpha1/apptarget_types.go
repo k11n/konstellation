@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 
@@ -21,40 +20,17 @@ type AppTargetSpec struct {
 	Target string `json:"target"`
 	Build  string `json:"build"`
 
-	// +kubebuilder:validation:Optional
-	// +nullable
-	// +optional
-	Ports []PortSpec `json:"ports,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// +nullable
-	// +optional
-	Command []string `json:"command,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +nullable
-	// +optional
-	Args []string `json:"args,omitempty"`
+	AppCommonSpec `json:",inline"`
 
 	// +kubebuilder:validation:Optional
 	// +nullable
 	// +optional
 	Configs []string `json:"configs,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +nullable
-	// +optional
-	Dependencies []AppReference `json:"dependencies,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +optional
-	ServiceAccount string `json:"serviceAccount,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +optional
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
 	// +kubebuilder:validation:Optional
 	// +optional
 	Scale ScaleSpec `json:"scale,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +optional
-	Probes ProbeConfig `json:"probes,omitempty"`
+
 	// +kubebuilder:validation:Optional
 	// +nullable
 	// +optional

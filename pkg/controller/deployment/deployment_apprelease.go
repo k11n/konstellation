@@ -408,16 +408,11 @@ func appReleaseForTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build, configMa
 			Labels:    labels,
 		},
 		Spec: v1alpha1.AppReleaseSpec{
-			App:          at.Spec.App,
-			Target:       at.Spec.Target,
-			Build:        build.Name,
-			Dependencies: at.Spec.Dependencies,
-			Role:         v1alpha1.ReleaseRoleNone,
-			Ports:        at.Spec.Ports,
-			Command:      at.Spec.Command,
-			Args:         at.Spec.Args,
-			Resources:    at.Spec.Resources,
-			Probes:       at.Spec.Probes,
+			App:           at.Spec.App,
+			Target:        at.Spec.Target,
+			Build:         build.Name,
+			Role:          v1alpha1.ReleaseRoleNone,
+			AppCommonSpec: at.Spec.AppCommonSpec,
 		},
 	}
 	if configMap != nil {

@@ -23,12 +23,30 @@ type AppSpec struct {
 	// +kubebuilder:validation:Required
 	Image string `json:"image"`
 
-	// +kubebuilder:validation:Optional
-	// +optional
-	Ports []PortSpec `json:"ports,omitempty"`
-
 	// +optional
 	ImageTag string `json:"imageTag,omitempty"`
+
+	AppCommonSpec `json:",inline"`
+
+	// +kubebuilder:validation:Optional
+	// +nullable
+	// +optional
+	Configs []string `json:"configs,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +optional
+	Scale ScaleSpec `json:"scale,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +nullable
+	Targets []TargetConfig `json:"targets"`
+}
+
+type AppCommonSpec struct {
+	// +kubebuilder:validation:Optional
+	// +nullable
+	// +optional
+	Ports []PortSpec `json:"ports,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// +nullable
@@ -39,11 +57,6 @@ type AppSpec struct {
 	// +nullable
 	// +optional
 	Args []string `json:"args,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// +nullable
-	// +optional
-	Configs []string `json:"configs,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// +nullable
@@ -60,15 +73,7 @@ type AppSpec struct {
 
 	// +kubebuilder:validation:Optional
 	// +optional
-	Scale ScaleSpec `json:"scale,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// +optional
 	Probes ProbeConfig `json:"probes,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// +nullable
-	Targets []TargetConfig `json:"targets"`
 }
 
 // AppStatus defines the observed state of App

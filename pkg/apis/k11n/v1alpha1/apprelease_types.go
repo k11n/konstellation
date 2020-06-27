@@ -17,31 +17,7 @@ type AppReleaseSpec struct {
 	Role              ReleaseRole `json:"role"`
 	TrafficPercentage int32       `json:"trafficPercentage"`
 
-	// +kubebuilder:validation:Optional
-	// +nullable
-	// +optional
-	Dependencies []AppReference `json:"dependencies,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +optional
-	ServiceAccount string `json:"serviceAccount,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +nullable
-	// +optional
-	Ports []PortSpec `json:"ports,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +nullable
-	// +optional
-	Command []string `json:"command,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +nullable
-	// +optional
-	Args []string `json:"args,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +optional
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +optional
-	Probes ProbeConfig `json:"probes,omitempty"`
+	AppCommonSpec `json:",inline"`
 }
 
 // AppReleaseStatus defines the observed state of AppRelease
