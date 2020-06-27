@@ -1,0 +1,129 @@
+---
+title: The Basics
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Konstellation works around the `App` as the master resource. Once you create the [apps manifest](../reference/manifest), it'll be deployed according to specification.
+
+Behind the scenes, Konstellation operator is creating other resources on Kubernetes and keeping them in sync for you.
+
+You would manage your apps via the `kon` CLI. The `kon app` command will list a number of subcommands that are available to manage apps.
+
+There are a few considrations and concepts when deploying apps with Konstellation.
+
+## Container registry
+
+Your app needs to be hosted by a container registry in order to be used with Kubernetes. The `registry` field in the app manifest specifies the URL to the registry. When `registry` is left blank, it defaults to Docker Hub. By default, the cluster only has access to public repos on Docker Hub. To access private registries, there are a couple of options.
+<Tabs
+  defaultValue="ecr"
+  values={[
+    {label: 'Amazon ECR', value: 'ecr'},
+    {label: 'ImagePullSecret', value: 'imagepullsecret'},
+  ]}>
+  <TabItem value="ecr">
+
+The simplest option is to use [Amazon ECR](https://aws.amazon.com/ecr/). When Konstellation sets up the IAM role for the cluster, it has read-only access to your repos on ECR.
+
+Once your images are pushed to ECR, set the `registry` field to your ECR URL. That's it.
+
+  </TabItem>
+  <TabItem value="imagepullsecret">
+
+TBD
+
+  </TabItem>
+</Tabs>
+
+## Targets
+
+Target is a concept in Konstellation that provides a namespace for your app. A target is roughly equivalent to a specific environment of your app. For example, you could specify a production and a development target, with different configurations for hostnames, scale parameters, and receive target-specific configs.
+
+Your cluster would define the targets that it supports with `kon cluster configure`. When deploying an app to a cluster, it will set up a deployment for each target that your cluster has declared. This configuration allows for the flexibility of using the same `app.yaml` across multiple clusters, if you prefer to have dedicated clusters for each target.
+
+Most target attributes can be defined on the app itself, and when running under that target, they are inherited from the base config. You may choose to override only specific portion of the attributes, and the result would be merged. The only attribute that's target-specific is `ingress`. Since ingress is specific to hostnames and exposing traffic to the outside world, it must be defined under the target.
+
+Konstellation will automatically create a namespace for each target and place all of the native resources under that namespace.
+
+See [TargetConfig](../reference/manifest#targetconfig)
+
+```yaml title="App.yaml"
+apiVersion: k11n.dev/v1alpha1
+kind: App
+metadata:
+  name: myapp
+spec:
+  image: repo/myapp
+  imageTag: v10
+  ports:
+    - name: http
+      port: 80
+  scale:
+    targetCPUUtilizationPercentage: 60
+    min: 1
+    max: 10
+  targets:
+    - name: staging
+      ingress:
+        hosts:
+          - staging.myapp.com
+        port: http
+      scale:
+        max: 1
+    - name: production
+      ingress:
+        hosts:
+          - www.myapp.com
+        port: http
+      scale:
+        min: 5
+        max: 20
+```
+
+In this example, the yaml defines two targets, `staging` and `production`. Note that we override the scale attribute for each target. With the overrides applied, `staging`'s scale attributes would become:
+
+```yaml
+targetCPUUtilizationPercentage: 60
+min: 1
+max: 1
+```
+
+`production` scale would be:
+
+```yaml
+targetCPUUtilizationPercentage: 60
+min: 5
+max: 20
+```
+
+## Releases
+
+A release is a base unit of an app's deployment. It locks in your app's build along with any configs that are associated with the app. Each change in your app's build or app config would trigger a new release to be created. You could list the releases with `kon app status <yourapp>`
+
+To deploy a new build, use `kon app deploy --tag <docker tag> <yourapp>`
+
+Konstellation would scale up the new release incrementally, and gradually shift over traffic to it. If there's a problem with a particular build or configuration, you could rollback to a prior working release with the `kon app rollback` command. Rollback marks a particular release as bad, and will cause the system to automatically deploy the previous working version.
+
+## Load balancer
+
+If your app needs to be surfaced to the internet, you'd have to declare an [ingress](../reference/manifest#ingressconfig) in order to create a load balancer.
+
+In the ingress config, list all of the domains that you wish the load balancer to handle. Konstellation will manage a AWS ALB and configure it to listen for all the traffic for your domains.
+
+You'll get a load balancer address (check with `kon app status <yourapp>`). Set up an DNS entry with your DNS provider and traffic will start flowing through to your app.
+
+To test your app before changing DNS, you can run
+
+```
+curl -H "Host: yourhost.com" <load balancer address>
+```
+
+## Scaling
+
+Konstellation supports autoscaling out of the box, and will manage a [Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on your configuration.
+
+In order to use autoscaling, you'd have to declare a few attributes in your manifest:
+
+* [**scale**](../reference/manifest#scalespec): You need to set the `min`, `max`, and `targetCPUUtilizationPercentage`
+* [**resources**](../reference/manifest#resource-requirements): Both `requests` and `limits` need to be set

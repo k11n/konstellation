@@ -23,13 +23,16 @@ spec:
     - name: http
       port: {{.Port}}
 
-  # Any named configs your app requires
+  # Any shared configs your app requires, the app config will be automatically loaded into the env
   # configs: ['name']
 
   # Other apps that you depend on, their hostnames will be made available via env vars
   # dependencies:
   #   - name: other_app
   #     port: http
+
+  # Service account to use, use a LinkedServiceAccount
+  # serviceAccount: account-name
 
   # Define resources that your app requires
   # with CPU, 1000m equals to a single core

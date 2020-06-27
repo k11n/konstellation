@@ -1,0 +1,65 @@
+---
+title: Installation
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
+## Requirements
+
+Konstellation works with EKS today. Google GKE and Azure AKS are both on the roadmap in the future. I welcome contributions from the community if that's what you are looking for. Right now we are focused on AWS.
+
+Before you start, ensure that you have [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and [terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) installed.
+
+## Installation
+
+Konstellation CLI is be compatible with Mac, Linux, and Windows. On Mac it's available via Brew. Otherwise you could build it from source.
+
+<Tabs
+  groupId="os"
+  defaultValue="mac"
+  values={[
+    {label: 'Mac', value: 'mac'},
+    {label: 'Linux', value: 'linux'},
+  ]}>
+  <TabItem value="mac">
+
+```
+% brew tap k11n/konstellation
+% brew install konstellation
+```
+
+  </TabItem>
+  <TabItem value="linux">
+
+```
+% git clone https://github.com/k11n/konstellation.git
+% cd konstellation
+% make cli
+% cp -Rv cmd/kon /usr/local/bin
+```
+  </TabItem>
+</Tabs>
+
+When this is installed, run `kon --version` to confirm the CLI is correctly installed
+
+A single binary is all you need to use the CLI.
+
+
+## Configuration
+
+```bash
+% kon setup
+Use the arrow keys to navigate: ↓ ↑ → ←
+? Choose a cloud provider to configure:
+  ▸ AWS
+```
+
+Konstellation requires a few pieces information before creating a cluster:
+
+* AWS Access Key and Secret Key - used to manage AWS resources
+* An S3 bucket to store Konstellation state
+* Region(s) that you intend to use
+
+This setup needs to be performed only once.
