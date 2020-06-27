@@ -32,6 +32,7 @@ module.exports = {
       label: 'Reference',
       items: [
         'reference/manifest',
+        'reference/linkedserviceaccount',
       ],
     },
   ],

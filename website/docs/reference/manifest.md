@@ -6,24 +6,25 @@ title: App Manifest
 
 The main entry point, the app manifest is the single source of truth to how an app should be deployed. This section serves as a reference to the nitty gritty details of the app yaml.
 
-| Field         | Type            | Required | Description                    |
-|:------------- |:--------------- |:-------- |:------------------------------ |
-| registry      | string          | no       | Docker registry where your image is hosted at. Defaults to Docker Hub
-| image         | string          | yes      | Your app's docker image
-| imageTag      | string          | no       | Tag to use for the initial release
-| ports         | List[[PortSpec](#portspec)]  | no       | Ports that your app surfaces
-| command       | List[string]    | no       | Override for your docker image's ENTRYPOINT
-| args          | List[string]    | no       | Arguments to the entrypoint. The docker image's CMD is used if this is not provided.
-| configs       | List[string]    | no       | [Shared Configs](apps.md#configuration) that your app needs
-| dependencies  | List[[AppReference](#appreference)] | no    | List of other apps your app depends ons, your app will receive their hostnames
-| resources     | [ResourceRequirements](#resource-requirements) | no | Define CPU/Memory requests and limits
-| scale         | [ScaleSpec](#scalespec) | no | Scaling limits and behavior
-| probes        | [ProbeConfig](#probeconfig) | no | Probes to determine app readiness and liveness
-| targets       | List[[TargetConfig](#targetconfig)] | yes | Define one or more targets
+| Field          | Type            | Required | Description                    |
+|:-------------- |:--------------- |:-------- |:------------------------------ |
+| registry       | string          | no       | Docker registry where your image is hosted at. Defaults to Docker Hub
+| image          | string          | yes      | Your app's docker image
+| imageTag       | string          | no       | Tag to use for the initial release
+| ports          | List[[PortSpec](#portspec)]  | no       | Ports that your app surfaces
+| command        | List[string]    | no       | Override for your docker image's ENTRYPOINT
+| args           | List[string]    | no       | Arguments to the entrypoint. The docker image's CMD is used if this is not provided.
+| configs        | List[string]    | no       | [Shared Configs](apps.md#configuration) that your app needs
+| dependencies   | List[[AppReference](#appreference)] | no    | List of other apps your app depends ons, your app will receive their hostnames
+| serviceAccount | string          | no       | Name of [LinkedServiceAccount](linkedserviceaccount) or [ServiceAccount](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) that your app should use.
+| resources      | [ResourceRequirements](#resource-requirements) | no | Define CPU/Memory requests and limits
+| scale          | [ScaleSpec](#scalespec) | no | Scaling limits and behavior
+| probes         | [ProbeConfig](#probeconfig) | no | Probes to determine app readiness and liveness
+| targets        | List[[TargetConfig](#targetconfig)] | yes | Define one or more targets
 
 ## AppReference
 
-References an app as a dependency.
+References an app as a dependency. Once you specify another app as a dependency, its connection string will be made available as an environment for your app.
 
 | Field         | Type            | Required | Description                    |
 |:------------- |:--------------- |:-------- |:------------------------------ |
@@ -31,9 +32,29 @@ References an app as a dependency.
 | target        | string          | no       | Target you are dependent upon, by default, it's the same target as the current running app
 | port          | string          | no       | Name of the port you need, when undefined, it references all defined ports.
 
+If you have the following dependencies declared
+
+```yaml
+...
+dependencies:
+  - name: reviews
+    port: grpc
+  - name: orders
+    port: http
+```
+
+Your app will receive the following env vars. They can be used to connect to the services.
+
+```bash
+REVIEWS_GRPC_HOST=reviews.target.svc.cluster.local:3001
+ORDERS_HTTP_HOST=orders.target.svc.cluster.local:80
+```
+
+When [running locally](../apps/develop#runninglocally), the same environment variables are made available. Since they cannot access private Kubernetes addresses, Konstellation will automatically set up local proxies to your dependencies, then setting the same env vars to the proxy addresses.
+
 ## IngressConfig
 
-Specification for an Ingress. An Ingress always listens on port 80/443 externally.
+Specification for an Ingress. An Ingress always listens on port 80/443 externally. SSL is terminated automatically at the load balancer automatically as long if there's a matching certificate on ACM. See [Setting up SSL](../apps/basics.mdx#settingupssl)
 
 | Field         | Type            | Required | Description                    |
 |:------------- |:--------------- |:-------- |:------------------------------ |
@@ -133,7 +154,7 @@ resources:
 
 ## ScaleSpec
 
-Controls the scaling behavior of your app
+Controls the scaling behavior of your app. All fields must be defined in order for the autoscaler to be activated.
 
 | Field                          | Type            | Required | Description                    |
 |:------------------------------ |:--------------- |:-------- |:------------------------------ |

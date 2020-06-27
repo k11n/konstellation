@@ -19,7 +19,9 @@ const (
 // AppSpec defines the desired state of App
 type AppSpec struct {
 	Registry string `json:"registry,omitempty"`
-	Image    string `json:"image"`
+
+	// +kubebuilder:validation:Required
+	Image string `json:"image"`
 
 	// +kubebuilder:validation:Optional
 	// +optional

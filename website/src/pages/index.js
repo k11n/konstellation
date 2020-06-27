@@ -123,7 +123,12 @@ function Home() {
                   <h3>An operator for apps</h3>
                   <hr />
                   <p>
-                    Your time is precious, and it shouldn't be spent on messing the deployment stack. While Kubernetes provides the scale and efficient resource utilization, it's raw, forcing users to think in resources. Konstellation is a layer on top of Kubernetes focused around apps.
+                    Deploying apps on Kubernetes can be really complex. You are
+                    forced to deal with raw resources, having to manually plan
+                    out the dependencies and references.
+                    Konstellation is a layer on top of Kubernetes focused around
+                    apps. It comes with a powerful CLI that manages all aspects
+                    of your clusters and apps.
                   </p>
                   <pre className="language-text">
                     {cliDemo}
@@ -136,7 +141,12 @@ function Home() {
                   <h3>One manifest to rule them all</h3>
                   <hr />
                   <p>
-                    Konstellation provides high level custom resources and then manages native Kubernetes resources behind the scenes. This means the end of copying and pasting resource templates that you don't understand. The following app manifest would set up ReplicaSets, Service, Autoscaler, Ingress, along with the necessary resources for the service mesh.
+                    Konstellation provides high level custom resources and then manages
+                    native Kubernetes resources behind the scenes. This means the end of
+                    copying and pasting resource templates that you don't understand.
+                    The following app manifest would set up ReplicaSets, Service,
+                    Autoscaler, Ingress, along with the necessary resources for the
+                    service mesh.
                   </p>
                   <Highlight {...defaultProps} theme={dracula} code={manifestExample} language="yaml">
                     {({ className, style, tokens, getLineProps, getTokenProps }) => (
