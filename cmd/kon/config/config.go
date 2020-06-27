@@ -139,5 +139,10 @@ func KubeConfigDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path.Join(homedir, ".kube", "config"), nil
+	d := path.Join(homedir, ".kube")
+	if _, err := os.Stat(d); err != nil {
+		// create it
+		os.MkdirAll(d, files.DefaultDirectoryMode)
+	}
+	return path.Join(d, "config"), nil
 }
