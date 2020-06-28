@@ -23,8 +23,11 @@ type NodePoolAWS struct {
 
 	// set only after cluster is created
 	SecurityGroupId string   `json:"securityGroupId,omitempty"`
-	SubnetIds       []string `json:"subnetIds"`
-	ASGID           string   `json:"asgId"`
+	SubnetIds       []string `json:"subnetIds,omitempty"`
+
+	// set only after nodepool is created
+	// +kubebuilder:validation:Optional
+	ASGID string `json:"asgId,omitempty"`
 }
 
 // NodepoolStatus defines the observed state of Nodepool

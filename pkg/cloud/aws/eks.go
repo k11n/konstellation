@@ -222,7 +222,7 @@ func (s *EKSService) TagSubnetsForCluster(ctx context.Context, clusterName strin
 	// tag VPC subnets if needed
 	ec2Svc := ec2.New(s.session)
 	for _, subnet := range subnetIds {
-		_, err := ec2Svc.CreateTags(&ec2.CreateTagsInput{
+		_, err := ec2Svc.CreateTagsWithContext(ctx, &ec2.CreateTagsInput{
 			Resources: []*string{aws.String(subnet)},
 			Tags: []*ec2.Tag{
 				{
@@ -251,7 +251,7 @@ func (s *EKSService) UnTagSubnetsForCluster(ctx context.Context, clusterName str
 		return nil
 	}
 
-	_, err := ec2Svc.DeleteTags(&ec2.DeleteTagsInput{
+	_, err := ec2Svc.DeleteTagsWithContext(ctx, &ec2.DeleteTagsInput{
 		Resources: resourcesToTag,
 		Tags: []*ec2.Tag{
 			{
@@ -272,13 +272,6 @@ func nodepoolSpecToCreateInput(cluster string, np *v1alpha1.Nodepool) *eks.Creat
 	cni.SetInstanceTypes([]*string{&nps.MachineType})
 	cni.SetNodeRole(nps.AWS.RoleARN)
 	cni.SetNodegroupName(np.ObjectMeta.Name)
-	rac := eks.RemoteAccessConfig{
-		Ec2SshKey: &nps.AWS.SSHKeypair,
-	}
-	if !nps.AWS.ConnectFromAnywhere && nps.AWS.SecurityGroupId != "" {
-		rac.SetSourceSecurityGroups([]*string{&nps.AWS.SecurityGroupId})
-	}
-	cni.SetRemoteAccess(&rac)
 	cni.SetScalingConfig(&eks.NodegroupScalingConfig{
 		MinSize:     &nps.MinSize,
 		MaxSize:     &nps.MaxSize,
@@ -286,6 +279,16 @@ func nodepoolSpecToCreateInput(cluster string, np *v1alpha1.Nodepool) *eks.Creat
 	})
 	for _, subnetId := range nps.AWS.SubnetIds {
 		cni.Subnets = append(cni.Subnets, aws.String(subnetId))
+	}
+
+	if nps.AWS.SSHKeypair != "" {
+		rac := eks.RemoteAccessConfig{
+			Ec2SshKey: &nps.AWS.SSHKeypair,
+		}
+		if !nps.AWS.ConnectFromAnywhere && nps.AWS.SecurityGroupId != "" {
+			rac.SetSourceSecurityGroups([]*string{&nps.AWS.SecurityGroupId})
+		}
+		cni.SetRemoteAccess(&rac)
 	}
 
 	tags := make(map[string]*string)

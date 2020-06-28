@@ -176,6 +176,7 @@ func clusterList(c *cli.Context) error {
 		return err
 	}
 
+	// TODO: this loop is super slow.. we need to optimize it by running cmds in parallel
 	for _, cm := range GetClusterManagers() {
 		ksvc := cm.KubernetesProvider()
 		if ksvc == nil {
@@ -187,6 +188,7 @@ func clusterList(c *cli.Context) error {
 		}
 
 		infos := []*clusterInfo{}
+
 		for _, cluster := range clusters {
 			info := &clusterInfo{
 				Cluster: cluster,

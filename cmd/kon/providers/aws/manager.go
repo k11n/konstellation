@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
@@ -257,23 +258,9 @@ func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nod
 	}
 
 	// set nodepool config from VPC
-	nps := &np.Spec
-	awsConf := cc.Spec.AWS
-	if len(awsConf.SecurityGroups) == 0 {
-		return fmt.Errorf("Could not find security groups")
+	if err = populateClusterInfo(cc, np); err != nil {
+		return err
 	}
-	nps.AWS.SecurityGroupId = awsConf.SecurityGroups[0]
-	var subnetSrc []*v1alpha1.AWSSubnet
-	if awsConf.Topology == v1alpha1.AWSTopologyPublicPrivate {
-		subnetSrc = awsConf.PrivateSubnets
-	} else {
-		subnetSrc = awsConf.PublicSubnets
-	}
-	for _, subnet := range subnetSrc {
-		nps.AWS.SubnetIds = append(nps.AWS.SubnetIds, subnet.SubnetId)
-	}
-
-	nps.AWS.RoleARN = awsConf.NodeRoleArn
 
 	// check aws nodepool status. if it doesn't exist, then create it
 	kubeProvider := a.KubernetesProvider()
@@ -344,7 +331,7 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 			for _, sub := range cc.Spec.AWS.PrivateSubnets {
 				subnetIds = append(subnetIds, sub.SubnetId)
 			}
-			err = eksSvc.TagSubnetsForCluster(context.Background(), cc.Name, subnetIds)
+			err = eksSvc.UnTagSubnetsForCluster(context.Background(), cc.Name, subnetIds)
 			if err != nil {
 				return err
 			}
@@ -359,33 +346,9 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 	}
 
 	for _, item := range listRes.Nodegroups {
-		// TODO: this might involve deleting the remote access groups
-		if err = eksSvc.DeleteNodepool(context.TODO(), cluster, *item); err != nil {
+		if err := a.DeleteNodepool(cluster, *item); err != nil {
 			return err
 		}
-	}
-
-	// wait for nodegroups to disappear
-	fmt.Printf("Waiting for nodepools to be deleted, this may take a few minutes\n")
-	err = utils.WaitUntilComplete(utils.ReallyLongTimeoutSec, utils.LongCheckInterval, func() (finished bool, err error) {
-		listRes, err := eksSvc.EKS.ListNodegroups(&eks.ListNodegroupsInput{
-			ClusterName: &cluster,
-		})
-		if err != nil {
-			return
-		}
-		finished = len(listRes.Nodegroups) == 0
-		if !finished {
-			// try to delete the security group and network interface manually
-			// for some reasons AWS doesn't clean it up
-			for _, item := range listRes.Nodegroups {
-				eksSvc.DeleteNodeGroupNetworkingResources(context.TODO(), *item)
-			}
-		}
-		return
-	})
-	if err != nil {
-		return err
 	}
 
 	// done, load cluster config and delete cluster
@@ -401,6 +364,52 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 	}
 	tf.RemoveDir()
 
+	return nil
+}
+
+func (a *AWSManager) DeleteNodepool(cluster string, nodepool string) error {
+	// list all nodepools, and delete them
+	sess := session.Must(a.awsSession())
+	eksSvc := kaws.NewEKSService(sess)
+
+	if err := eksSvc.DeleteNodepool(context.TODO(), cluster, nodepool); err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			if aerr.Code() == "ResourceNotFoundException" {
+				// ignore notfound errors for nodepools
+				return nil
+			}
+		}
+		return err
+	}
+
+	// wait for nodepool to be fully deleted, delete any other resources if needed
+	// wait for nodegroups to disappear
+	fmt.Printf("Waiting for nodepool %s to be deleted, this may take a few minutes\n", nodepool)
+	err := utils.WaitUntilComplete(utils.ReallyLongTimeoutSec, utils.LongCheckInterval, func() (finished bool, err error) {
+		listRes, err := eksSvc.EKS.ListNodegroups(&eks.ListNodegroupsInput{
+			ClusterName: &cluster,
+		})
+		if err != nil {
+			return
+		}
+
+		finished = true
+		for _, ng := range listRes.Nodegroups {
+			if *ng == nodepool {
+				finished = false
+				break
+			}
+		}
+		if !finished {
+			// try to delete the security group and network interface manually
+			// for some reasons AWS doesn't clean it up
+			err = eksSvc.DeleteNodeGroupNetworkingResources(context.TODO(), nodepool)
+		}
+		return
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -797,4 +806,27 @@ func sessionForRegion(region string) (*session.Session, error) {
 		Region:      aws.String(region),
 		Credentials: credentials.NewStaticCredentials(creds.AccessKeyID, creds.SecretAccessKey, ""),
 	})
+}
+
+func populateClusterInfo(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) error {
+	nps := &np.Spec
+	awsConf := cc.Spec.AWS
+	if len(awsConf.SecurityGroups) == 0 {
+		return fmt.Errorf("Could not find security groups")
+	}
+	nps.AWS.SecurityGroupId = awsConf.SecurityGroups[0]
+	var subnetSrc []*v1alpha1.AWSSubnet
+	if awsConf.Topology == v1alpha1.AWSTopologyPublicPrivate {
+		subnetSrc = awsConf.PrivateSubnets
+	} else {
+		subnetSrc = awsConf.PublicSubnets
+	}
+
+	nps.AWS.SubnetIds = make([]string, 0)
+	for _, subnet := range subnetSrc {
+		nps.AWS.SubnetIds = append(nps.AWS.SubnetIds, subnet.SubnetId)
+	}
+
+	nps.AWS.RoleARN = awsConf.NodeRoleArn
+	return nil
 }

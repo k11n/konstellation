@@ -54,6 +54,7 @@ spec:
                 amiType:
                   type: string
                 asgId:
+                  description: set only after nodepool is created
                   type: string
                 connectFromAnywhere:
                   type: boolean
@@ -70,11 +71,9 @@ spec:
                   type: array
               required:
               - amiType
-              - asgId
               - connectFromAnywhere
               - roleArn
               - sshKeypair
-              - subnetIds
               type: object
             diskSizeGiB:
               type: integer

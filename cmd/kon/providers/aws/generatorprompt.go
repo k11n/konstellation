@@ -147,50 +147,25 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 	nps := v1alpha1.NodepoolSpec{
 		AWS: &v1alpha1.NodePoolAWS{},
 	}
-	ec2Svc := kaws.NewEC2Service(g.session)
 
-	// keypairs for access
-	kpRes, err := ec2Svc.EC2.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{})
+	// See if remote access is needed
+	sshPrompt := promptui.Prompt{
+		Label:     "Enable SSH access to nodes",
+		IsConfirm: true,
+		Default:   "N",
+	}
+
+	_, err = sshPrompt.Run()
 	if err != nil {
-		return
-	}
-	keypairs := kpRes.KeyPairs
-	keypairNames := make([]string, 0, len(keypairs))
-	for _, keypair := range keypairs {
-		keypairNames = append(keypairNames, *keypair.KeyName)
-	}
-	keypairPrompt := promptui.SelectWithAdd{
-		Label:    "Keypair (for SSH access into nodes)",
-		AddLabel: "Create new keypair",
-		Items:    keypairNames,
-		Validate: utils.ValidateKubeName,
-	}
-	idx, keypairName, err := keypairPrompt.Run()
-	if err != nil {
-		return
-	}
-	if idx == -1 {
-		// create new keypair and save it to ~/.ssh
-		nps.AWS.SSHKeypair, err = promptCreateKeypair(ec2Svc.EC2, keypairName)
-		if err != nil {
+		if err == promptui.ErrAbort {
+			// skip sequence
+		} else {
 			return
 		}
 	} else {
-		nps.AWS.SSHKeypair = *keypairs[idx].KeyName
-	}
-
-	// configure node connection
-	if cc.Spec.AWS.Topology == v1alpha1.AWSTopologyPublic {
-		// remote access is only possible when VPC is public-only
-		connectionPrompt := utils.NewPromptSelect(
-			"Allow remote access to nodes from the internet?",
-			[]string{"allow", "disallow"},
-		)
-		idx, _, err = connectionPrompt.Run()
-		if err != nil {
+		if err = g.promptSshAccess(np, cc.Spec.AWS.Topology); err != nil {
 			return
 		}
-		nps.AWS.ConnectFromAnywhere = idx == 0
 	}
 
 	instanceConfirmed := false
@@ -262,6 +237,9 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 		},
 		Spec: nps,
 	}
+
+	// ignore errors, since it might not be available at the time of config generation
+	populateClusterInfo(cc, np)
 	return
 }
 
@@ -370,6 +348,55 @@ func promptTopology() (topology v1alpha1.AWSTopology, err error) {
 		return
 	}
 	return topologies[idx], nil
+}
+
+func (g *PromptConfigGenerator) promptSshAccess(np *v1alpha1.Nodepool, topology v1alpha1.AWSTopology) error {
+	nps := &np.Spec
+	ec2Svc := kaws.NewEC2Service(g.session)
+	// keypairs for access
+	kpRes, err := ec2Svc.EC2.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{})
+	if err != nil {
+		return err
+	}
+	keypairs := kpRes.KeyPairs
+	keypairNames := make([]string, 0, len(keypairs))
+	for _, keypair := range keypairs {
+		keypairNames = append(keypairNames, *keypair.KeyName)
+	}
+	keypairPrompt := promptui.SelectWithAdd{
+		Label:    "Keypair (for SSH access into nodes)",
+		AddLabel: "Create new keypair",
+		Items:    keypairNames,
+		Validate: utils.ValidateKubeName,
+	}
+	idx, keypairName, err := keypairPrompt.Run()
+	if err != nil {
+		return err
+	}
+	if idx == -1 {
+		// create new keypair and save it to ~/.ssh
+		nps.AWS.SSHKeypair, err = promptCreateKeypair(ec2Svc.EC2, keypairName)
+		if err != nil {
+			return err
+		}
+	} else {
+		nps.AWS.SSHKeypair = *keypairs[idx].KeyName
+	}
+
+	// configure node connection
+	if topology == v1alpha1.AWSTopologyPublic {
+		// remote access is only possible when VPC is public-only
+		connectionPrompt := utils.NewPromptSelect(
+			"Allow remote access to nodes from the internet?",
+			[]string{"allow", "disallow"},
+		)
+		idx, _, err = connectionPrompt.Run()
+		if err != nil {
+			return err
+		}
+		nps.AWS.ConnectFromAnywhere = idx == 0
+	}
+	return nil
 }
 
 func promptCreateKeypair(ec2Svc *ec2.EC2, name string) (keyName string, err error) {

@@ -16,7 +16,7 @@ var SetupCommands = []*cli.Command{
 	{
 		Name:     "setup",
 		Usage:    "Setup Konstellation CLI",
-		Category: "Cluster",
+		Category: "Other",
 		Action:   setupStart,
 	},
 }

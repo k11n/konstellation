@@ -32,9 +32,10 @@ func main() {
 		commands.AppCommands,
 		commands.ConfigCommands,
 		commands.AccountCommands,
-		commands.ClusterCommands,
 		commands.CertificateCommands,
+		commands.ClusterCommands,
 		commands.LaunchCommands,
+		commands.NodepoolCommands,
 		commands.SetupCommands,
 		commands.VPCCommands,
 	}
