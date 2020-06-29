@@ -12,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/manifoldco/promptui"
@@ -168,12 +169,16 @@ type clusterInfo struct {
 
 func clusterList(c *cli.Context) error {
 	conf := config.GetConfig()
-	if conf.IsClusterSelected() {
-		fmt.Printf("\nSelected cluster %s\n", conf.SelectedCluster)
-	}
 
 	if err := updateClusterLocations(); err != nil {
 		return err
+	}
+	if conf.IsClusterSelected() {
+		if _, ok := conf.Clusters[conf.SelectedCluster]; ok {
+			fmt.Printf("\nSelected cluster %s\n", conf.SelectedCluster)
+		} else if err := clusterReset(); err != nil {
+			return err
+		}
 	}
 
 	// TODO: this loop is super slow.. we need to optimize it by running cmds in parallel
@@ -187,8 +192,8 @@ func clusterList(c *cli.Context) error {
 			return err
 		}
 
-		infos := []*clusterInfo{}
-
+		infos := make([]*clusterInfo, 0, len(clusters))
+		var wg sync.WaitGroup
 		for _, cluster := range clusters {
 			info := &clusterInfo{
 				Cluster: cluster,
@@ -200,32 +205,52 @@ func clusterList(c *cli.Context) error {
 			if err != nil {
 				continue
 			}
-			config, err := resources.GetClusterConfig(kclient)
-			if err != nil {
-				continue
-			}
-			info.Config = config
 
-			info.Nodepools, err = resources.GetNodepools(kclient)
-			if err != nil {
-				continue
-			}
+			// get cluster config
+			wg.Add(1)
+			go func(kc client.Client, info2 *clusterInfo) {
+				defer wg.Done()
+				info2.Config, err = resources.GetClusterConfig(kc)
+				if err != nil {
+					fmt.Println("error getting cluster config", err)
+				}
+			}(kclient, info)
+
+			// get nodepools
+			wg.Add(1)
+			go func(kc client.Client, info2 *clusterInfo) {
+				defer wg.Done()
+				info2.Nodepools, err = resources.GetNodepools(kc)
+				if err != nil {
+					fmt.Println("error getting modepools", err)
+				}
+			}(kclient, info)
 
 			// get all nodes
-			nodeList := corev1.NodeList{}
-			if err = kclient.List(context.TODO(), &nodeList); err == nil {
-				info.Nodes = nodeList.Items
-			}
+			wg.Add(1)
+			go func(kc client.Client, info2 *clusterInfo) {
+				defer wg.Done()
+				nodeList := corev1.NodeList{}
+				if err = kc.List(context.TODO(), &nodeList); err == nil {
+					info2.Nodes = nodeList.Items
+				} else {
+					fmt.Println("error getting node list", err)
+				}
+			}(kclient, info)
 
 			// get node metrics
-			metricsList := metrics.NodeMetricsList{}
-			if err = kclient.List(context.TODO(), &metricsList); err == nil {
-				info.NodeMetrics = metricsList.Items
-			} else {
-				fmt.Println("error", err)
-			}
+			wg.Add(1)
+			go func(kc client.Client, info2 *clusterInfo) {
+				metricsList := metrics.NodeMetricsList{}
+				if err = kc.List(context.TODO(), &metricsList); err == nil {
+					info2.NodeMetrics = metricsList.Items
+				} else {
+					fmt.Println("error getting node metrics", err)
+				}
+			}(kclient, info)
 		}
 
+		wg.Wait()
 		if len(infos) > 0 {
 			printClusterSection(cm, infos)
 		}
