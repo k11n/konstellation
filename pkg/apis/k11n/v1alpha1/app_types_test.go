@@ -13,9 +13,11 @@ func TestAppTargetResources(t *testing.T) {
 	cpu2 := resource.MustParse("2000m")
 	app := &App{
 		Spec: AppSpec{
-			Resources: corev1.ResourceRequirements{
-				Requests: map[corev1.ResourceName]resource.Quantity{
-					corev1.ResourceCPU: cpu1,
+			AppCommonSpec: AppCommonSpec{
+				Resources: corev1.ResourceRequirements{
+					Requests: map[corev1.ResourceName]resource.Quantity{
+						corev1.ResourceCPU: cpu1,
+					},
 				},
 			},
 			Targets: []TargetConfig{
