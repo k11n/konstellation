@@ -181,7 +181,6 @@ func clusterList(c *cli.Context) error {
 		}
 	}
 
-	// TODO: this loop is super slow.. we need to optimize it by running cmds in parallel
 	for _, cm := range GetClusterManagers() {
 		ksvc := cm.KubernetesProvider()
 		if ksvc == nil {
