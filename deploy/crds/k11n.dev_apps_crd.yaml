@@ -420,6 +420,11 @@ spec:
             targets:
               items:
                 properties:
+                  deployMode:
+                    enum:
+                    - latest
+                    - halt
+                    type: string
                   ingress:
                     description: if ingress is needed
                     properties:

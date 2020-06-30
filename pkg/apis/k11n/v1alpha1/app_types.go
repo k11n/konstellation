@@ -135,9 +135,20 @@ type ProbeConfig struct {
 	Startup *Probe `json:"startup,omitempty"`
 }
 
+// +kubebuilder:validation:Enum=latest;halt
+type DeployMode string
+
+const (
+	DeployLatest DeployMode = "latest"
+	DeployHalt   DeployMode = "halt"
+)
+
 type TargetConfig struct {
 	Name string `json:"name"`
 
+	// +optional
+	// +kubebuilder:validation:Optional
+	DeployMode DeployMode `json:"deployMode,omitempty"`
 	// if ingress is needed
 	// +optional
 	Ingress *IngressConfig `json:"ingress,omitempty"`
@@ -199,6 +210,15 @@ func (a *AppSpec) ProbesForTarget(target string) *ProbeConfig {
 		objects.MergeObject(probes, &tc.Probes)
 	}
 	return probes
+}
+
+func (a *AppSpec) DeployModeForTarget(target string) DeployMode {
+	deployMode := DeployLatest
+	tc := a.GetTargetConfig(target)
+	if tc != nil && tc.DeployMode != "" {
+		deployMode = tc.DeployMode
+	}
+	return deployMode
 }
 
 func (a *AppSpec) GetTargetConfig(target string) *TargetConfig {

@@ -20,6 +20,9 @@ type AppTargetSpec struct {
 	Target string `json:"target"`
 	Build  string `json:"build"`
 
+	// +kubebuilder:validation:Required
+	DeployMode DeployMode `json:"deployMode"`
+
 	AppCommonSpec `json:",inline"`
 
 	// +kubebuilder:validation:Optional
@@ -99,6 +102,9 @@ func (at *AppTarget) TargetNamespace() string {
 }
 
 func (at *AppTarget) DesiredInstances() int32 {
+	if at.Spec.DeployMode == DeployHalt {
+		return 0
+	}
 	instances := at.Spec.Scale.Min
 	if at.Status.NumDesired > instances {
 		instances = at.Status.NumDesired

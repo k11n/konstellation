@@ -45,6 +45,7 @@ const (
 	ReleaseStateRetired   ReleaseState = "retired"
 	ReleaseStateFailed    ReleaseState = "failed"
 	ReleaseStateBad       ReleaseState = "bad"
+	ReleaseStateHalted    ReleaseState = "halted"
 )
 
 type ReleaseRole string

@@ -83,6 +83,11 @@ spec:
                 type: object
               nullable: true
               type: array
+            deployMode:
+              enum:
+              - latest
+              - halt
+              type: string
             ingress:
               nullable: true
               properties:
@@ -452,6 +457,7 @@ spec:
           required:
           - app
           - build
+          - deployMode
           - target
           type: object
         status:

@@ -77,6 +77,31 @@ func GetActiveRelease(kclient client.Client, app, target string) (*v1alpha1.AppR
 	return ar, nil
 }
 
+func GetTargetRelease(kclient client.Client, app, target string) (*v1alpha1.AppRelease, error) {
+	var ar, tr *v1alpha1.AppRelease
+	err := ForEach(kclient, &v1alpha1.AppReleaseList{}, func(item interface{}) error {
+		release := item.(v1alpha1.AppRelease)
+		if release.Spec.Role == v1alpha1.ReleaseRoleTarget {
+			tr = &release
+		} else if release.Spec.Role == v1alpha1.ReleaseRoleActive {
+			ar = &release
+		}
+		return nil
+	}, client.MatchingLabels{
+		AppLabel:    app,
+		TargetLabel: target,
+	}, client.InNamespace(target))
+	if err != nil {
+		return nil, err
+	}
+
+	// if no target, then return active
+	if tr == nil {
+		tr = ar
+	}
+	return tr, nil
+}
+
 func GetAppRelease(kclient client.Client, app, target, name string) (*v1alpha1.AppRelease, error) {
 	ar := &v1alpha1.AppRelease{}
 	err := kclient.Get(context.TODO(), client.ObjectKey{

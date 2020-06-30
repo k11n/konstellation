@@ -86,6 +86,23 @@ var AppCommands = []*cli.Command{
 				ArgsUsage: "<app>",
 			},
 			{
+				Name:      "halt",
+				Usage:     "Halt/unhalt an app. Halting an app scales it to down immediately",
+				Action:    appHalt,
+				ArgsUsage: "<app>",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "target",
+						Usage:    "target to halt/unhalt",
+						Required: true,
+					},
+					&cli.BoolFlag{
+						Name:  "unhalt",
+						Usage: "unhalt an app",
+					},
+				},
+			},
+			{
 				Name:   "list",
 				Usage:  "List apps on this cluster",
 				Action: appList,
@@ -236,7 +253,7 @@ func appList(c *cli.Context) error {
 		fmt.Println("Target: ", target)
 
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"App", "Image", "Last Deployed", "Pods", "Ports", "Host"})
+		table.SetHeader([]string{"App", "Image", "Last Deployed", "Pods", "Ports", "Deploy Mode", "Host"})
 		resources.ForEach(kclient, &v1alpha1.AppTargetList{}, func(item interface{}) error {
 			at := item.(v1alpha1.AppTarget)
 			build, err := resources.GetBuildByName(kclient, at.Spec.Build)
@@ -264,6 +281,7 @@ func appList(c *cli.Context) error {
 				at.Status.DeployUpdatedAt.Format(cliDateFormat),
 				fmt.Sprintf("%d (max %d)", at.Status.NumAvailable, at.Spec.Scale.Max),
 				strings.Join(portsStr, ", "),
+				string(at.Spec.DeployMode),
 				hosts,
 			})
 			return nil
@@ -336,6 +354,9 @@ func appStatus(c *cli.Context) error {
 			fmt.Printf("Load Balancer: %s\n", ir.Status.Address)
 		}
 		fmt.Printf("Scale: %d min, %d max\n", at.Spec.Scale.Min, at.Spec.Scale.Max)
+		if at.Spec.DeployMode != v1alpha1.DeployLatest {
+			fmt.Println("Deploys halted")
+		}
 		fmt.Println()
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{
@@ -440,6 +461,52 @@ func appDeploy(c *cli.Context) error {
 		return err
 	}
 	fmt.Printf("Build %s has been successfully created.\n", build.ShortName())
+	return nil
+}
+
+func appHalt(c *cli.Context) error {
+	appName, err := getAppArg(c)
+	if err != nil {
+		return err
+	}
+	target := c.String("target")
+	unhalt := c.Bool("unhalt")
+
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+	kclient := ac.kubernetesClient()
+
+	app, err := resources.GetAppByName(kclient, appName)
+	if err != nil {
+		return err
+	}
+
+	status := "halted"
+	targetMode := v1alpha1.DeployHalt
+	if unhalt {
+		targetMode = v1alpha1.DeployLatest
+		status = "unhalted"
+	}
+
+	if targetMode == app.Spec.DeployModeForTarget(target) {
+		fmt.Printf("%s-%s is already %s\n", appName, target, status)
+		return nil
+	}
+
+	tc := app.Spec.GetTargetConfig(target)
+	if tc == nil {
+		return fmt.Errorf("%s does not define a target %s", appName, target)
+	}
+	tc.DeployMode = targetMode
+	_, err = resources.UpdateResource(kclient, app, nil, nil)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%s-%s has been %s\n", appName, target, status)
+
 	return nil
 }
 
@@ -970,8 +1037,7 @@ func chooseReleaseHelper(kclient client.Client, c *cli.Context) (pc *podContext,
 		}
 	}
 	if release == "" {
-		// find active release
-		ar, err := resources.GetActiveRelease(kclient, app, target)
+		ar, err := resources.GetTargetRelease(kclient, app, target)
 		if err != nil {
 			return nil, err
 		}

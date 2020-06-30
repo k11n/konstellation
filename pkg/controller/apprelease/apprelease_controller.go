@@ -140,11 +140,16 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 		NumReady:     rs.Status.ReadyReplicas,
 		NumAvailable: rs.Status.AvailableReplicas,
 	}
+
 	if ar.Spec.Role == v1alpha1.ReleaseRoleActive {
 		if status.NumReady == status.NumAvailable && status.NumReady > 0 {
 			status.State = v1alpha1.ReleaseStateReleased
 		} else {
 			status.State = v1alpha1.ReleaseStateReleasing
+		}
+		if status.NumDesired == 0 {
+			// halted
+			status.State = v1alpha1.ReleaseStateHalted
 		}
 	} else if ar.Spec.Role == v1alpha1.ReleaseRoleTarget {
 		status.State = v1alpha1.ReleaseStateReleasing

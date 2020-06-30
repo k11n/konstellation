@@ -260,8 +260,9 @@ func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Build)
 				Resources:      *app.Spec.ResourcesForTarget(target),
 				Probes:         *app.Spec.ProbesForTarget(target),
 			},
-			Configs: app.Spec.Configs,
-			Scale:   *app.Spec.ScaleSpecForTarget(target),
+			DeployMode: app.Spec.DeployModeForTarget(target),
+			Configs:    app.Spec.Configs,
+			Scale:      *app.Spec.ScaleSpecForTarget(target),
 		},
 	}
 

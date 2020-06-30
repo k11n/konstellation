@@ -202,13 +202,24 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 	if targetRelease == activeRelease {
 		targetTrafficPercentage = 100
 		targetRelease.Spec.NumDesired = desiredInstances
+	} else if desiredInstances == 0 {
+		logger.Info("Scaling target to 0 instances", "release", targetRelease.Name)
+		// technically nothing should be getting traffic.. but if it's not set to 100% istio will reject config
+		targetTrafficPercentage = 100
+		targetRelease.Spec.NumDesired = desiredInstances
+		hasChanges = true
+		// flip to active
+		activeRelease = targetRelease
 	} else {
 		// increase by up to rampIncrement
 		maxIncrement := int32(float32(desiredInstances) * increment)
 		if maxIncrement < 1 {
 			maxIncrement = 1
 		}
+		// if earlier instances aren't available, don't ramp new instances.
+		// it's likely something is wrong
 		targetInstances := targetRelease.Status.NumAvailable + maxIncrement
+
 		if targetInstances > desiredInstances {
 			targetInstances = desiredInstances
 		}
@@ -232,7 +243,7 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		}
 
 		if targetRelease.Spec.TrafficPercentage == 100 {
-			// traffic at 100%, update active roles and we are done
+			// traffic already at 100%, update active roles and we are done
 			activeRelease = targetRelease
 			logger.Info("Target fully deployed, marking as active", "release", targetRelease.Name)
 			hasChanges = true
@@ -271,7 +282,6 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 					"lastTraffic", ar.Spec.TrafficPercentage)
 			}
 			ar.Spec.TrafficPercentage = targetTrafficPercentage
-
 		} else if ar.Spec.Role == v1alpha1.ReleaseRoleBad {
 			ar.Spec.TrafficPercentage = 0
 			ar.Spec.NumDesired = 0
