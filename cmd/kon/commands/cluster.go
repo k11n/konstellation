@@ -511,13 +511,7 @@ func clusterSelect(clusterName string) error {
 	}
 	conf := config.GetConfig()
 	conf.SelectedCluster = clusterName
-
 	err = generateKubeConfig()
-	if err != nil {
-		return err
-	}
-
-	err = conf.Persist()
 	if err != nil {
 		return err
 	}
@@ -525,6 +519,12 @@ func clusterSelect(clusterName string) error {
 	kclient := ac.kubernetesClient()
 	// see if we have to configure cluster
 	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return err
+	}
+
+	// only persist once connected
+	err = conf.Persist()
 	if err != nil {
 		return err
 	}
