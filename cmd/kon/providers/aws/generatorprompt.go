@@ -163,7 +163,7 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 			return
 		}
 	} else {
-		if err = g.promptSshAccess(np, cc.Spec.AWS.Topology); err != nil {
+		if err = g.promptSshAccess(&nps, cc.Spec.AWS.Topology); err != nil {
 			return
 		}
 	}
@@ -350,8 +350,7 @@ func promptTopology() (topology v1alpha1.AWSTopology, err error) {
 	return topologies[idx], nil
 }
 
-func (g *PromptConfigGenerator) promptSshAccess(np *v1alpha1.Nodepool, topology v1alpha1.AWSTopology) error {
-	nps := &np.Spec
+func (g *PromptConfigGenerator) promptSshAccess(nps *v1alpha1.NodepoolSpec, topology v1alpha1.AWSTopology) error {
 	ec2Svc := kaws.NewEC2Service(g.session)
 	// keypairs for access
 	kpRes, err := ec2Svc.EC2.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{})
