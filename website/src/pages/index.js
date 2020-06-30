@@ -14,7 +14,7 @@ const features = [
     imageUrl: 'img/undraw_docusaurus_mountain.svg',
     description: (
       <>
-        Konstellation gives you a Heroku-like experience on top of Kubernetes that you fully control. It gives you a CLI that manages every aspect of your app deployment. New apps are deployed in minutes with minimal configuration.
+        Konstellation gives you a Heroku-like experience on top of Kubernetes that you fully control. It provides a CLI that manages every aspect of your app deployments. New apps are deployed in minutes with minimal configuration.
       </>
     ),
   },
@@ -23,7 +23,7 @@ const features = [
     imageUrl: 'img/undraw_docusaurus_tree.svg',
     description: (
       <>
-        Built on years of experience with running production Kubernetes clusters. Konstellation provides an integrated stack including load balancing, autoscaling, service mesh, and release management.
+        Built on years of experience with running production Kubernetes clusters. Konstellation provides an integrated stack including load balancing, autoscaling, service mesh, release management, and observability.
       </>
     ),
   },

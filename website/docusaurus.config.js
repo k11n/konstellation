@@ -81,7 +81,7 @@ module.exports = {
         //   ],
         // },
       ],
-      copyright: `Apache 2.0 Licensed. Copyright © ${new Date().getFullYear()} David Zhao`,
+      copyright: `Apache 2.0 Licensed. Copyright © ${new Date().getFullYear()} Konstellation, LLC.`,
     },
   },
   presets: [
