@@ -240,6 +240,7 @@ func clusterList(c *cli.Context) error {
 			// get node metrics
 			wg.Add(1)
 			go func(kc client.Client, info2 *clusterInfo) {
+				wg.Done()
 				metricsList := metrics.NodeMetricsList{}
 				if err = kc.List(context.TODO(), &metricsList); err == nil {
 					info2.NodeMetrics = metricsList.Items
