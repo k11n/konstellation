@@ -20,7 +20,7 @@ It has a `local` mode that replicates the in-cluster config for your app. To use
 
 If a target is not passed in, it'll use the first target defined.
 
-When running locally, the same environment variables will be set for the configuration and hostnames of service dependencies. For service dependencies, proxies will be created on localhost that would allow you to connect to services running inside of the Kubernetes cluster. This is extremely useful in an microservices environment since you could avoid replciating the entire setup in order to test a single service.
+When running locally, the same environment variables will be set for the configuration and hostnames of service dependencies. For service dependencies, proxies will be created on localhost that would allow you to connect to services running inside of the Kubernetes cluster. This is extremely useful in an microservices environment since you could avoid replicating the entire setup in order to test a single service.
 
 ## Inspecting the container
 
