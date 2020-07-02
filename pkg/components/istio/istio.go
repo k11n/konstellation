@@ -73,6 +73,10 @@ func (i *IstioInstaller) InstallCLI() error {
 		return err
 	}
 
+	// clear existing dir
+	os.RemoveAll(i.installRoot())
+	os.RemoveAll(i.cliPath())
+
 	// run download script
 	cmd := exec.Command(installCmd)
 	cmd.Dir = parentDir

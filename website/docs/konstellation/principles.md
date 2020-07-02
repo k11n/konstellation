@@ -2,11 +2,19 @@
 title: Principles
 ---
 
+## Stability & cohesion
+
+Konstellation is designed to provide an integrated platform involving multiple OSS components. Thus, one of our core goals is to provide cohesion with all of the included software components.
+
+When upgrading third party components, we choose versions of components that have been tested to work with each other, as well as the version of Kubernetes cluster that you create.
+
 ## Reproducibility and undo
 
-With infrastructure changes in the cloud, it can be easy to create a lot of resources that are inter-dependent, making it difficult to remove. Konstellation automates resources management, tracking all of the resources that it creates. For the cluster and VPC, a `destroy` command would remove everything it allocated.
+With infrastructure changes in the cloud, it can be easy to create a lot of resources that are inter-dependent, making it difficult to reproduce the setup or to remove. Konstellation automates resources management, tracking all of the resources that it creates, and tagging them accordingly. For the cluster and VPC, a `destroy` command would remove everything it allocated.
 
-It should also be easy to replicate a cluster, with no manual steps. Konstellation stores all manifests as Kubernetes resources, and offers export and import commands to help you recreate the same setup.
+It should also be easy to replicate a cluster, with no manual steps. Konstellation stores all manifests as Kubernetes resources, and offers export and import commands to easily recreate the same setup.
+
+The same principals also apply to managing app releases. Instead of relying on a traditional Kubernetes Deployment, Konstellation creates distinct AppReleases for just about any changes to your app. This includes build, config, etc. Each App Release can be managed independently, and rolled back if necessary.
 
 ## Optimized for apps, not databases
 
@@ -14,9 +22,9 @@ A application typically involves a combination services and databases. While it'
 
 * Databases benefit from having close to the metal access
 * Operating databases is very different from operating services, and there are managed services that solve that problem very well. ([RDS](https://aws.amazon.com/rds/), [ElastiCache](https://aws.amazon.com/elasticache/), [ScyllaCloud](https://www.scylladb.com/product/scylla-cloud/) to name a few)
-* Scaling databases is tricky, due to the amount of data on disk. The same policies used for scaling homogenous services (autoscaling based on CPU utilization) isn't necessarily the solution for DBs.
+* Scaling databases is tricky, due to the amount of data on disk. The same policies used for scaling homogenous services (autoscaling based on CPU utilization) isn't as effective when scaling DBs.
 
-Konstellation focuses on apps (or services/microservices), and is designed to allow you to point to externally hosted databases via [Configs](apps.md#Configuration).
+Konstellation focuses on apps (or services/microservices), and is designed to allow you to point to externally hosted databases via [Configs](apps/configuration.md).
 
 ## Upgrading software
 
