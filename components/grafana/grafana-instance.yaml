@@ -14,7 +14,7 @@ spec:
       admin_user: "admin"
       admin_password: "admin"
     auth:
-      disable_login_form: True
+      disable_login_form: False
       disable_signout_menu: True
     auth.anonymous:
       enabled: True

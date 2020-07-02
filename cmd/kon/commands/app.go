@@ -825,7 +825,7 @@ func appLogs(c *cli.Context) error {
 	fmt.Printf("%s logs for pod %s\n", verb, pc.pod)
 	namespace := pc.target
 	args := []string{
-		"logs", pc.pod, "-n", namespace, "-c", "app",
+		"logs", pc.pod, "-n", namespace, "-c", pc.app,
 		"--tail", strconv.Itoa(c.Int("tail")),
 	}
 	if c.Bool("follow") {
@@ -1015,7 +1015,7 @@ func appShell(c *cli.Context) error {
 	}
 
 	fmt.Printf("initializing shell to pod %s\n", pc.pod)
-	cmd := exec.Command("kubectl", "exec", "-n", pc.target, "-it", pc.pod, "--container", "app", "--", c.String("shell"))
+	cmd := exec.Command("kubectl", "exec", "-n", pc.target, "-it", pc.pod, "--container", pc.app, "--", c.String("shell"))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin

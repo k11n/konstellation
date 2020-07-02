@@ -216,7 +216,7 @@ func (r *ReconcileAppRelease) newReplicaSetForAR(ar *v1alpha1.AppRelease, build 
 	labels[resources.KubeAppLabel] = ar.Spec.App
 
 	container := corev1.Container{
-		Name:      "app",
+		Name:      ar.Spec.App,
 		Image:     build.FullImageWithTag(),
 		Command:   ar.Spec.Command,
 		Args:      ar.Spec.Args,
