@@ -8,8 +8,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"text/template"
 	"time"
 
@@ -744,6 +746,7 @@ func appLocal(c *cli.Context) error {
 		cmdArgs = args[1:]
 	}
 	cmd := exec.Command(args[0], cmdArgs...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
@@ -777,6 +780,19 @@ func appLocal(c *cli.Context) error {
 			fmt.Println("")
 		}
 	}
+
+	// intercept CTL+C and kill underlying processes
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigchan
+		if cmd.Process == nil {
+			return
+		}
+		cmd.Process.Kill()
+		time.Sleep(3.0)
+		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}()
 
 	err = cmd.Run()
 	for _, proxy := range proxies {
