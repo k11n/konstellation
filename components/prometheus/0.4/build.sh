@@ -16,5 +16,7 @@ jsonnet -J vendor -m manifests "${FILE}" | xargs -I{} sh -c 'cat {} | gojsontoya
 # Make sure to remove json files
 find manifests -type f ! -name '*.yaml' -delete
 
+cp ../kon/* manifests/
+
 kustomize build manifests/setup > prometheus-operator.yaml
 kustomize build manifests > prometheus-k8s.yaml

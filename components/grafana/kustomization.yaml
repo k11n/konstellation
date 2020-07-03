@@ -33,3 +33,4 @@ resources:
 - dashboards/istio-pilot-dashboard.yaml
 - dashboards/istio-mesh-dashboard.yaml
 - dashboards/istio-mixer-dashboard.yaml
+- dashboards/app-dashboard.yaml

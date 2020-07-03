@@ -54,3 +54,5 @@ resources:
 - prometheus-serviceMonitorIstioEnvoyStats.yaml
 - prometheus-serviceMonitorIstioMesh.yaml
 - prometheus-podMonitorIstio.yaml
+# added for kon
+- kon-app-rules.yaml

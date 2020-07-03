@@ -2357,6 +2357,18 @@ spec:
         severity: warning
 ---
 apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    prometheus: k8s
+    role: alert-rules
+  name: prometheus-kon-rules
+  namespace: kon-system
+spec:
+  groups:
+  - name: konstellation-app.rules
+---
+apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:

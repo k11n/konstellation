@@ -19,6 +19,7 @@ def main():
     source = sys.argv[1]
     target_dir = path.join(path.dirname(__file__), "dashboards")
     istio_dir = path.join(target_dir, 'istio')
+    kon_dir = path.join(target_dir, 'kon')
 
     f = open(source, "rb")
     content = yaml.load(f)
@@ -39,6 +40,7 @@ def main():
 
     # generate istio json dash
     json_files = glob(path.join(istio_dir, "*.json"))
+    json_files.extend(glob(path.join(kon_dir, "*.json")))
     for json_file in json_files:
         f = open(json_file)
         content = f.read()

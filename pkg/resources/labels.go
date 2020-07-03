@@ -13,7 +13,7 @@ const (
 	DomainLabel        = "k11n.dev/domain"
 
 	KubeManagedByLabel   = "app.kubernetes.io/managed-by"
-	KubeAppLabel         = "app.kubernetes.io/name"
+	KubeAppLabel         = "app"
 	KubeAppVersionLabel  = "app.kubernetes.io/version"
 	KubeAppInstanceLabel = "app.kubernetes.io/instance"
 

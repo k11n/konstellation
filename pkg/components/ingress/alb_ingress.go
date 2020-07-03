@@ -93,7 +93,7 @@ func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, tlsHosts []
 
 func (i *AWSALBIngress) deploymentForIngress(cc *v1alpha1.ClusterConfig) *appsv1.Deployment {
 	labels := map[string]string{
-		"app.kubernetes.io/name": albIngressName,
+		resources.KubeAppLabel: albIngressName,
 	}
 	// mapped from: https://raw.githubusercontent.com/kubernetes-sigs/aws-alb-ingress-controller/v1.1.6/docs/examples/alb-ingress-controller.yaml
 	dep := &appsv1.Deployment{
