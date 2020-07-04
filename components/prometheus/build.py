@@ -24,6 +24,9 @@ def main():
     shutil.rmtree("build", ignore_errors=True)
     os.makedirs("build/setup")
     os.makedirs("dist", exist_ok=True)
+
+    os.system("jb install")
+
     # Calling gojsontoyaml is optional, but we would like to generate yaml, not json
     cmd = r"jsonnet -J vendor -m build %s | xargs -I{} sh -c 'cat {} | gojsontoyaml > {}.yaml' -- {}" % jsonnet
     print(cmd)

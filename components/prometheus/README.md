@@ -8,10 +8,4 @@ go get github.com/jsonnet-bundler/jsonnet-bundler/cmd/jb
 go get github.com/brancz/gojsontoyaml
 ```
 
-Then init jsonnet deps
-
-```
-jb install
-```
-
-And finally build with `./build.sh`
+And build with `./build.py 0.4`
