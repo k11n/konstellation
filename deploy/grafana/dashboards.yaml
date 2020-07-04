@@ -2277,11 +2277,6 @@ spec:
         "list": [
           {
             "allValue": null,
-            "current": {
-              "tags": [],
-              "text": "ssfetcher",
-              "value": "ssfetcher"
-            },
             "datasource": "prometheus",
             "definition": "istio_requests_total",
             "hide": 0,
@@ -2303,10 +2298,6 @@ spec:
           },
           {
             "allValue": null,
-            "current": {
-              "text": "production",
-              "value": "production"
-            },
             "datasource": "prometheus",
             "definition": "istio_requests_total",
             "hide": 0,
@@ -2329,7 +2320,7 @@ spec:
         ]
       },
       "time": {
-        "from": "now-6h",
+        "from": "now-1h",
         "to": "now"
       },
       "timepicker": {

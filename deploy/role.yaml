@@ -40,12 +40,29 @@ rules:
   - update
   - watch
 - apiGroups:
+  - storage.k8s.io
+  resources:
+  - storageclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - monitoring.coreos.com
   resources:
+  - alertmanagers
+  - podmonitors
+  - prometheuses
+  - rule
   - servicemonitors
   verbs:
   - get
+  - list
   - create
+  - delete
+  - update
+  - patch
+  - watch
 - apiGroups:
   - apps
   resourceNames:
