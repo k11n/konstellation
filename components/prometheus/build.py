@@ -8,6 +8,7 @@ from os import path
 
 __exclude_files__ = [
     'prometheus-prometheus.yaml',
+    'grafana-',
 ]
 
 
@@ -49,7 +50,13 @@ def process_dir(dir: str, target_file: str):
         for item in glob.glob("*"):
             if path.isdir(item):
                 continue
-            if item in __exclude_files__:
+            should_exclude = False
+            for exclude in __exclude_files__:
+                if item.startswith(exclude):
+                    should_exclude = True
+                    break
+
+            if should_exclude:
                 continue
             if not item.endswith(".yaml"):
                 # delete
