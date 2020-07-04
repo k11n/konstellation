@@ -8,9 +8,15 @@ Konstellation is designed to provide an integrated platform involving multiple O
 
 When upgrading third party components, we choose versions of components that have been tested to work with each other, as well as the version of Kubernetes cluster that you create.
 
-## Kubernetes++
+## Abstraction with extensibility
 
-Konstellation builds on top of Kubernetes, and does not change any underlying attributes of Kube. You may continue to use the clusters managed by Konstellation directly; and any resources supported by Kubernetes will continue to work.
+In order to simplify complex systems, we create abstractions as software engineers. Sometimes, the abstraction becomes the only way to interact with that complex system, and it becomes limiting.
+
+We believe in extensible abstractions, where the abstraction applies to the common uses cases, and yet does not prevent access to the underlying engine.
+
+While Konstellation is an abstraction on top of Kubernetes, you may still use raw Kubernetes and create resources directly with `kubectl`; it doesn't take away any of the existing functionality of Kube.
+
+
 
 ## Reproducibility and undo
 

@@ -18,6 +18,7 @@ module.exports = {
         'apps/configuration',
         'apps/develop',
         'apps/services',
+        'apps/monitoring',
       ],
     },
     {
