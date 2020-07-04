@@ -2,13 +2,32 @@
 title: Monitoring & Alerting
 ---
 
-Observability is a critical piece of any production infrastructure. Konstellation comes configured with Kube dashboard, Prometheus, Grafana, AlertManager, as well as pre-configured dashboards for the apps that you deploy.
+Observability is a critical piece of any production infrastructure. Konstellation comes configured with Kube dashboard, Prometheus, Grafana, AlertManager, as well as a set of dashboards for the apps that you deploy.
 
-## Monitoring with grafana
+You can also use the same Prometheus instance to collect additional metrics about your apps.
 
-`kon launch grafana` will launch a browser to the Grafana instance through a proxy to your cluster. You'll find a series of dashboard pre-configured for your cluster.
+## Launching tools
 
-### App Overview
+Monitoring and observability tools run within your cluster, and are inaccessible to the internet. Konstellation makes it easy to get to these tools with the `launch` command. It opens up a [secure proxy](https://kubernetes.io/docs/concepts/cluster-administration/proxies/#proxies) to services within the cluster.
 
-![Docusaurus with Keytar](/img/screen/grafana-app-overview.png)
+## Kubernetes dashboard
 
+`kon launch kubedash` starts the Kubernetes Dashboard. Because the dashboard gives you full control over the cluster, authentication is required. Konstellation generates a secret token for each cluster, and the launch command displays prints it out so you can copy and paste to authenticate.
+
+![Kubernetes Dashboard](/img/screen/kubedash.png)
+
+## Monitoring with Grafana
+
+`kon launch grafana` will launch a browser to the Grafana instance. You'll find a series of dashboard pre-configured for your cluster. We'll highlight a couple of them that you should check out.
+
+### App overview
+
+![App Overview Screenshot](/img/screen/grafana-app-overview.png)
+
+This dashboard is a quick way of getting the key metrics about your app, including releases and pods, throughput and success rate, as well as CPU and memory utilization.
+
+### Istio mesh
+
+![Istio Mesh Screenshot](/img/screen/grafana-istio-mesh.png)
+
+An overview of the health of the service mesh. It's useful when it comes to diagnosing the current flow of traffic.

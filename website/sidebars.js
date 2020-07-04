@@ -25,7 +25,8 @@ module.exports = {
       type: 'category',
       label: 'Cluster Operation',
       items: [
-
+        'clusters/creation',
+        'clusters/upgrading',
       ],
     },
     {
