@@ -73,25 +73,15 @@ yourapp-20200423-1531-7800    yourrepo/image     2020-05-16 23:01:23     1/1    
 
 ### Routing your domain
 
-What remains is linking your domain to the load balancer. You'll need to create a CNAME record, and in the field, specify the `Load Balancer` address shown in the status output.
+What remains is linking your domain to the load balancer. You'll need to create an ALIAS (preferred on Route53) or CNAME record, and in the field, specify the `Load Balancer` address shown in the status output.
 
-### Setting up SSL
+### Setting up SSL (Optional)
 
-On EKS, Konstellation uses an [Application Load Balancer (ALB)](https://aws.amazon.com/elasticloadbalancing/features/) for your ingress. ALB is a layer 7 load balancer and is capable of terminating SSL/TLS requests.
-
-Because the termination is handled by ALB, Konstellation (or Kubernetes) does not need your certificate nor private key. This creates a secure setup since we no longer have to worry about securing Kubernetes' key storage. As long as your certificates are stored in ACM, Konstellation needs only a reference to them.
-
-To use SSL with Konstellation, first ensure your certificate is uploaded into [ACM](https://console.aws.amazon.com/acm/home), then sync certificate references into Kubernetes with:
-
-```text
-% kon certificate sync
-```
-
-After this, your app should be automatically available via HTTPS. Note: ACM is region aware, your cluster and certificates must reside in the same region as the cluster for them to be usable.
+If you have a SSL certificate for the configured domain, Konstellation can [set up the load balancer to handle SSL termination](../apps/basics.mdx#setting-up-ssl).
 
 ### Configuring your app
 
-For most non-trivial apps, you'd likely want to pass in configuration. Konstellation lets you manage both app and shared configs. See [Configuration](apps.md#Configuration) for details.
+For most non-trivial apps, you'd likely want to pass in configuration. Konstellation lets you manage both app and shared configs. See [Configuration](../apps.md#configuration) for details.
 
 ## Cleaning it all up
 

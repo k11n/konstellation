@@ -31,7 +31,7 @@ Once your images are pushed to ECR, set the `registry` field to your ECR URL. Th
   </TabItem>
   <TabItem value="imagepullsecret">
 
-TBD
+Documentation for this is coming.
 
   </TabItem>
 </Tabs>
@@ -105,13 +105,13 @@ To deploy a new build, use `kon app deploy --tag <docker tag> <yourapp>`
 
 Konstellation would scale up the new release incrementally, and gradually shift over traffic to it. If there's a problem with a particular build or configuration, you could rollback to a prior working release with the `kon app rollback` command. Rollback marks a particular release as bad, and will cause the system to automatically deploy the previous working version.
 
-## Load balancer
+## Ingress
 
 If your app needs to be surfaced to the internet, you'd have to declare an [ingress](../reference/manifest#ingressconfig) in order to create a load balancer.
 
 In the ingress config, list all of the domains that you wish the load balancer to handle. Konstellation will manage a AWS ALB and configure it to listen for all the traffic for your domains.
 
-You'll get a load balancer address (check with `kon app status <yourapp>`). Set up an DNS entry with your DNS provider and traffic will start flowing through to your app.
+You'll get a load balancer address (check with `kon app status <yourapp>`). Set up an ALIAS or CNAME with your DNS provider and traffic will start flowing through to your app.
 
 To test your app before changing DNS, you can run
 
@@ -121,7 +121,17 @@ curl -H "Host: yourhost.com" <load balancer address>
 
 ## Setting up SSL
 
-When you
+On EKS, Konstellation uses an [Application Load Balancer (ALB)](https://aws.amazon.com/elasticloadbalancing/features/) for your ingress. ALB is a layer 7 load balancer and is capable of terminating SSL/TLS requests.
+
+Because the termination is handled by ALB, Konstellation (or Kubernetes) does not need your certificate nor private key. This creates a secure setup since we no longer have to worry about securing Kubernetes' key storage. As long as your certificates are stored in ACM, Konstellation needs only a reference to them.
+
+To use SSL with Konstellation, first ensure your certificate is uploaded into [ACM](https://console.aws.amazon.com/acm/home), then sync certificate references into Kubernetes with:
+
+```text
+% kon certificate sync
+```
+
+After this, your app should be automatically available via HTTPS. Note: ACM is region aware, your cluster and certificates must reside in the same region as the cluster for them to be usable.
 
 ## Scaling
 

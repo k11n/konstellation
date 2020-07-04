@@ -2,19 +2,18 @@
 title: Introduction
 ---
 
-Konstellation is an open source app platform that helps you deploy your apps & services quickly on Kubernetes. It's designed to be a production-scale system that lets you harness the power of Kubernetes and yet being as easy to operate as Heroku.
+Konstellation is an open source app platform that helps developers to deploy apps & services quickly on Kubernetes. It's a production-grade system that lets you manage a scalable infrastructure, without having to deal with the layers of complexities that comes with Kubernetes.
 
 ## What is it
 
-Konstellation is an integration of original and third party open source components. It includes
+Konstellation is set of software components working together, including
 
 * a management CLI that runs on your dev machine (`kon`)
 * [custom resource definitions](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRDs) that allows you to specify Apps as a first class resource
-* a set of best of breed components (istio, ingress controller, prometheus, grafana) configured to compatible with the version of Kubernetes on the cluster.
+* a set of best of breed components (Istio, Ingress controller, Prometheus, Grafana) configured to compatible with the version of Kubernetes on the cluster.
 * a [Kubernetes operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) that makes all of the components work together
+* a set of Grafana dashboards for observability into health of your apps
 * Terraform based automation that manages cloud resources related to your clusters.
-
-Working together, it allows a developer to focus the outcome that you want to achieve, versus the nitty gritty of how to achieve that outcome in a Kubernetes world.
 
 ## AWS EKS
 

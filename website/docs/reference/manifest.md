@@ -14,7 +14,7 @@ The main entry point, the app manifest is the single source of truth to how an a
 | ports          | List[[PortSpec](#portspec)]  | no       | Ports that your app surfaces
 | command        | List[string]    | no       | Override for your docker image's ENTRYPOINT
 | args           | List[string]    | no       | Arguments to the entrypoint. The docker image's CMD is used if this is not provided.
-| configs        | List[string]    | no       | [Shared Configs](apps.md#configuration) that your app needs
+| configs        | List[string]    | no       | [Shared Configs](../apps/configuration.md#shared-config) that your app needs
 | dependencies   | List[[AppReference](#appreference)] | no    | List of other apps your app depends ons, your app will receive their hostnames
 | serviceAccount | string          | no       | Name of [LinkedServiceAccount](linkedserviceaccount) or [ServiceAccount](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) that your app should use.
 | resources      | [ResourceRequirements](#resource-requirements) | no | Define CPU/Memory requests and limits
@@ -54,7 +54,7 @@ When [running locally](../apps/develop#runninglocally), the same environment var
 
 ## IngressConfig
 
-Specification for an Ingress. An Ingress always listens on port 80/443 externally. SSL is terminated automatically at the load balancer automatically as long if there's a matching certificate on ACM. See [Setting up SSL](../apps/basics.mdx#settingupssl)
+Specification for an Ingress. An Ingress always listens on port 80/443 externally. SSL is terminated automatically at the load balancer automatically as long if there's a matching certificate on ACM. See [Setting up SSL](../apps/basics.mdx#setting-up-ssl)
 
 | Field         | Type            | Required | Description                    |
 |:------------- |:--------------- |:-------- |:------------------------------ |

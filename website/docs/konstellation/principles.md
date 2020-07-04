@@ -8,6 +8,10 @@ Konstellation is designed to provide an integrated platform involving multiple O
 
 When upgrading third party components, we choose versions of components that have been tested to work with each other, as well as the version of Kubernetes cluster that you create.
 
+## Kubernetes++
+
+Konstellation builds on top of Kubernetes, and does not change any underlying attributes of Kube. You may continue to use the clusters managed by Konstellation directly; and any resources supported by Kubernetes will continue to work.
+
 ## Reproducibility and undo
 
 With infrastructure changes in the cloud, it can be easy to create a lot of resources that are inter-dependent, making it difficult to reproduce the setup or to remove. Konstellation automates resources management, tracking all of the resources that it creates, and tagging them accordingly. For the cluster and VPC, a `destroy` command would remove everything it allocated.
@@ -18,7 +22,7 @@ The same principals also apply to managing app releases. Instead of relying on a
 
 ## Optimized for apps, not databases
 
-A application typically involves a combination services and databases. While it's possible to run databases inside of Kubernetes, I prefer to run them externally. This is because:
+An application typically involves a combination services and databases. While it's possible to run databases inside of Kubernetes, we prefer to run them separately. This is because:
 
 * Databases benefit from having close to the metal access
 * Operating databases is very different from operating services, and there are managed services that solve that problem very well. ([RDS](https://aws.amazon.com/rds/), [ElastiCache](https://aws.amazon.com/elasticache/), [ScyllaCloud](https://www.scylladb.com/product/scylla-cloud/) to name a few)
