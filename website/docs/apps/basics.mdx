@@ -141,3 +141,17 @@ In order to use autoscaling, you'd have to declare a few attributes in your mani
 
 * [**scale**](../reference/manifest#scalespec): You need to set the `min`, `max`, and `targetCPUUtilizationPercentage`
 * [**resources**](../reference/manifest#resource-requirements): Both `requests` and `limits` need to be set
+
+## Using AWS IAM roles in apps
+
+Konstellation could can take full advantage of IAM roles when running apps. By default, all of your apps are ran with the same role as the EKS node, which are fairly restrictive.
+
+Kubernetes supports role based access control (RBAC) with Service Accounts. It works wonderfully in handling the identity of your app automatically. However, Service Accounts are designed to control access within Kubernetes itself, and is not connected to the AWS role in any way.
+
+In order to make this work simply in a reproducible manner, Konstellation supports an extension of service accounts: [Linked Service Account](../reference/linkedserviceaccount) that links IAM policies to a Kubernetes service account.
+
+Once you've created a Linked Service Account, set it in your app manifest and your app would be able to use the policies set.
+
+__Limitations__
+
+Your app needs to be using one of the [supported AWS SDKs](https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts-minimum-sdk.html) in order to make use of linked service accounts.
