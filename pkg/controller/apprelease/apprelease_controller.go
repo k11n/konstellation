@@ -103,7 +103,10 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 			return res, err
 		}
 	}
-	rs := r.newReplicaSetForAR(ar, build, cm)
+	rs, err := r.newReplicaSetForAR(ar, build, cm)
+	if err != nil {
+		return reconcile.Result{RequeueAfter: 1 * time.Minute}, err
+	}
 
 	shouldUpdate := true
 	if ar.Spec.Role == v1alpha1.ReleaseRoleActive {
@@ -210,7 +213,7 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	return res, err
 }
 
-func (r *ReconcileAppRelease) newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build, cm *corev1.ConfigMap) *appsv1.ReplicaSet {
+func (r *ReconcileAppRelease) newReplicaSetForAR(ar *v1alpha1.AppRelease, build *v1alpha1.Build, cm *corev1.ConfigMap) (*appsv1.ReplicaSet, error) {
 	labels := labelsForAppRelease(ar)
 	labels[resources.BuildLabel] = build.Name
 	labels[resources.KubeAppLabel] = ar.Spec.App
@@ -249,6 +252,7 @@ func (r *ReconcileAppRelease) newReplicaSetForAR(ar *v1alpha1.AppRelease, build 
 		envs, err := resources.GetServiceHostEnvForReference(r.client, ref, ar.Spec.Target)
 		if err != nil {
 			log.Error(err, "could not resolve dependencies", "app", ar.Spec.App, "target", ar.Spec.Target, "dependency", ref.Name)
+			return nil, err
 		}
 		for _, e := range envs {
 			container.Env = append(container.Env, e)
@@ -285,7 +289,7 @@ func (r *ReconcileAppRelease) newReplicaSetForAR(ar *v1alpha1.AppRelease, build 
 			},
 		},
 	}
-	return rs
+	return rs, nil
 }
 
 func labelsForAppRelease(ar *v1alpha1.AppRelease) map[string]string {
