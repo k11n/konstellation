@@ -22,14 +22,12 @@ generate:
 	operator-sdk generate crds
 
 prometheus-0.4:
-	cd components/prometheus/0.4; ./build.sh
-	mkdir -p deploy/kube-prometheus/0.4
-	mv components/prometheus/0.4/*.yaml deploy/kube-prometheus/0.4/
+	components/prometheus/build.py 0.4
+	mv components/prometheus/0.4/dist/*.yaml deploy/kube-prometheus/0.4/
 
 prometheus-0.3:
-	cd components/prometheus/0.3; ./build.sh
-	mkdir -p deploy/kube-prometheus/0.3
-	mv components/prometheus/0.3/*.yaml deploy/kube-prometheus/0.3/
+	components/prometheus/build.py 0.3
+	mv components/prometheus/0.3/dist/*.yaml deploy/kube-prometheus/0.3/
 
 grafana:
 	# build grafana-operator

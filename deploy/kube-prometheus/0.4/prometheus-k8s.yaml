@@ -2367,6 +2367,102 @@ metadata:
 spec:
   groups:
   - name: konstellation-app.rules
+    rules:
+    - expr: |
+        count(
+          label_replace(
+            rate(kube_pod_status_phase{phase="Running", namespace!~".*-system", namespace!="grafana"}[5m]),
+            "release", "$1", "pod", "([a-zA-Z0-9-]+-[0-9]+-[0-9]+-[a-z0-9]+).+"
+          )
+        ) by (namespace, release)
+      record: namespace_release:kon_running_pods:rate5m
+    - expr: |
+        count(
+          label_replace(
+            rate(kube_pod_status_phase{namespace!~".*-system", namespace!="grafana"}[5m]),
+            "release", "$1", "pod", "([a-zA-Z0-9-]+-[0-9]+-[0-9]+-[a-z0-9]+).+"
+          )
+        ) by (namespace, release, phase)
+      record: namespace_release_phase:kon_pods:rate5m
+    - expr: sum by(destination_service, response_code) (irate(istio_requests_total{reporter="destination"}[5m]))
+      record: destination_service_response_code:istio_requests_total:irate5m
+    - expr: sum by(destination_service, source_app) (irate(istio_requests_total{reporter="destination"}[5m]))
+      record: destination_service_source_app:istio_requests_total:irate5m
+    - expr: |
+        sum(
+          irate(istio_request_duration_milliseconds_bucket{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[1m])
+        ) by (destination_service, k11n_dev_appRelease, le)
+      record: destination_service_release_le:istio_request_duration_milliseconds_bucket:irate1m
+    - expr: |
+        sum(
+          irate(istio_request_duration_milliseconds_count{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[1m])
+        ) by (destination_service, source_app, k11n_dev_appRelease)
+      record: destination_service_source_release:istio_request_duration_milliseconds_count:irate1m
+    - expr: |
+        sum(
+          kube_pod_container_resource_requests_cpu_cores{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}
+        ) by (namespace, pod, container)
+      record: namespace_pod_container:kube_pod_container_resource_requests_cpu_cores
+    - expr: |
+        sum(
+          rate(container_cpu_usage_seconds_total{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}[5m])
+        ) by (namespace, pod, container)
+      record: namespace_pod_container:container_cpu_usage_seconds_total:rate5m
+    - expr: |
+        sum(
+          rate(container_cpu_cfs_throttled_seconds_total{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}[5m])
+        ) by (namespace, pod, container)
+      record: namespace_pod_container:container_cpu_cfs_throttled_seconds_total:rate5m
+    - expr: |
+        sum(
+          container_memory_working_set_bytes{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}
+        ) by (namespace, pod, container)
+      record: namespace_pod_container:container_memory_working_set_bytes
+    - expr: |
+        sum(
+          kube_pod_container_resource_limits_memory_bytes{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}
+        ) by (namespace, pod, container)
+      record: namespace_pod_container:kube_pod_container_resource_limits_memory_bytes
+    - expr: |
+        sum(
+          irate(istio_request_bytes_bucket{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[5m])
+        ) by (destination_service, k11n_dev_appRelease, source_app, le)
+      record: destination_service_release_source_le:istio_request_bytes_bucket:rate5m
+    - expr: |
+        sum(
+          irate(istio_response_bytes_bucket{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[5m])
+        ) by (destination_service, k11n_dev_appRelease, source_app, le)
+      record: destination_service_release_source_le:istio_response_bytes_bucket:rate5m
+    - expr: |
+        sum(
+          rate(istio_request_bytes_sum{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[5m])
+        ) by (destination_service, k11n_dev_appRelease, source_app, le)
+      record: destination_service_release_source:istio_request_bytes_sum:rate5m
+    - expr: |
+        sum(
+          rate(istio_response_bytes_sum{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[5m])
+        ) by (destination_service, k11n_dev_appRelease, source_app, le)
+      record: destination_service_release_source:istio_response_bytes_sum:rate5m
+    - expr: |
+        sum(
+          rate(istio_request_bytes_count{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[5m])
+        ) by (destination_service, k11n_dev_appRelease, source_app, le)
+      record: destination_service_release_source:istio_request_bytes_count:rate5m
+    - expr: |
+        sum(
+          rate(istio_response_bytes_count{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[5m])
+        ) by (destination_service, k11n_dev_appRelease, source_app, le)
+      record: destination_service_release_source:istio_response_bytes_count:rate5m
+    - expr: |
+        sum(
+          rate(container_fs_writes_bytes_total{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}[5m])
+        ) by (namespace, pod, container)
+      record: namespace_pod_container:container_fs_writes_bytes_total:rate5m
+    - expr: |
+        sum(
+          rate(container_fs_reads_bytes_total{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}[5m])
+        ) by (namespace, pod, container)
+      record: namespace_pod_container:container_fs_reads_bytes_total:rate5m
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
