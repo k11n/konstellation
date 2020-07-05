@@ -8,6 +8,8 @@ Konstellation operates within its own VPC due to the complexities in networking 
 
 Both topologies ensures your load balancers are accessible from the internet. The tradeoffs are between levels of security and cost.
 
+We recommend using a /16 CIDR block. Konstellation will use one bit to denote public vs private, and 3 bits for the availability zones, leaving 12 bits or 4000 available IP addresses for each subnet.
+
 ### Public
 
 With this configuration, there's a single public subnet (per availability zone), and an internet gateway (IGW) to allow bidirectional communication over the internet. This means that every EKS node (EC2 instances) are reachable via the internet. To fine tune security and connection settings, use security groups associated with the EKS cluster.
@@ -26,9 +28,17 @@ With this configuration, all of your EKS nodes will be allocated in the private 
 
 ## Node autoscaling
 
+When you create a cluster, you'll be asked to specify the min and max number of nodes to use for the cluster. Konstellation will initially allocate the minimum, and then use the included [cluster autoscaler](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler) to scale it up.
 
+As new apps are deployed, or when existing [apps scale up](../apps/basics#scaling), the cluster will allocate new nodes just in time.
+
+The autoscaler will also scale down excess capacity, moving workload from under-utilized nodes before shutting them down.
 
 ## Provider quotas
+
+One of the common reasons for VPC or cluster creation to fail is due to hitting service quotas with AWS. If you are seeing a failure, be sure to check the [EC2 limits page](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-resource-limits.html) and request an increase for the respective resource. Unfortunately, it's not easy to tell from the console which resource is close to the limits. The error message can usually give a clue to what failed.
+
+Creates and deletes are idempotent in Konstellation. After resource limits have been increased, you can re-run the previously failed command. It should resume from where it left off.
 
 ## Manging users
 

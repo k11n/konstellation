@@ -135,9 +135,9 @@ After this, your app should be automatically available via HTTPS. Note: ACM is r
 
 ## Scaling
 
-Konstellation supports autoscaling out of the box, and will manage a [Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on your configuration.
+Konstellation supports autoscaling out of the box, and will manage a [Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on your configuration. Depending on the specified resource usage, your app will scale up and down in the number of pods to meet demand.
 
-In order to use autoscaling, you'd have to declare a few attributes in your manifest:
+In order to use autoscaling, you'd have to declare a few attributes in the app manifest:
 
 * [**scale**](../reference/manifest#scalespec): You need to set the `min`, `max`, and `targetCPUUtilizationPercentage`
 * [**resources**](../reference/manifest#resource-requirements): Both `requests` and `limits` need to be set
