@@ -263,6 +263,7 @@ func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Build)
 			DeployMode: app.Spec.DeployModeForTarget(target),
 			Configs:    app.Spec.Configs,
 			Scale:      *app.Spec.ScaleSpecForTarget(target),
+			Prometheus: app.Spec.Prometheus,
 		},
 	}
 

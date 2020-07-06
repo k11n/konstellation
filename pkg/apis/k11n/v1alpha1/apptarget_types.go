@@ -38,6 +38,10 @@ type AppTargetSpec struct {
 	// +nullable
 	// +optional
 	Ingress *IngressConfig `json:"ingress,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +nullable
+	Prometheus *PrometheusSpec `json:"prometheus,omitempty"`
 }
 
 // AppTargetStatus defines the observed state of AppTarget

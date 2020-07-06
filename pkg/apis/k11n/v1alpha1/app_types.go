@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	promv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -36,6 +37,10 @@ type AppSpec struct {
 	// +kubebuilder:validation:Optional
 	// +optional
 	Scale ScaleSpec `json:"scale,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +nullable
+	Prometheus *PrometheusSpec `json:"prometheus,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// +nullable
@@ -172,6 +177,14 @@ type AppReference struct {
 	Target string `json:"target,omitempty"`
 	// +optional
 	Port string `json:"port,omitempty"`
+}
+
+type PrometheusSpec struct {
+	// +kubebuilder:validation:Required
+	Endpoints []promv1.Endpoint `json:"endpoints"`
+
+	// +kubebuilder:validation:Optional
+	Rules []promv1.Rule `json:"rules,omitempty"`
 }
 
 func init() {

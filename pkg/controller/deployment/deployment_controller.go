@@ -3,12 +3,14 @@ package deployment
 import (
 	"context"
 
+	promv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/thoas/go-funk"
 	istio "istio.io/client-go/pkg/apis/networking/v1beta1"
 	autoscalev2beta2 "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -195,6 +197,14 @@ func (r *ReconcileDeployment) Reconcile(request reconcile.Request) (res reconcil
 		return
 	}
 
+	// reconcile prometheus setup
+	if err = r.reconcilePrometheusServiceMonitor(at); err != nil {
+		return
+	}
+	if err = r.reconcilePrometheusRules(at); err != nil {
+		return
+	}
+
 	// filter only releases with traffic
 	activeReleases := funk.Filter(releases, func(ar *v1alpha1.AppRelease) bool {
 		return ar.Spec.TrafficPercentage > 0
@@ -265,6 +275,132 @@ func (r *ReconcileDeployment) reconcileConfigMap(at *v1alpha1.AppTarget) (config
 		err = r.client.Create(context.Background(), configMap)
 	}
 	return
+}
+
+func (r *ReconcileDeployment) reconcilePrometheusServiceMonitor(at *v1alpha1.AppTarget) error {
+	needsServiceMonitor := true
+	if !at.NeedsService() {
+		needsServiceMonitor = false
+	}
+	prom := at.Spec.Prometheus
+	if prom == nil {
+		needsServiceMonitor = false
+	} else if len(prom.Endpoints) == 0 {
+		needsServiceMonitor = false
+	}
+
+	if !needsServiceMonitor {
+		existing := &promv1.ServiceMonitor{}
+		err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: at.TargetNamespace(), Name: at.Spec.App}, existing)
+		if errors.IsNotFound(err) {
+			// does not exist, perfect
+			return nil
+		} else if err != nil {
+			return err
+		}
+
+		// delete existing service monitor
+		log.Info("deleting ServiceMonitor", "appTarget", at.Name)
+		if err = r.client.Delete(context.TODO(), existing); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// create or update service monitor
+	sm := newServiceMonitorForAppTarget(at)
+	op, err := resources.UpdateResource(r.client, sm, at, r.scheme)
+	if err != nil {
+		return err
+	}
+
+	resources.LogUpdates(log, op, "updated ServiceMonitor",
+		"appTarget", at.Name, "port", sm.Spec.Endpoints[0].Port)
+
+	return nil
+}
+
+func (r *ReconcileDeployment) reconcilePrometheusRules(at *v1alpha1.AppTarget) error {
+	needsRules := true
+	prom := at.Spec.Prometheus
+	if prom == nil {
+		needsRules = false
+	} else if len(prom.Rules) == 0 {
+		needsRules = false
+	}
+
+	if !needsRules {
+		// delete existing prometheus rule
+		existing := &promv1.PrometheusRule{}
+		err := r.client.Get(context.TODO(), client.ObjectKey{Namespace: at.TargetNamespace(), Name: at.Spec.App}, existing)
+		if errors.IsNotFound(err) {
+			// does not exist, perfect
+			return nil
+		} else if err != nil {
+			return err
+		}
+
+		// delete existing service monitor
+		log.Info("deleting PrometheusRule", "appTarget", at.Name)
+		if err = r.client.Delete(context.TODO(), existing); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	// create or update
+	pr := newPromRuleForAppTarget(at)
+	op, err := resources.UpdateResource(r.client, pr, at, r.scheme)
+	if err != nil {
+		return err
+	}
+
+	resources.LogUpdates(log, op, "updated PrometheusRule",
+		"appTarget", at.Name, "numRules", len(pr.Spec.Groups[0].Rules))
+
+	return nil
+}
+
+func newServiceMonitorForAppTarget(at *v1alpha1.AppTarget) *promv1.ServiceMonitor {
+	sm := &promv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: at.TargetNamespace(),
+			Name:      at.Spec.App,
+			Labels:    labelsForAppTarget(at),
+		},
+		Spec: promv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					resources.AppLabel:    at.Spec.App,
+					resources.TargetLabel: at.Spec.Target,
+				},
+			},
+			NamespaceSelector: promv1.NamespaceSelector{
+				MatchNames: []string{at.TargetNamespace()},
+			},
+			Endpoints: at.Spec.Prometheus.Endpoints,
+		},
+	}
+	return sm
+}
+
+func newPromRuleForAppTarget(at *v1alpha1.AppTarget) *promv1.PrometheusRule {
+	pr := &promv1.PrometheusRule{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: at.TargetNamespace(),
+			Name:      at.Spec.App,
+			Labels:    labelsForAppTarget(at),
+		},
+		Spec: promv1.PrometheusRuleSpec{
+			Groups: []promv1.RuleGroup{
+				{
+					Name:  at.Spec.App,
+					Rules: at.Spec.Prometheus.Rules,
+				},
+			},
+		},
+	}
+	return pr
 }
 
 func labelsForAppTarget(at *v1alpha1.AppTarget) map[string]string {
