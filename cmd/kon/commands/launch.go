@@ -99,7 +99,7 @@ func launchKubeDash(c *cli.Context) error {
 	time.Sleep(2 * time.Second)
 	browser.OpenURL(url)
 
-	proxy.WaitUntilDone()
+	proxy.WaitUntilCanceled()
 	return nil
 }
 
@@ -176,7 +176,7 @@ func launchProxy(c *cli.Context) error {
 
 	fmt.Printf("Proxy to %s.%s:%v started on %s\n", target, app, portName, proxy.URL())
 
-	proxy.WaitUntilDone()
+	proxy.WaitUntilCanceled()
 
 	return nil
 }
@@ -194,6 +194,6 @@ func startProxyAndWait(proxy *koncli.KubeProxy, name string) error {
 	time.Sleep(2 * time.Second)
 	browser.OpenURL(proxy.URL())
 
-	proxy.WaitUntilDone()
+	proxy.WaitUntilCanceled()
 	return nil
 }

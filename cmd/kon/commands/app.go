@@ -795,10 +795,10 @@ func appLocal(c *cli.Context) error {
 	}()
 
 	err = cmd.Run()
+
 	for _, proxy := range proxies {
 		if proxy != nil {
-			// ensure clean shutdown
-			proxy.WaitUntilDone()
+			proxy.Stop()
 		}
 	}
 

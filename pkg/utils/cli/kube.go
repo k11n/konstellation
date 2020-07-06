@@ -157,7 +157,7 @@ func (p *KubeProxy) Start() error {
 	return nil
 }
 
-func (p *KubeProxy) WaitUntilDone() {
+func (p *KubeProxy) WaitUntilCanceled() {
 	if !p.started || p.sigChan != nil {
 		return
 	}
@@ -173,10 +173,12 @@ func (p *KubeProxy) WaitUntilDone() {
 	}()
 
 	<-p.doneChan
-	usedPorts.Delete(p.LocalPort)
 }
 
 func (p *KubeProxy) Stop() {
+	if !p.started {
+		return
+	}
 	if p.command != nil {
 		p.command.Process.Signal(syscall.SIGTERM)
 	}
@@ -187,8 +189,10 @@ func (p *KubeProxy) Stop() {
 	}
 	if p.sigChan != nil {
 		signal.Stop(p.sigChan)
+		close(p.sigChan)
 		p.sigChan = nil
 	}
+	usedPorts.Delete(p.LocalPort)
 	p.started = false
 }
 
