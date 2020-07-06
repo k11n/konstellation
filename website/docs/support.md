@@ -1,7 +1,15 @@
-# Additional Support
+---
+title: Getting Help
+---
 
-## Consulting
+Konstellation is a new project and we'd be glad to help you get started with it.
 
 ## Slack
 
-## Bug Reports
+We have a Slack set up for users of Konstellation. We are more than happy to answer any questions that you have.
+
+[Join Konstellation Users](https://join.slack.com/t/kon-users/shared_invite/zt-fm64885u-QSlL0VQUJdZ_rcQBaZ81ug)
+
+## Support Service
+
+If you are looking for something more than the public support channel, or need hands-on help, we can point you to the right direction. Shoot me a note: dz at konstellation.dev

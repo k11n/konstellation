@@ -79,12 +79,8 @@ module.exports = {
               href: repoUrl,
             },
             {
-              label: 'Join Slack',
-              href: '1',
-            },
-            {
               label: 'Support',
-              href: '2',
+              to: 'docs/support',
             }
           ],
         },

@@ -37,5 +37,9 @@ module.exports = {
         'reference/linkedserviceaccount',
       ],
     },
+    {
+      type: 'doc',
+      id: 'support',
+    },
   ],
 };
