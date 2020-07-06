@@ -22,7 +22,7 @@ module.exports = {
       },
       links: [
         {
-          to: 'docs/',
+          to: 'docs/konstellation/introduction',
           activeBasePath: 'docs',
           label: 'Docs',
           position: 'left',
@@ -37,51 +37,60 @@ module.exports = {
     footer: {
       style: 'dark',
       links: [
-        // {
-        //   title: 'Docs',
-        //   items: [
-        //     {
-        //       label: 'Style Guide',
-        //       to: 'docs/',
-        //     },
-        //     {
-        //       label: 'Second Doc',
-        //       to: 'docs/doc2/',
-        //     },
-        //   ],
-        // },
-        // {
-        //   title: 'Community',
-        //   items: [
-        //     {
-        //       label: 'Stack Overflow',
-        //       href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-        //     },
-        //     {
-        //       label: 'Discord',
-        //       href: 'https://discordapp.com/invite/docusaurus',
-        //     },
-        //     {
-        //       label: 'Twitter',
-        //       href: 'https://twitter.com/docusaurus',
-        //     },
-        //   ],
-        // },
-        // {
-        //   title: 'More',
-        //   items: [
-        //     {
-        //       label: 'Blog',
-        //       to: 'blog',
-        //     },
-        //     {
-        //       label: 'GitHub',
-        //       href: repoUrl,
-        //     },
-        //   ],
-        // },
+        {
+          title: 'Introduction',
+          items: [
+            {
+              label: 'Intro',
+              to: 'docs/konstellation/introduction',
+            },
+            {
+              label: 'Why Konstellation',
+              to: 'docs/konstellation/why',
+            },
+            {
+              label: 'Design Principles',
+              to: 'docs/konstellation/principles',
+            },
+          ],
+        },
+        {
+          title: 'Docs',
+          items: [
+            {
+              label: 'Working with Apps',
+              to: 'docs/apps/basics',
+            },
+            {
+              label: 'Cluster Operation',
+              to: 'docs/clusters/creation',
+            },
+            {
+              label: 'Reference',
+              to: 'docs/reference/manifest',
+            },
+          ],
+        },
+        {
+          title: 'More',
+          items: [
+            {
+              label: 'GitHub',
+              href: repoUrl,
+            },
+            {
+              label: 'Join Slack',
+              href: '1',
+            },
+            {
+              label: 'Support',
+              href: '2',
+            }
+          ],
+        },
       ],
-      copyright: `Apache 2.0 Licensed. Copyright © ${new Date().getFullYear()} Konstellation, LLC.`,
+      // Copyright © ${new Date().getFullYear()} Konstellation, LLC.
+      copyright: `Apache 2.0 Licensed.`,
     },
   },
   presets: [
@@ -90,7 +99,7 @@ module.exports = {
       {
         docs: {
           // It is recommended to set document id as docs home page (`docs/` path).
-          homePageId: 'konstellation/introduction',
+          homePageId: 'getting-started/installation',
           sidebarPath: require.resolve('./sidebars.js'),
           // Please change this to your repo.
           editUrl:

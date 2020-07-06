@@ -20,6 +20,7 @@ The main entry point, the app manifest is the single source of truth to how an a
 | resources      | [ResourceRequirements](#resource-requirements) | no | Define CPU/Memory requests and limits
 | scale          | [ScaleSpec](#scalespec) | no | Scaling limits and behavior
 | probes         | [ProbeConfig](#probeconfig) | no | Probes to determine app readiness and liveness
+| prometheus     | [PrometheusSpec](#prometheusspec) | no | Define Prometheus scraping
 | targets        | List[[TargetConfig](#targetconfig)] | yes | Define one or more targets
 
 ## AppReference
@@ -65,10 +66,10 @@ Specification for an Ingress. An Ingress always listens on port 80/443 externall
 
 Specification for a port
 
-| Field         | Type            | Required | Description                    |
-|:------------- |:--------------- |:-------- |:------------------------------ |
-| name          | string          | yes      | Name of the port. This will be used to reference the port elsewhere
-| port          | int             | yes      | Port that your app listens on
+| Field           | Type            | Required | Description                    |
+|:--------------- |:--------------- |:-------- |:------------------------------ |
+| name            | string          | yes      | Name of the port. This will be used to reference the port elsewhere
+| port            | int             | yes      | Port that your app listens on
 
 ## Probe
 
@@ -151,6 +152,17 @@ resources:
     memory: '200Mi'
     cpu: '1200m'
 ```
+
+## PrometheusSpec
+
+Defines Prometheus metrics scraping behavior. The fields below are translated into Prometheus Operator types.
+
+| Field         | Type            | Required | Description                    |
+|:------------- |:--------------- |:-------- |:------------------------------ |
+| endpoints     | List[[Endpoint](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint)]  | yes      | Endpoints to scrape
+| rules         | List[[Rules](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#rule)] | no | Recording and alerting rules
+
+
 
 ## ScaleSpec
 
