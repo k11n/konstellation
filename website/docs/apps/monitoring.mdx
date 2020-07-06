@@ -24,7 +24,7 @@ Monitoring and observability tools run within your cluster, and are inaccessible
 
 ![App Overview Screenshot](/img/screen/grafana-app-overview.png)
 
-This dashboard is a quick way of getting the key metrics about your app, including releases and pods, throughput and success rate, as well as CPU and memory utilization.
+This dashboard is a quick way of getting the key metrics about apps, including releases and pods, throughput and success rate, as well as CPU and memory utilization.
 
 ### Istio mesh
 
@@ -36,11 +36,11 @@ An overview of the health of the service mesh. It's useful when it comes to diag
 
 The pre-configured Prometheus install runs redundant with two instances. Metric data is stored on an EBS volume attached to each instance (set up as a persistent volume). Launch Prometheus web UI with `kon launch prometheus`.
 
-This Prometheus install is configured to collect metrics for the cluster and Istio mesh, including data that it could observe about your apps.
+This Prometheus install is configured to collect metrics for the cluster and Istio mesh, including data that it could observe about apps.
 
 ### Collecting app metrics
 
-The default setup could provide basic metrics observable from outside of your app, but to measure app-specific attributes, you need to integrate one of the Prometheus [client libraries](https://prometheus.io/docs/instrumenting/clientlibs/) and expose a metric endpoint on one of your ports (by default `/metrics`). You can enable Prometheus scraping by setting the [prometheus]() section of your app manifest.
+The default setup could provide basic metrics observable from outside of apps, but to measure app-specific metrics, you need to integrate one of the Prometheus [client libraries](https://prometheus.io/docs/instrumenting/clientlibs/) and expose a metric endpoint on one of the ports. You can enable Prometheus scraping by setting the [prometheus]() field in the manifest.
 
 ```yaml title="App.yaml"
 apiVersion: k11n.dev/v1alpha1
@@ -57,4 +57,4 @@ spec:
       # path: /metrics
 ```
 
-Konstellation uses [Prometheus Operator](https://github.com/coreos/prometheus-operator) and will set up ServiceMonitors for your app. The above setup will instruct Prometheus to scrape your app's `http` port every 10 seconds.
+Konstellation uses [Prometheus Operator](https://github.com/coreos/prometheus-operator) and will set up a ServiceMonitor for the app. The above setup will instruct Prometheus to scrape the `http` port every 10 seconds.

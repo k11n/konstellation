@@ -14,7 +14,7 @@ const features = [
     imageUrl: 'img/undraw_docusaurus_mountain.svg',
     description: (
       <>
-        Konstellation gives you a Heroku-like experience on top of Kubernetes that you fully control. It provides a CLI that manages every aspect of your app deployments. New apps are deployed in minutes with minimal configuration.
+        Konstellation gives you a Heroku-like experience on top of Kubernetes that you fully control. It provides a CLI that manages every aspect of app deployments. New apps are deployed in minutes with minimal configuration.
       </>
     ),
   },

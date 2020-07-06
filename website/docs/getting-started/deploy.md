@@ -4,7 +4,7 @@ title: Deploying Your First App
 
 ## Creating a cluster
 
-A cluster is the hosting container for your apps. It represents a Kubernetes cluster, and will make use of a configurable number of nodes.
+A cluster is the hosting container for apps. It represents a Kubernetes cluster, and will make use of a configurable number of nodes.
 
 ```bash
 % kon cluster create
@@ -34,30 +34,30 @@ Konstellation supports working with multiple clusters. You will need to choose a
 
 ## Deploying your first app
 
-First, create an app template with the CLI.
+First, create an app manifest with the CLI.
 
 ```text
 % kon app new
 ```
 
-Enter your docker image and then open the generated yaml file and edit it. There are a few things you'll need to change:
+Enter your docker image and then edit the generated template. There are a few things you'll need to change:
 
 * registry - if you are not using DockerHub, enter url of your docker registry
-* ingress.hosts - one or more domains that you'd like your app to handle
+* ingress.hosts - one or more domains that you'd like the app to handle
 
-Once complete, then load your config into Kubernetes with
+Once complete, then load the manifest into Kubernetes with
 
 ```
 % kon app load <yourapp>.yaml
 ```
 
-That's it! With that, Konstellation will create all of the resources necessary to run your app on Kubernetes. It creates a native load balancer and outputs its address.
+That's it! With that, Konstellation will create all of the resources necessary to run the app on Kubernetes, including a native load balancer.
 
 The app manifest is persisted in Kubernetes, and can be edited at any time with `kon app edit <app>`
 
 ### Checking app status
 
-The status command gives an overview of the state of your app as currently deployed. It's useful to check up on different releases of the app, and load balancer status.
+The status command gives an overview of the state of an app as currently deployed. It's useful to check up on different releases of the app, and load balancer status.
 
 ```
 % kon app status <yourapp>

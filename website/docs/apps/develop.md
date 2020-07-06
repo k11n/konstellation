@@ -8,15 +8,15 @@ Konstellation simplifies the debugging & development process by giving you an ap
 
 ## Getting logs
 
-To pull your apps logs from production, or to tail the logs, you would run the `kon app logs <yourapp>` command. It will guide you through the process of picking a pod to inspect.
+To pull app logs from production, or to tail the logs, you would run the `kon app logs <yourapp>` command. It will guide you through the process of picking a pod to inspect.
 
 By default, it'll print the last 100 lines of logs from your container. To follow logs, run `kon app logs -f <yourapp>`.
 
 ## Running locally
 
-When you need to replicate the in-cluster setup to test your app locally, Konstellation provides a shortcut in doing so.
+When you need to replicate the in-cluster setup to test an app locally, Konstellation provides a shortcut in doing so.
 
-It has a `local` mode that replicates the in-cluster config for your app. To use this, run `kon app local [--target target] <yourapp>`
+It has a `local` mode that replicates the in-cluster config for the app. To use this, run `kon app local [--target target] <yourapp>`
 
 If a target is not passed in, it'll use the first target defined.
 
@@ -24,6 +24,6 @@ When running locally, the same environment variables will be set for the configu
 
 ## Inspecting the container
 
-You can get shell access to any instances of your app with `kon app shell <yourapp>`.
+You can get shell access to any instances of an app with `kon app shell <yourapp>`.
 
 In order for this to work, you need to have a shell installed on the docker image. By default Konstellation will launch `/bin/sh`. To override the shell, run `kon app shell --shell <path-to-shell> <yourapp>`

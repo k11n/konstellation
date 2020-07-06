@@ -10,4 +10,4 @@ Given the plethora of components that are out there, you have to become proficie
 
 The inspiration for Konstellation comes from having worked at two companies that have done exactly that. After deciding to adopt Kubernetes, they spent more than 6 months developing internal tools to make it practical for developers. Having been through the same experience twice, I wanted an open source set of tools that can solve these pain points; but none existed.
 
-With that thought, I wrote the first line of code for Konstellation in November 2019. From the onset, my goal is to create a solution as simple to use as Heroku, while running on a robust layer that Kubernetes provides. Konstellation is designed to give you most (if not all) of tools necessary to deploy and operate your apps on Kubernetes.
+With that thought, I wrote the first line of code for Konstellation in November 2019. From the onset, my goal is to create a solution as simple to use as Heroku, while running on a robust layer that Kubernetes provides. Konstellation is designed to give you most (if not all) of tools necessary to deploy and operate apps on Kubernetes.

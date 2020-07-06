@@ -24,7 +24,7 @@ With infrastructure changes in the cloud, it can be easy to create a lot of reso
 
 It should also be easy to replicate a cluster, with no manual steps. Konstellation stores all manifests as Kubernetes resources, and offers export and import commands to easily recreate the same setup.
 
-The same principals also apply to managing app releases. Instead of relying on a traditional Kubernetes Deployment, Konstellation creates distinct AppReleases for just about any changes to your app. This includes build, config, etc. Each App Release can be managed independently, and rolled back if necessary.
+The same principals also apply to managing app releases. Instead of relying on a traditional Kubernetes Deployment, Konstellation creates distinct AppReleases for just about any changes to apps. This includes build, config, etc. Each App Release can be managed independently, and rolled back if necessary.
 
 ## Optimized for apps, not databases
 

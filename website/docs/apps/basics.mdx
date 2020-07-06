@@ -9,13 +9,13 @@ Konstellation works around the `App` as the master resource. Once you create the
 
 Behind the scenes, Konstellation operator is creating other resources on Kubernetes and keeping them in sync for you.
 
-You would manage your apps via the `kon` CLI. The `kon app` command will list a number of subcommands that are available to manage apps.
+Management of apps is performed via the CLI. The `kon app` command will list a number of subcommands that are available to manage apps.
 
 There are a few considrations and concepts when deploying apps with Konstellation.
 
 ## Container registry
 
-Your app needs to be hosted by a container registry in order to be used with Kubernetes. The `registry` field in the app manifest specifies the URL to the registry. When `registry` is left blank, it defaults to Docker Hub. By default, the cluster only has access to public repos on Docker Hub. To access private registries, there are a couple of options.
+Apps need to be hosted by a container registry in order to be used with Kubernetes. The `registry` field in the app manifest specifies the URL to the registry. When `registry` is left blank, it defaults to Docker Hub. By default, the cluster only has access to public repos on Docker Hub. To access private registries, there are a couple of options.
 <Tabs
   defaultValue="ecr"
   values={[
@@ -38,9 +38,9 @@ Documentation for this is coming.
 
 ## Targets
 
-Target is a concept in Konstellation that provides a namespace for your app. A target is roughly equivalent to a specific environment of your app. For example, you could specify a production and a development target, with different configurations for hostnames, scale parameters, and receive target-specific configs.
+Target is a concept in Konstellation that provides a namespace for apps. A target is roughly equivalent to a specific environment of an app. For example, you could specify a production and a development target, with different configurations for hostnames, scale parameters, and receive target-specific configs.
 
-Your cluster would define the targets that it supports with `kon cluster configure`. When deploying an app to a cluster, it will set up a deployment for each target that your cluster has declared. This configuration allows for the flexibility of using the same `app.yaml` across multiple clusters, if you prefer to have dedicated clusters for each target.
+Each cluster would define the targets that it supports with `kon cluster configure`. When deploying an app to a cluster, it will set up a deployment for each target that the cluster has declared. This configuration allows for the flexibility of using the same `app.yaml` across multiple clusters, if you prefer to have dedicated clusters for each target.
 
 Most target attributes can be defined on the app itself, and when running under that target, they are inherited from the base config. You may choose to override only specific portion of the attributes, and the result would be merged. The only attribute that's target-specific is `ingress`. Since ingress is specific to hostnames and exposing traffic to the outside world, it must be defined under the target.
 
@@ -99,7 +99,7 @@ max: 20
 
 ## Releases
 
-A release is a base unit of an app's deployment. It locks in your app's build along with any configs that are associated with the app. Each change in your app's build or app config would trigger a new release to be created. You could list the releases with `kon app status <yourapp>`
+A release is a base unit of an app's deployment. It locks in the app's build along with any configurations. Each change in the app's build or config would trigger a new release to be created. You could list the releases with `kon app status <yourapp>`
 
 To deploy a new build, use `kon app deploy --tag <docker tag> <yourapp>`
 
@@ -107,13 +107,13 @@ Konstellation would scale up the new release incrementally, and gradually shift 
 
 ## Ingress
 
-If your app needs to be surfaced to the internet, you'd have to declare an [ingress](../reference/manifest#ingressconfig) in order to create a load balancer.
+If the app needs to be surfaced to the internet, you'd have to declare an [ingress](../reference/manifest#ingressconfig) in order to create a load balancer.
 
 In the ingress config, list all of the domains that you wish the load balancer to handle. Konstellation will manage a AWS ALB and configure it to listen for all the traffic for your domains.
 
-You'll get a load balancer address (check with `kon app status <yourapp>`). Set up an ALIAS or CNAME with your DNS provider and traffic will start flowing through to your app.
+Once created, you can check the address of the load balancer with `kon app status <yourapp>`. Then, set up an ALIAS or CNAME with your DNS provider pointing the domain to that address.
 
-To test your app before changing DNS, you can run
+To test the app before changing DNS, you can run
 
 ```
 curl -H "Host: yourhost.com" <load balancer address>
@@ -121,7 +121,7 @@ curl -H "Host: yourhost.com" <load balancer address>
 
 ## Setting up SSL
 
-On EKS, Konstellation uses an [Application Load Balancer (ALB)](https://aws.amazon.com/elasticloadbalancing/features/) for your ingress. ALB is a layer 7 load balancer and is capable of terminating SSL/TLS requests.
+On EKS, Konstellation uses an [Application Load Balancer (ALB)](https://aws.amazon.com/elasticloadbalancing/features/) for ingress. ALB is a layer 7 load balancer and is capable of terminating SSL/TLS requests.
 
 Because the termination is handled by ALB, Konstellation (or Kubernetes) does not need your certificate nor private key. This creates a secure setup since we no longer have to worry about securing Kubernetes' key storage. As long as your certificates are stored in ACM, Konstellation needs only a reference to them.
 
@@ -131,11 +131,11 @@ To use SSL with Konstellation, first ensure your certificate is uploaded into [A
 % kon certificate sync
 ```
 
-After this, your app should be automatically available via HTTPS. Note: ACM is region aware, your cluster and certificates must reside in the same region as the cluster for them to be usable.
+After the sync, the app will be available via HTTPS as well. Note: ACM is region aware, your cluster and certificates must reside in the same region as the cluster for them to be usable.
 
 ## Scaling
 
-Konstellation supports autoscaling out of the box, and will manage a [Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on your configuration. Depending on the specified resource usage, your app will scale up and down in the number of pods to meet demand.
+Konstellation supports autoscaling out of the box, and will manage a [Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on configuration. Depending on the specified resource usage, your app will scale up and down in the number of pods to meet demand.
 
 In order to use autoscaling, you'd have to declare a few attributes in the app manifest:
 
@@ -144,13 +144,13 @@ In order to use autoscaling, you'd have to declare a few attributes in the app m
 
 ## Using AWS IAM roles in apps
 
-Konstellation could can take full advantage of IAM roles when running apps. By default, all of your apps are ran with the same role as the EKS node, which are fairly restrictive.
+Konstellation could can take full advantage of IAM roles when running apps. By default, all of the apps are ran with the same role as the EKS node, which is set up with a minimal set of permissions.
 
-Kubernetes supports role based access control (RBAC) with Service Accounts. It works wonderfully in handling the identity of your app automatically. However, Service Accounts are designed to control access within Kubernetes itself, and is not connected to the AWS role in any way.
+Kubernetes supports role based access control (RBAC) with Service Accounts. It works wonderfully in handling the identity of the app automatically. However, Service Accounts are designed to control access within Kubernetes itself, and is not connected to the AWS role in any way.
 
 In order to make this work simply in a reproducible manner, Konstellation supports an extension of service accounts: [Linked Service Account](../reference/linkedserviceaccount) that links IAM policies to a Kubernetes service account.
 
-Once you've created a Linked Service Account, set it in your app manifest and your app would be able to use the policies set.
+Once you've created a Linked Service Account, set it in the app manifest's `serviceAccount` field. A new deployment of the app will be created that assumes the permissions of the linked service account.
 
 __Limitations__
 

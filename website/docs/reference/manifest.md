@@ -9,14 +9,14 @@ The main entry point, the app manifest is the single source of truth to how an a
 | Field          | Type            | Required | Description                    |
 |:-------------- |:--------------- |:-------- |:------------------------------ |
 | registry       | string          | no       | Docker registry where your image is hosted at. Defaults to Docker Hub
-| image          | string          | yes      | Your app's docker image
+| image          | string          | yes      | Docker image of the app
 | imageTag       | string          | no       | Tag to use for the initial release
-| ports          | List[[PortSpec](#portspec)]  | no       | Ports that your app surfaces
+| ports          | List[[PortSpec](#portspec)]  | no       | Ports that the app surfaces
 | command        | List[string]    | no       | Override for your docker image's ENTRYPOINT
 | args           | List[string]    | no       | Arguments to the entrypoint. The docker image's CMD is used if this is not provided.
-| configs        | List[string]    | no       | [Shared Configs](../apps/configuration.md#shared-config) that your app needs
-| dependencies   | List[[AppReference](#appreference)] | no    | List of other apps your app depends ons, your app will receive their hostnames
-| serviceAccount | string          | no       | Name of [LinkedServiceAccount](linkedserviceaccount) or [ServiceAccount](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) that your app should use.
+| configs        | List[string]    | no       | [Shared Configs](../apps/configuration.md#shared-config) that the app needs
+| dependencies   | List[[AppReference](#appreference)] | no    | List of other apps the current app depends ons
+| serviceAccount | string          | no       | Name of [LinkedServiceAccount](linkedserviceaccount) or [ServiceAccount](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) that the app should use.
 | resources      | [ResourceRequirements](#resource-requirements) | no | Define CPU/Memory requests and limits
 | scale          | [ScaleSpec](#scalespec) | no | Scaling limits and behavior
 | probes         | [ProbeConfig](#probeconfig) | no | Probes to determine app readiness and liveness
@@ -25,7 +25,7 @@ The main entry point, the app manifest is the single source of truth to how an a
 
 ## AppReference
 
-References an app as a dependency. Once you specify another app as a dependency, its connection string will be made available as an environment for your app.
+References an app as a dependency. Once you specify another app as a dependency, its connection string will be made available as an environment variable.
 
 | Field         | Type            | Required | Description                    |
 |:------------- |:--------------- |:-------- |:------------------------------ |
@@ -44,7 +44,7 @@ dependencies:
     port: http
 ```
 
-Your app will receive the following env vars. They can be used to connect to the services.
+It'll will receive the following env vars. They can be used to connect to the respective services.
 
 ```bash
 REVIEWS_GRPC_HOST=reviews.target.svc.cluster.local:3001
@@ -69,11 +69,11 @@ Specification for a port
 | Field           | Type            | Required | Description                    |
 |:--------------- |:--------------- |:-------- |:------------------------------ |
 | name            | string          | yes      | Name of the port. This will be used to reference the port elsewhere
-| port            | int             | yes      | Port that your app listens on
+| port            | int             | yes      | Port that the app listens on
 
 ## Probe
 
-Probes allows Kubernetes to understand the state of your app so that it could act accordingly.
+Probes allows Kubernetes to understand the state of the app so that it could act accordingly.
 
 | Field               | Type            | Required | Description                    |
 |:------------------- |:--------------- |:-------- |:------------------------------ |
@@ -118,8 +118,8 @@ ProbeConfig is a container for probe definitions.
 
 | Field         | Type            | Required | Description                    |
 |:------------- |:--------------- |:-------- |:------------------------------ |
-| liveness      | [Probe](#probe) | no       | Determines if your app is still running, when this probe fails, Kubernetes will restart your app
-| readiness     | [Probe](#probe) | no       | Determines if your app is ready to serve traffic. Sometimes an app may need to load large amount of data before it's ready to serve traffic. An app that isn't reporting it's ready will not receive traffic
+| liveness      | [Probe](#probe) | no       | Determines if the app is still running, when this probe fails, Kubernetes will restart the app
+| readiness     | [Probe](#probe) | no       | Determines if the app is ready to serve traffic. Sometimes an app may need to load large amount of data before it's ready to serve traffic. An app that isn't reporting it's ready will not receive traffic
 
 Example
 
@@ -166,7 +166,7 @@ Defines Prometheus metrics scraping behavior. The fields below are translated in
 
 ## ScaleSpec
 
-Controls the scaling behavior of your app. All fields must be defined in order for the autoscaler to be activated.
+Controls the scaling behavior of the app. All fields must be defined in order for the autoscaler to be activated.
 
 | Field                          | Type            | Required | Description                    |
 |:------------------------------ |:--------------- |:-------- |:------------------------------ |
