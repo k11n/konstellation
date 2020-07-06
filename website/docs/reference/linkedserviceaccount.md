@@ -35,7 +35,7 @@ spec:
 
 In this example, using one of the global policies, `myaccount` will have read-only access to all buckets in S3.
 
-3. References in app manifest
+3. Set service account in app manifest
 
 ```
 kon app edit myapp

@@ -45,6 +45,28 @@ var LaunchCommands = []*cli.Command{
 				Usage:  "Launch Prometheus UI",
 				Action: launchPrometheus,
 			},
+			{
+				Name:   "proxy",
+				Usage:  "Start a proxy to any service",
+				Action: launchProxy,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "app",
+						Aliases:  []string{"service"},
+						Usage:    "name of app or service to proxy",
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:    "target",
+						Aliases: []string{"namespace"},
+						Usage:   "target or namespace of the service (defaults to first target)",
+					},
+					&cli.StringFlag{
+						Name:  "port",
+						Usage: "port name or number for the service",
+					},
+				},
+			},
 		},
 	},
 }
@@ -118,6 +140,45 @@ func launchAlertManager(c *cli.Context) error {
 		return err
 	}
 	return startProxyAndWait(proxy, "Alert Manager")
+}
+
+func launchProxy(c *cli.Context) error {
+	ac, err := getActiveCluster()
+	if err != nil {
+		return err
+	}
+	kclient := ac.kubernetesClient()
+
+	target := c.String("target")
+	app := c.String("app")
+	portName := c.String("port")
+	if target == "" {
+		// find first target in cluster
+		cc, err := resources.GetClusterConfig(kclient)
+		if err != nil {
+			return err
+		}
+
+		if len(cc.Spec.Targets) == 0 {
+			return fmt.Errorf("cluster %s does not define any targets", cc.Name)
+		}
+		target = cc.Spec.Targets[0]
+	}
+
+	proxy, err := koncli.NewKubeProxyForService(kclient, target, app, portName)
+	if err != nil {
+		return err
+	}
+
+	if err = proxy.Start(); err != nil {
+		return errors.Wrap(err, "unable to start proxy")
+	}
+
+	fmt.Printf("Proxy to %s.%s:%v started on %s\n", target, app, portName, proxy.URL())
+
+	proxy.WaitUntilDone()
+
+	return nil
 }
 
 func startProxyAndWait(proxy *koncli.KubeProxy, name string) error {

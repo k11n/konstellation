@@ -7,10 +7,10 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"strconv"
 	"sync"
 	"syscall"
 
+	"github.com/spf13/cast"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/pkg/resources"
@@ -55,8 +55,8 @@ func KubeApply(url string) error {
 type KubeProxy struct {
 	Namespace   string
 	Service     string
-	ServicePort int
-	LocalPort   int
+	ServicePort int32
+	LocalPort   int32
 	command     *exec.Cmd
 	started     bool
 	sigChan     chan os.Signal
@@ -71,7 +71,7 @@ func NewKubeProxy() *KubeProxy {
 	return &KubeProxy{}
 }
 
-func NewKubeProxyForService(kclient client.Client, namespace, service string, port int) (kp *KubeProxy, err error) {
+func NewKubeProxyForService(kclient client.Client, namespace, service string, port interface{}) (kp *KubeProxy, err error) {
 	// find port for service
 	svc, err := resources.GetService(kclient, namespace, service)
 	if err != nil {
@@ -83,13 +83,32 @@ func NewKubeProxyForService(kclient client.Client, namespace, service string, po
 		return
 	}
 
-	if port == 0 {
-		port = int(svc.Spec.Ports[0].Port)
+	portNumber := cast.ToInt32(port)
+	if portNumber == 0 {
+		// not a proper port number
+		if port == nil || port == "" {
+			// no indicated port, use the first
+			portNumber = svc.Spec.Ports[0].Port
+		} else if portName, ok := port.(string); ok {
+			// port name, search in service
+			for _, p := range svc.Spec.Ports {
+				if p.Name == portName {
+					portNumber = p.Port
+					break
+				}
+			}
+			// no port name found
+			err = fmt.Errorf("service %s doesn't have a port named %s", service, portName)
+			return
+		} else {
+			err = fmt.Errorf("incorrect port %v (%T)", port, port)
+		}
 	}
+
 	kp = &KubeProxy{
 		Namespace:   namespace,
 		Service:     service,
-		ServicePort: port,
+		ServicePort: portNumber,
 	}
 
 	return
@@ -100,7 +119,7 @@ func (p *KubeProxy) Start() error {
 		return fmt.Errorf("Proxy is already started")
 	}
 
-	defPort := 7001
+	defPort := int32(7001)
 	if p.Service != "" {
 		defPort = p.ServicePort
 	}
@@ -121,7 +140,7 @@ func (p *KubeProxy) Start() error {
 		}
 	} else {
 		args = []string{
-			"proxy", "-p", strconv.Itoa(port),
+			"proxy", "-p", cast.ToString(port),
 		}
 	}
 
@@ -181,7 +200,7 @@ func (p *KubeProxy) HostWithPort() string {
 	return fmt.Sprintf("localhost:%d", p.LocalPort)
 }
 
-func (p *KubeProxy) findUnusedPort(initial int) (int, error) {
+func (p *KubeProxy) findUnusedPort(initial int32) (int32, error) {
 	for port := initial; port < initial+1000; port += 1 {
 		if _, ok := usedPorts.Load(port); ok {
 			// used by another process
@@ -197,7 +216,7 @@ func (p *KubeProxy) findUnusedPort(initial int) (int, error) {
 			continue
 		}
 		defer l.Close()
-		return l.Addr().(*net.TCPAddr).Port, nil
+		return int32(l.Addr().(*net.TCPAddr).Port), nil
 	}
 	return 0, fmt.Errorf("could not find unused port")
 }

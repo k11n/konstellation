@@ -26,7 +26,7 @@ With this configuration, all of your EKS nodes will be allocated in the private 
 
 ![Public topology](/img/publicprivate-topology.png)
 
-## Node autoscaling
+## Cluster autoscaling
 
 When you create a cluster, you'll be asked to specify the min and max number of nodes to use for the cluster. Konstellation will initially allocate the minimum, and then use the included [cluster autoscaler](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler) to scale it up.
 
@@ -39,7 +39,3 @@ The autoscaler will also scale down excess capacity, moving workload from under-
 One of the common reasons for VPC or cluster creation to fail is due to hitting service quotas with AWS. If you are seeing a failure, be sure to check the [EC2 limits page](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-resource-limits.html) and request an increase for the respective resource. Unfortunately, it's not easy to tell from the console which resource is close to the limits. The error message can usually give a clue to what failed.
 
 Creates and deletes are idempotent in Konstellation. After resource limits have been increased, you can re-run the previously failed command. It should resume from where it left off.
-
-## Manging users
-
-## Managing multiple clusters
