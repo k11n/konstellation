@@ -1,4 +1,4 @@
-<img src="docs/.vuepress/public/konstellation-logo.png" width="600px"></img>
+<img src="website/static/img/logo-word-transparentbg.png" width="600px"></img>
 
 An application platform for Kubernetes
 
