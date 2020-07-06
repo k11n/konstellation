@@ -203,7 +203,7 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 
 	diskPrompt := promptui.Prompt{
 		Label:    "Size of root disk (GiB)",
-		Default:  "100",
+		Default:  "50",
 		Validate: utils.ValidateInt,
 	}
 	sizeStr, err := diskPrompt.Run()
