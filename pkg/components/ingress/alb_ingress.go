@@ -83,10 +83,11 @@ func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, tlsHosts []
 	}
 	annotations = map[string]string{
 		"kubernetes.io/ingress.class":                "alb",
-		"alb.ingress.kubernetes.io/scheme":           "internet-facing",
-		"alb.ingress.kubernetes.io/listen-ports":     listeners,
 		"alb.ingress.kubernetes.io/healthcheck-port": resources.IngressHealthPort,
 		"alb.ingress.kubernetes.io/healthcheck-path": resources.IngressHealthPath,
+		"alb.ingress.kubernetes.io/ip-address-type":  "dualstack",
+		"alb.ingress.kubernetes.io/listen-ports":     listeners,
+		"alb.ingress.kubernetes.io/scheme":           "internet-facing",
 	}
 	return
 }
