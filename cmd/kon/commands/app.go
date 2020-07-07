@@ -753,7 +753,7 @@ func appLocal(c *cli.Context) error {
 
 	if cm != nil {
 		for key, val := range cm.Data {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, utilscli.EscapeEnvVar(val)))
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, val))
 		}
 	}
 	for i, dep := range deps {
