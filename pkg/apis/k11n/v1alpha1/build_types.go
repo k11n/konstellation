@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"regexp"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
-const (
-	DefaultRegistry = "registry.hub.docker.com"
+var (
+	allowedNameRegexp = regexp.MustCompile(`[^a-zA-Z0-9\-]`)
 )
 
 // BuildSpec defines the desired state of Build
@@ -64,8 +65,16 @@ func (b *Build) GetUniqueName() string {
 	checksum, err := files.Sha1Checksum(sb)
 	if err != nil {
 		log.Fatalf("Unable to generate checksum: %v", err)
+	} else {
+		checksum = checksum[:4]
 	}
-	return checksum
+	name := b.Spec.Image
+	if b.Spec.Tag != "" {
+		name += "-" + b.Spec.Tag
+	}
+	name = allowedNameRegexp.ReplaceAllString(name, "-") + "-" + checksum
+
+	return name
 }
 
 func (b *Build) ImagePath() string {
