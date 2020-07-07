@@ -12,6 +12,7 @@ import (
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/components/prometheus"
 	"github.com/k11n/konstellation/pkg/resources"
+	"github.com/k11n/konstellation/version"
 
 	corev1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -31,8 +32,9 @@ import (
 var log = logf.Log.WithName("controller.ClusterConfig")
 
 const (
-	prometheusName = "prometheus"
-	k8sName        = "k8s"
+	prometheusName        = "prometheus"
+	k8sName               = "k8s"
+	defaultScrapeInterval = "15s"
 )
 
 func Add(mgr manager.Manager) error {
@@ -230,6 +232,7 @@ func newPrometheus(config map[string]string, storageClass string) *promv1.Promet
 					"role":         "alert-rules",
 				},
 			},
+			ScrapeInterval: defaultScrapeInterval,
 			SecurityContext: &corev1.PodSecurityContext{
 				FSGroup:      pointer.Int64Ptr(2000),
 				RunAsNonRoot: pointer.BoolPtr(true),
@@ -257,7 +260,7 @@ func newPrometheus(config map[string]string, storageClass string) *promv1.Promet
 					},
 				},
 			},
-			Version: "v2.11.0",
+			Version: version.PrometheusVersion,
 		},
 	}
 	return prom
