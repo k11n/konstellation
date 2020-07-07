@@ -260,7 +260,7 @@ func newPrometheus(config map[string]string, storageClass string) *promv1.Promet
 					},
 				},
 			},
-			Version: version.PrometheusVersion,
+			Version: version.Prometheus,
 		},
 	}
 	return prom
