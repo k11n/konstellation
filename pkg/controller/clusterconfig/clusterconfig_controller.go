@@ -34,7 +34,7 @@ var log = logf.Log.WithName("controller.ClusterConfig")
 const (
 	prometheusName        = "prometheus"
 	k8sName               = "k8s"
-	defaultScrapeInterval = "15s"
+	defaultScrapeInterval = "20s"
 )
 
 func Add(mgr manager.Manager) error {
@@ -232,7 +232,8 @@ func newPrometheus(config map[string]string, storageClass string) *promv1.Promet
 					"role":         "alert-rules",
 				},
 			},
-			ScrapeInterval: defaultScrapeInterval,
+			EvaluationInterval: defaultScrapeInterval,
+			ScrapeInterval:     defaultScrapeInterval,
 			SecurityContext: &corev1.PodSecurityContext{
 				FSGroup:      pointer.Int64Ptr(2000),
 				RunAsNonRoot: pointer.BoolPtr(true),
