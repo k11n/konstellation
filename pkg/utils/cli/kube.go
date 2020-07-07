@@ -98,8 +98,10 @@ func NewKubeProxyForService(kclient client.Client, namespace, service string, po
 				}
 			}
 			// no port name found
-			err = fmt.Errorf("service %s doesn't have a port named %s", service, portName)
-			return
+			if portNumber == 0 {
+				err = fmt.Errorf("service %s doesn't have a port named %s", service, portName)
+				return
+			}
 		} else {
 			err = fmt.Errorf("incorrect port %v (%T)", port, port)
 		}
