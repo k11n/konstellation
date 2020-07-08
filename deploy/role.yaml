@@ -53,7 +53,7 @@ rules:
   - alertmanagers
   - podmonitors
   - prometheuses
-  - rule
+  - prometheusrules
   - servicemonitors
   verbs:
   - get
