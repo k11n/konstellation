@@ -2,11 +2,11 @@
 title: Getting Help
 ---
 
-Konstellation is a new project and we'd be glad to help you get started with it.
+Konstellation is a new project and we'll be glad to help you get started.
 
 ## Slack
 
-We have a Slack set up for users of Konstellation. We are more than happy to answer any questions that you have.
+We have a Slack set up for users of Konstellation. Let us know with your questions and feedback.
 
 [Join Konstellation Users](https://join.slack.com/t/kon-users/shared_invite/zt-fm64885u-QSlL0VQUJdZ_rcQBaZ81ug)
 

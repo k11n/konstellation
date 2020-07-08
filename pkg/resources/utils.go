@@ -3,10 +3,12 @@ package resources
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"reflect"
 	"strings"
 
 	"github.com/go-logr/logr"
+	pkgerrors "github.com/pkg/errors"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,8 +23,7 @@ import (
 )
 
 const (
-	dateTimeFormat  = "20060102-1504"
-	defaultListSize = 10
+	dateTimeFormat = "20060102-1504"
 )
 
 var (
@@ -179,4 +180,17 @@ func NewYAMLEncoder() runtime.Encoder {
 
 func NewYAMLDecoder() runtime.Decoder {
 	return clientgoscheme.Codecs.UniversalDeserializer()
+}
+
+func ReadObjectFromFile(decoder runtime.Decoder, filename string, obj runtime.Object) (res runtime.Object, err error) {
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return
+	}
+	res, _, err = decoder.Decode(content, nil, obj)
+	if err != nil {
+		return nil, pkgerrors.Wrapf(err, "could not read object from %s", filename)
+	}
+
+	return
 }

@@ -102,7 +102,9 @@ func (a *Action) replaceTemplates() error {
 		return err
 	}
 	for _, fi := range files {
-		if !fi.IsDir() {
+		if strings.HasPrefix(fi.Name(), ".") {
+			continue
+		} else if !fi.IsDir() {
 			if err = a.replaceTemplate(path.Join(a.WorkingDir, fi.Name())); err != nil {
 				return err
 			}

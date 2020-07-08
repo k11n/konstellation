@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cast"
 	"gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,6 +79,16 @@ func (c *AppConfig) SetConfig(config map[string]interface{}) error {
 		return err
 	}
 	c.ConfigYaml = content
+	return nil
+}
+
+func (c *AppConfig) SetConfigYAML(conf []byte) error {
+	out := yaml.Node{}
+	// validate config to be yaml
+	if err := yaml.Unmarshal(conf, &out); err != nil {
+		return errors.Wrap(err, "config contains invalid YAML")
+	}
+	c.ConfigYaml = conf
 	return nil
 }
 

@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/pkg/errors"
 	"github.com/thoas/go-funk"
 	"github.com/urfave/cli/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -217,7 +218,9 @@ func configEdit(c *cli.Context) error {
 	}
 
 	// persist
-	appConfig.ConfigYaml = data
+	if err = appConfig.SetConfigYAML(data); err != nil {
+		return errors.Wrap(err, "could not update config")
+	}
 	err = resources.SaveAppConfig(kclient, appConfig)
 	if err != nil {
 		return err

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -274,15 +275,13 @@ func (i *Importer) ImportApps(appsDir string) error {
 	}
 
 	for _, f := range files {
-		if f.IsDir() {
+		if strings.HasPrefix(f.Name(), ".") {
+			continue
+		} else if f.IsDir() {
 			fmt.Println("Unexpected directory", f.Name())
 			continue
 		}
-		content, err := ioutil.ReadFile(path.Join(appsDir, f.Name()))
-		if err != nil {
-			return err
-		}
-		obj, _, err := i.decoder.Decode(content, nil, &v1alpha1.App{})
+		obj, err := ReadObjectFromFile(i.decoder, path.Join(appsDir, f.Name()), &v1alpha1.App{})
 		if err != nil {
 			return err
 		}
@@ -308,15 +307,13 @@ func (i *Importer) ImportBuilds(buildsDir string) error {
 	}
 
 	for _, f := range files {
-		if f.IsDir() {
+		if strings.HasPrefix(f.Name(), ".") {
+			continue
+		} else if f.IsDir() {
 			fmt.Println("Unexpected directory", f.Name())
 			continue
 		}
-		content, err := ioutil.ReadFile(path.Join(buildsDir, f.Name()))
-		if err != nil {
-			return err
-		}
-		obj, _, err := i.decoder.Decode(content, nil, &v1alpha1.Build{})
+		obj, err := ReadObjectFromFile(i.decoder, path.Join(buildsDir, f.Name()), &v1alpha1.Build{})
 		if err != nil {
 			return err
 		}
@@ -363,6 +360,9 @@ func (i *Importer) ImportConfigs(configsDir string) error {
 
 		// import files directly, and directories as targets
 		for _, f := range files {
+			if strings.HasPrefix(f.Name(), ".") {
+				continue
+			}
 			itemPath := path.Join(ci.dir, f.Name())
 			if f.IsDir() {
 				subfiles, err := ioutil.ReadDir(itemPath)
@@ -371,7 +371,9 @@ func (i *Importer) ImportConfigs(configsDir string) error {
 				}
 				target := f.Name()
 				for _, subf := range subfiles {
-					if subf.IsDir() {
+					if strings.HasPrefix(f.Name(), ".") {
+						continue
+					} else if subf.IsDir() {
 						return fmt.Errorf("unexpected directory: %s", path.Join(itemPath, subf.Name()))
 					}
 					if err = i.importConfig(path.Join(itemPath, subf.Name()), ci.confType, target); err != nil {
@@ -402,16 +404,14 @@ func (i *Importer) ImportLinkedAccounts(dir string) error {
 	}
 
 	for _, f := range files {
-		if f.IsDir() {
+		if strings.HasPrefix(f.Name(), ".") {
+			continue
+		} else if f.IsDir() {
 			fmt.Println("Unexpected directory", f.Name())
 			continue
 		}
 
-		content, err := ioutil.ReadFile(path.Join(dir, f.Name()))
-		if err != nil {
-			return err
-		}
-		obj, _, err := i.decoder.Decode(content, nil, &v1alpha1.LinkedServiceAccount{})
+		obj, err := ReadObjectFromFile(i.decoder, path.Join(dir, f.Name()), &v1alpha1.LinkedServiceAccount{})
 		if err != nil {
 			return err
 		}
@@ -445,6 +445,10 @@ func (i *Importer) importConfig(filename string, confType v1alpha1.ConfigType, t
 	if err != nil {
 		return err
 	}
-	conf.ConfigYaml = data
+
+	if err = conf.SetConfigYAML(data); err != nil {
+		return errors.Wrapf(err, "failed to import config: %s", filename)
+	}
+
 	return SaveAppConfig(i.client, conf)
 }
