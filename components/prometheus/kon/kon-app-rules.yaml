@@ -65,36 +65,79 @@ spec:
           kube_pod_container_resource_limits_memory_bytes{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}
         ) by (namespace, pod, container)
       record: namespace_pod_container:kube_pod_container_resource_limits_memory_bytes
+      # inbound request bytes histogram
     - expr: |
         sum(
-          irate(istio_request_bytes_bucket{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[5m])
+          rate(istio_request_bytes_bucket{app_kubernetes_io_managed_by="konstellation", reporter="destination", container!="istio-proxy"}[5m])
         ) by (destination_service, k11n_dev_appRelease, source_app, le)
       record: destination_service_release_source_le:istio_request_bytes_bucket:rate5m
+      # inbound response bytes histogram
     - expr: |
         sum(
-          irate(istio_response_bytes_bucket{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[5m])
+          rate(istio_response_bytes_bucket{app_kubernetes_io_managed_by="konstellation", reporter="destination", container!="istio-proxy"}[5m])
         ) by (destination_service, k11n_dev_appRelease, source_app, le)
       record: destination_service_release_source_le:istio_response_bytes_bucket:rate5m
+      # inbound request bytes total
     - expr: |
         sum(
-          rate(istio_request_bytes_sum{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[5m])
-        ) by (destination_service, k11n_dev_appRelease, source_app, le)
+          rate(istio_request_bytes_sum{app_kubernetes_io_managed_by="konstellation", reporter="destination", container!="istio-proxy"}[5m])
+        ) by (destination_service, k11n_dev_appRelease, source_app)
       record: destination_service_release_source:istio_request_bytes_sum:rate5m
+      # inbound response bytes total
     - expr: |
         sum(
-          rate(istio_response_bytes_sum{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[5m])
-        ) by (destination_service, k11n_dev_appRelease, source_app, le)
+          rate(istio_response_bytes_sum{app_kubernetes_io_managed_by="konstellation", reporter="destination", container!="istio-proxy"}[5m])
+        ) by (destination_service, k11n_dev_appRelease, source_app)
       record: destination_service_release_source:istio_response_bytes_sum:rate5m
+      # inbound request bytes count
     - expr: |
         sum(
-          rate(istio_request_bytes_count{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[5m])
-        ) by (destination_service, k11n_dev_appRelease, source_app, le)
+          rate(istio_request_bytes_count{app_kubernetes_io_managed_by="konstellation", reporter="destination", container!="istio-proxy"}[5m])
+        ) by (destination_service, k11n_dev_appRelease, source_app)
       record: destination_service_release_source:istio_request_bytes_count:rate5m
+      # inbound response bytes count
     - expr: |
         sum(
-          rate(istio_response_bytes_count{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[5m])
-        ) by (destination_service, k11n_dev_appRelease, source_app, le)
+          rate(istio_response_bytes_count{app_kubernetes_io_managed_by="konstellation", reporter="destination", container!="istio-proxy"}[5m])
+        ) by (destination_service, k11n_dev_appRelease, source_app)
       record: destination_service_release_source:istio_response_bytes_count:rate5m
+
+      # outbound request bytes histogram
+    - expr: |
+        sum(
+          rate(istio_request_bytes_bucket{app_kubernetes_io_managed_by="konstellation", reporter="source", container!="istio-proxy"}[5m])
+        ) by (app, k11n_dev_target, k11n_dev_appRelease, destination_app, le)
+      record: app_target_release_destination_le:istio_request_bytes_bucket:rate5m
+      # outbound response bytes histogram
+    - expr: |
+        sum(
+          rate(istio_response_bytes_bucket{app_kubernetes_io_managed_by="konstellation", reporter="source", container!="istio-proxy"}[5m])
+        ) by (app, k11n_dev_target, k11n_dev_appRelease, destination_app, le)
+      record: app_target_release_destination_le:istio_response_bytes_bucket:rate5m
+      # outbound request bytes total
+    - expr: |
+        sum(
+          rate(istio_request_bytes_sum{app_kubernetes_io_managed_by="konstellation", reporter="source", container!="istio-proxy"}[5m])
+        ) by (app, k11n_dev_target, k11n_dev_appRelease, destination_app)
+      record: app_target_release_destination:istio_request_bytes_sum:rate5m
+      # outbound response bytes total
+    - expr: |
+        sum(
+          rate(istio_response_bytes_sum{app_kubernetes_io_managed_by="konstellation", reporter="source", container!="istio-proxy"}[5m])
+        ) by (app, k11n_dev_target, k11n_dev_appRelease, destination_app)
+      record: app_target_release_destination:istio_response_bytes_sum:rate5m
+      # outbound request bytes count
+    - expr: |
+        sum(
+          rate(istio_request_bytes_count{app_kubernetes_io_managed_by="konstellation", reporter="source", container!="istio-proxy"}[5m])
+        ) by (app, k11n_dev_target, k11n_dev_appRelease, destination_app)
+      record: app_target_release_destination:istio_request_bytes_count:rate5m
+      # outbound response bytes count
+    - expr: |
+        sum(
+          rate(istio_response_bytes_count{app_kubernetes_io_managed_by="konstellation", reporter="source", container!="istio-proxy"}[5m])
+        ) by (app, k11n_dev_target, k11n_dev_appRelease, destination_app)
+      record: app_target_release_destination:istio_response_bytes_count:rate5m
     - expr: |
         sum(
           rate(container_fs_writes_bytes_total{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}[5m])
