@@ -17,7 +17,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 29,
-  "iteration": 1594244802985,
+  "iteration": 1594247888344,
   "links": [],
   "panels": [
     {
@@ -177,9 +177,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code!=\"0\"}",
-          "legendFormat": "{{response_code}}",
-          "refId": "A"
+          "expr": "sum(destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code=\"200\"}) / sum(destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code!=\"0\"})",
+          "instant": false,
+          "legendFormat": "success rate",
+          "refId": "C"
         },
         {
           "expr": "sum(destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code!=\"0\"})",
@@ -187,10 +188,9 @@
           "refId": "B"
         },
         {
-          "expr": "sum(destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code=\"200\"}) / sum(destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code!=\"0\"})",
-          "instant": false,
-          "legendFormat": "success rate",
-          "refId": "C"
+          "expr": "destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code!=\"0\"}",
+          "legendFormat": "{{response_code}}",
+          "refId": "A"
         }
       ],
       "thresholds": [],
@@ -224,8 +224,8 @@
           "format": "percentunit",
           "label": "success rate",
           "logBase": 1,
-          "max": null,
-          "min": null,
+          "max": "1",
+          "min": "0",
           "show": true
         }
       ],
@@ -328,11 +328,12 @@
           "show": true
         },
         {
+          "decimals": null,
           "format": "percentunit",
           "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
+          "max": "1",
+          "min": "0",
           "show": true
         }
       ],
@@ -1163,5 +1164,5 @@
   "timezone": "",
   "title": "App Overview",
   "uid": "thZnaFGGk",
-  "version": 7
+  "version": 9
 }
