@@ -16,7 +16,6 @@ const (
 	IngressBackendName = "istio-ingressgateway"
 
 	// the port opened by istio-ingressgateway Service for health checks
-	IngressHealthPort = "31819"
 	IngressHealthPath = "/healthz/ready"
 )
 

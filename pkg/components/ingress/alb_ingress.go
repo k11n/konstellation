@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/spf13/cast"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -87,12 +88,25 @@ func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, tlsHosts []
 	}
 
 	annotations = map[string]string{
-		"kubernetes.io/ingress.class":                "alb",
-		"alb.ingress.kubernetes.io/healthcheck-port": resources.IngressHealthPort,
-		"alb.ingress.kubernetes.io/healthcheck-path": resources.IngressHealthPath,
-		"alb.ingress.kubernetes.io/ip-address-type":  "dualstack",
-		"alb.ingress.kubernetes.io/listen-ports":     listeners,
-		"alb.ingress.kubernetes.io/scheme":           "internet-facing",
+		"kubernetes.io/ingress.class":               "alb",
+		"alb.ingress.kubernetes.io/ip-address-type": "dualstack",
+		"alb.ingress.kubernetes.io/listen-ports":    listeners,
+		"alb.ingress.kubernetes.io/scheme":          "internet-facing",
+	}
+
+	//
+
+	// find istio status port
+	svc, err := resources.GetService(kclient, resources.IstioNamespace, resources.IngressBackendName)
+	if err != nil {
+		return
+	}
+
+	for _, p := range svc.Spec.Ports {
+		if p.Name == "status-port" {
+			annotations["alb.ingress.kubernetes.io/healthcheck-port"] = cast.ToString(p.NodePort)
+			annotations["alb.ingress.kubernetes.io/healthcheck-path"] = resources.IngressHealthPath
+		}
 	}
 
 	// get all certs and match against
