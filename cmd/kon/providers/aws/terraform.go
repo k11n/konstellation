@@ -132,16 +132,6 @@ func NewVPCTFAction(values terraform.Values, zones []string, opts ...terraform.O
 	return
 }
 
-type eksClusterInput struct {
-	bucket           string
-	bucketRegion     string
-	region           string
-	vpcId            string
-	name             string
-	kubeVersion      string
-	securityGroupIds []string
-}
-
 func NewEKSClusterTFAction(values terraform.Values, opts ...terraform.Option) (a *terraform.Action, err error) {
 	vars := []terraform.Var{
 		TFStateBucket,
