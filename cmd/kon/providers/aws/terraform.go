@@ -36,18 +36,24 @@ var (
 	TFStateBucket       = terraform.Var{Name: "state_bucket", TemplateOnly: true}
 	TFStateBucketRegion = terraform.Var{Name: "state_bucket_region", TemplateOnly: true}
 	TFRegion            = terraform.Var{Name: "region"}
-	TFVPCCidr           = terraform.Var{Name: "vpc_cidr"}
-	TFAZSuffixes        = terraform.Var{Name: "az_suffixes", CreationOnly: true}
-	TFTopology          = terraform.Var{Name: "topology"}
-	TFCluster           = terraform.Var{Name: "cluster"}
-	TFKubeVersion       = terraform.Var{Name: "kube_version", CreationOnly: true}
-	TFSecurityGroupIds  = terraform.Var{Name: "security_group_ids", CreationOnly: true}
-	TFVPCId             = terraform.Var{Name: "vpc_id", CreationOnly: true}
-	TFAccount           = terraform.Var{Name: "account"}
-	TFTargets           = terraform.Var{Name: "targets", CreationOnly: true}
-	TFPolicies          = terraform.Var{Name: "policies", CreationOnly: true}
-	TFOIDCUrl           = terraform.Var{Name: "oidc_url", CreationOnly: true}
-	TFOIDCArn           = terraform.Var{Name: "oidc_arn", CreationOnly: true}
+
+	// vpc & cluster
+	TFVPCCidr          = terraform.Var{Name: "vpc_cidr"}
+	TFEnableIPv6       = terraform.Var{Name: "enable_ipv6", CreationOnly: true}
+	TFAZSuffixes       = terraform.Var{Name: "az_suffixes", CreationOnly: true}
+	TFTopology         = terraform.Var{Name: "topology"}
+	TFCluster          = terraform.Var{Name: "cluster"}
+	TFKubeVersion      = terraform.Var{Name: "kube_version", CreationOnly: true}
+	TFSecurityGroupIds = terraform.Var{Name: "security_group_ids", CreationOnly: true}
+	TFVPCId            = terraform.Var{Name: "vpc_id", CreationOnly: true}
+	TFAdminGroups      = terraform.Var{Name: "admin_groups", CreationOnly: true}
+
+	// linked accounts
+	TFAccount  = terraform.Var{Name: "account"}
+	TFTargets  = terraform.Var{Name: "targets", CreationOnly: true}
+	TFPolicies = terraform.Var{Name: "policies", CreationOnly: true}
+	TFOIDCUrl  = terraform.Var{Name: "oidc_url", CreationOnly: true}
+	TFOIDCArn  = terraform.Var{Name: "oidc_arn", CreationOnly: true}
 )
 
 type ObjContainer struct {
@@ -57,6 +63,7 @@ type ObjContainer struct {
 
 type TFVPCOutput struct {
 	VpcId              string      `json:"vpc_id"`
+	Ipv6Cidr           string      `json:"ipv6_cidr"`
 	MainRouteTable     string      `json:"main_route_table"`
 	PublicSubnets      []*TFSubnet `json:"public_subnets"`
 	PublicGateway      string      `json:"public_gateway"`
@@ -81,6 +88,7 @@ type TFClusterOutput struct {
 	ClusterName       string
 	AlbIngressRoleArn string
 	NodeRoleArn       string
+	AdminRoleArn      string
 }
 
 func NewVPCTFAction(values terraform.Values, zones []string, opts ...terraform.Option) (a *terraform.Action, err error) {
@@ -93,6 +101,7 @@ func NewVPCTFAction(values terraform.Values, zones []string, opts ...terraform.O
 
 		// creation only
 		TFAZSuffixes,
+		TFEnableIPv6,
 	}
 
 	targetDir := path.Join(config.TerraformDir(), "aws", "vpc")
@@ -144,6 +153,7 @@ func NewEKSClusterTFAction(values terraform.Values, opts ...terraform.Option) (a
 		TFKubeVersion,
 		TFSecurityGroupIds,
 		TFVPCId,
+		TFAdminGroups,
 	}
 
 	targetDir := path.Join(config.TerraformDir(), "aws", "cluster", values[TFCluster].(string))
@@ -168,6 +178,7 @@ func ParseVPCTFOutput(data []byte) (tf *TFVPCOutput, err error) {
 
 	tf = &TFVPCOutput{
 		VpcId:          oc.GetString("vpc_id"),
+		Ipv6Cidr:       oc.GetString("ipv6_cidr"),
 		MainRouteTable: oc.GetString("main_route_table"),
 		PublicGateway:  oc.GetString("public_gateway"),
 	}
@@ -188,6 +199,7 @@ func ParseClusterTFOutput(data []byte) (tf *TFClusterOutput, err error) {
 		ClusterName:       oc.GetString("cluster_name"),
 		AlbIngressRoleArn: oc.GetString("cluster_alb_role_arn"),
 		NodeRoleArn:       oc.GetString("cluster_node_role_arn"),
+		AdminRoleArn:      oc.GetString("cluster_admin_role_arn"),
 	}
 	return
 }

@@ -34,12 +34,22 @@ spec:
             aws:
               nullable: true
               properties:
+                adminGroups:
+                  items:
+                    type: string
+                  nullable: true
+                  type: array
+                adminRoleArn:
+                  type: string
                 albRoleArn:
                   type: string
                 availabilityZone:
                   items:
                     type: string
                   type: array
+                ipv6Cidr:
+                  description: set after cluster is created
+                  type: string
                 nodeRoleArn:
                   type: string
                 privateSubnets:
@@ -48,6 +58,8 @@ spec:
                       availabilityZone:
                         type: string
                       ipv4Cidr:
+                        type: string
+                      ipv6Cidr:
                         type: string
                       isPublic:
                         type: boolean
@@ -68,6 +80,8 @@ spec:
                         type: string
                       ipv4Cidr:
                         type: string
+                      ipv6Cidr:
+                        type: string
                       isPublic:
                         type: boolean
                       subnetId:
@@ -80,7 +94,6 @@ spec:
                     type: object
                   type: array
                 securityGroups:
-                  description: set after cluster is created
                   items:
                     type: string
                   type: array
@@ -93,6 +106,7 @@ spec:
                   description: input values
                   type: string
               required:
+              - adminRoleArn
               - albRoleArn
               - availabilityZone
               - nodeRoleArn
@@ -104,23 +118,15 @@ spec:
               type: object
             cloud:
               type: string
-            components:
-              items:
-                properties:
-                  config:
-                    additionalProperties:
-                      type: string
-                    nullable: true
-                    type: object
-                  name:
-                    type: string
-                  version:
-                    type: string
-                required:
-                - name
-                - version
+            componentConfig:
+              additionalProperties:
+                additionalProperties:
+                  type: string
                 type: object
-              type: array
+              nullable: true
+              type: object
+            enableIpv6:
+              type: boolean
             kubeVersion:
               type: string
             region:
@@ -134,7 +140,7 @@ spec:
               type: string
           required:
           - cloud
-          - components
+          - enableIpv6
           - kubeVersion
           - region
           - version

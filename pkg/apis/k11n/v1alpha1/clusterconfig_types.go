@@ -4,17 +4,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type ClusterComponent struct {
-	ComponentSpec `json:",inline"`
-	// +kubebuilder:validation:Optional
-	// +nullable
-	Config map[string]string `json:"config,omitempty"`
-}
-
 type ComponentSpec struct {
 	Name    string `json:"name"`
 	Version string `json:"version"`
 }
+
+type ComponentConfig map[string]string
 
 // ClusterConfigSpec defines the desired state of ClusterConfig
 type ClusterConfigSpec struct {
@@ -22,13 +17,16 @@ type ClusterConfigSpec struct {
 	KubeVersion string `json:"kubeVersion"`
 	Cloud       string `json:"cloud"`
 	Region      string `json:"region"`
+	EnableIpv6  bool   `json:"enableIpv6"`
 	// +kubebuilder:validation:Optional
 	// +nullable
 	AWS *AWSClusterSpec `json:"aws"`
 	// +kubebuilder:validation:Optional
 	// +nullable
-	Targets    []string           `json:"targets"`
-	Components []ClusterComponent `json:"components"`
+	Targets []string `json:"targets"`
+	// +kubebuilder:validation:Optional
+	// +nullable
+	ComponentConfig map[string]ComponentConfig `json:"componentConfig"`
 }
 
 // ClusterConfigStatus defines the observed state of ClusterConfig
@@ -49,7 +47,7 @@ type ClusterConfig struct {
 	Status ClusterConfigStatus `json:"status,omitempty"`
 }
 
-func (c *ClusterConfig) GetComponentConfig(name string) map[string]string {
+func (c *ClusterConfig) GetComponentConfig(name string) ComponentConfig {
 	// check status, if not installed, return nil
 	installed := false
 	for _, comp := range c.Status.InstalledComponents {
@@ -63,16 +61,11 @@ func (c *ClusterConfig) GetComponentConfig(name string) map[string]string {
 		return nil
 	}
 
-	for _, comp := range c.Spec.Components {
-		if comp.Name == name {
-			if comp.Config != nil {
-				return comp.Config
-			} else {
-				return map[string]string{}
-			}
-		}
+	conf := c.Spec.ComponentConfig[name]
+	if conf == nil {
+		conf = map[string]string{}
 	}
-	return nil
+	return conf
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -89,10 +82,14 @@ type AWSClusterSpec struct {
 	VpcCidr           string      `json:"vpcCidr"`
 	AvailabilityZones []string    `json:"availabilityZone"`
 	Topology          AWSTopology `json:"topology"`
+	// +kubebuilder:validation:Optional
+	// +nullable
+	AdminGroups []string `json:"adminGroups,omitempty"`
 	// optional, only if it's using an existing VPC
 	Vpc string `json:"vpc"`
 
 	// set after cluster is created
+	Ipv6Cidr       string       `json:"ipv6Cidr,omitempty"`
 	SecurityGroups []string     `json:"securityGroups"`
 	PublicSubnets  []*AWSSubnet `json:"publicSubnets"`
 	// +kubebuilder:validation:Optional
@@ -100,12 +97,14 @@ type AWSClusterSpec struct {
 	PrivateSubnets []*AWSSubnet `json:"privateSubnets"`
 	AlbRoleArn     string       `json:"albRoleArn"`
 	NodeRoleArn    string       `json:"nodeRoleArn"`
+	AdminRoleArn   string       `json:"adminRoleArn"`
 }
 
 type AWSSubnet struct {
 	SubnetId         string `json:"subnetId"`
 	IsPublic         bool   `json:"isPublic"`
 	Ipv4Cidr         string `json:"ipv4Cidr"`
+	Ipv6Cidr         string `json:"ipv6Cidr,omitempty"`
 	AvailabilityZone string `json:"availabilityZone"`
 }
 

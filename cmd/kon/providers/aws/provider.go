@@ -16,7 +16,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/k11n/konstellation/cmd/kon/config"
+	"github.com/k11n/konstellation/cmd/kon/kube"
 	"github.com/k11n/konstellation/cmd/kon/utils"
+	"github.com/k11n/konstellation/pkg/components"
+	"github.com/k11n/konstellation/pkg/components/ingress"
 )
 
 type AWSProvider struct {
@@ -165,6 +168,13 @@ func (a *AWSProvider) Setup() error {
 	fmt.Println("AWS has been configured to use with Konstellation!")
 	fmt.Println("next, try creating a cluster with `kon cluster create`")
 	return conf.Persist()
+}
+
+func (a *AWSProvider) GetComponents() []components.ComponentInstaller {
+	comps := make([]components.ComponentInstaller, 0, len(kube.KubeComponents)+1)
+	comps = append(comps, kube.KubeComponents...)
+	comps = append(comps, &ingress.AWSALBIngress{})
+	return comps
 }
 
 func (a *AWSProvider) createStateBucket(sess *session.Session, defaultBucket string) (bucketName string, bucketRegion string, err error) {

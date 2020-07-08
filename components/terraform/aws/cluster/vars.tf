@@ -21,6 +21,11 @@ variable "kube_version" {
   default = ""
 }
 
+variable "admin_groups" {
+  type = list(string)
+  default = []
+}
+
 output "cluster_name" {
   value = aws_eks_cluster.main.id
 }
@@ -31,4 +36,8 @@ output "cluster_alb_role_arn" {
 
 output "cluster_node_role_arn" {
   value = aws_iam_role.eks_node_role.arn
+}
+
+output "cluster_admin_role_arn" {
+  value = aws_iam_role.cluster_admin_role.arn
 }

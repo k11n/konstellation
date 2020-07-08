@@ -20,6 +20,7 @@ resource "aws_subnet" "private" {
   tags = merge(
     local.common_tags,
     {
+      "Name" = "kon-private-${each.key}"
       "k11n.dev/subnetScope" = "private",
       "k11n.dev/az" = "${var.region}${each.key}",
       "kubernetes.io/role/internal-elb" = "1"
@@ -37,6 +38,7 @@ resource "aws_eip" "nat" {
     local.common_tags,
     {
       "k11n.dev/purpose" = "nat_gateway",
+      "k11n.dev/az" = each.value.tags["k11n.dev/az"],
       "k11n.dev/publicSubnet" = each.value.id,
     }
   )
@@ -52,8 +54,10 @@ resource "aws_nat_gateway" "private_gw" {
   tags = merge(
     local.common_tags,
     {
+      "Name" = "kon-${each.value.tags["k11n.dev/az"]}"
       "k11n.dev/publicSubnet" = each.value.tags["k11n.dev/publicSubnet"],
       "k11n.dev/privateSubnet" = aws_subnet.private[each.key].id
+      "k11n.dev/az" = each.value.tags["k11n.dev/az"],
     }
   )
   depends_on = [aws_eip.nat, aws_subnet.private]
@@ -66,6 +70,8 @@ resource "aws_route_table" "private" {
   tags = merge(
     local.common_tags,
     {
+      "Name" = "kon-private-route ${each.value.tags["k11n.dev/az"]}"
+      "k11n.dev/az" = each.value.tags["k11n.dev/az"],
       "k11n.dev/subnet" = each.value.tags["k11n.dev/privateSubnet"]
       "k11n.dev/natGateway" = each.value.id
     }
@@ -73,7 +79,7 @@ resource "aws_route_table" "private" {
   depends_on = [aws_nat_gateway.private_gw]
 }
 
-resource "aws_route" "nat_gateway" {
+resource "aws_route" "nat_gateway_ipv4" {
   for_each = aws_route_table.private
 
   // route_table_id = aws_route_table.private.id

@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/pricing"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cast"
@@ -22,12 +23,10 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/k11n/konstellation/cmd/kon/config"
-	"github.com/k11n/konstellation/cmd/kon/kube"
 	"github.com/k11n/konstellation/cmd/kon/utils"
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	kaws "github.com/k11n/konstellation/pkg/cloud/aws"
 	"github.com/k11n/konstellation/pkg/cloud/types"
-	"github.com/k11n/konstellation/pkg/components/ingress"
 	"github.com/k11n/konstellation/pkg/resources"
 	"github.com/k11n/konstellation/version"
 )
@@ -81,17 +80,6 @@ func (g *PromptConfigGenerator) CreateClusterConfig() (cc *v1alpha1.ClusterConfi
 		return
 	}
 
-	// AWS only component
-	comps := append(kube.KubeComponents, &ingress.AWSALBIngress{})
-	for _, comp := range comps {
-		cc.Spec.Components = append(cc.Spec.Components, v1alpha1.ClusterComponent{
-			ComponentSpec: v1alpha1.ComponentSpec{
-				Name:    comp.Name(),
-				Version: comp.VersionForKube(cc.Spec.KubeVersion),
-			},
-		})
-	}
-
 	// VPC
 	as.Vpc, as.VpcCidr, err = promptChooseVPC(g.session)
 	if err != nil {
@@ -100,6 +88,10 @@ func (g *PromptConfigGenerator) CreateClusterConfig() (cc *v1alpha1.ClusterConfi
 
 	ec2Svc := ec2.New(g.session)
 	if as.Vpc == "" {
+		cc.Spec.EnableIpv6, err = promptIPv6()
+		if err != nil {
+			return
+		}
 		// creating a new VPC
 		as.AvailabilityZones, err = promptAZs(ec2Svc)
 		if err != nil {
@@ -140,6 +132,13 @@ func (g *PromptConfigGenerator) CreateClusterConfig() (cc *v1alpha1.ClusterConfi
 			as.Topology = v1alpha1.AWSTopologyPublicPrivate
 		}
 	}
+
+	// admin group
+	cc.Spec.AWS.AdminGroups, err = g.promptAdminGroups()
+	if err != nil {
+		return
+	}
+
 	return
 }
 
@@ -243,6 +242,45 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 	return
 }
 
+func (g *PromptConfigGenerator) promptAdminGroups() (groups []string, err error) {
+	iamSvc := iam.New(g.session)
+	groupNames := make([]string, 0)
+	err = iamSvc.ListGroupsPages(&iam.ListGroupsInput{}, func(out *iam.ListGroupsOutput, last bool) bool {
+		for _, g := range out.Groups {
+			groupNames = append(groupNames, *g.GroupName)
+		}
+		return true
+	})
+	if err != nil {
+		return
+	}
+
+	fmt.Println("Select an IAM admin group:\nKonstellation configures an IAM group to be admins of the cluster. To enable other users to access clusters that you create, add them to the admin group.")
+	groupPrompt := promptui.SelectWithAdd{
+		Label:    "Choose IAM group",
+		Items:    groupNames,
+		AddLabel: "Create new",
+	}
+	idx, name, err := groupPrompt.Run()
+	if err != nil {
+		return
+	}
+
+	if idx != -1 {
+		// selected an existing group
+		return []string{name}, nil
+	}
+
+	// otherwise create new group
+	fmt.Println("creating group", name)
+	createOut, err := iamSvc.CreateGroup(&iam.CreateGroupInput{GroupName: &name})
+	if err != nil {
+		return
+	}
+
+	return []string{*createOut.Group.GroupName}, nil
+}
+
 func promptChooseVPC(sess *session.Session) (vpcId string, cidrBlock string, err error) {
 	vpcProvider := kaws.NewEC2Service(sess)
 	vpcs, err := vpcProvider.ListVPCs(context.TODO())
@@ -327,6 +365,22 @@ func promptAZs(ec2Svc *ec2.EC2) (zones []string, err error) {
 		zones = append(zones, *z.ZoneName)
 	}
 	return
+}
+
+func promptIPv6() (bool, error) {
+	prompt := promptui.Prompt{
+		Label:     "Enable IPv6 (AWS provided CIDR)",
+		IsConfirm: true,
+		Default:   "Y",
+	}
+
+	_, err := prompt.Run()
+	if err == promptui.ErrAbort {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func promptTopology() (topology v1alpha1.AWSTopology, err error) {

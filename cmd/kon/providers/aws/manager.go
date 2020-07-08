@@ -139,6 +139,7 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	inventory = append(inventory, "IAM roles for the cluster:")
 	inventory = append(inventory, fmt.Sprintf("  kon-%s-service-role", cc.Name))
 	inventory = append(inventory, fmt.Sprintf("  kon-%s-node-role", cc.Name))
+	inventory = append(inventory, fmt.Sprintf("  kon-%s-admin-role", cc.Name))
 	inventory = append(inventory, fmt.Sprintf("  kon-%s-alb-role", cc.Name))
 	inventory = append(inventory, fmt.Sprintf("EKS Cluster %s", cc.Name))
 
@@ -166,6 +167,7 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 		values := a.tfValues()
 		values[TFVPCCidr] = awsConf.VpcCidr
 		values[TFTopology] = string(awsConf.Topology)
+		values[TFEnableIPv6] = cc.Spec.EnableIpv6
 		tfVpc, err := NewVPCTFAction(values, awsConf.AvailabilityZones, terraform.OptionDisplayOutput)
 		if err != nil {
 			return err
@@ -201,6 +203,7 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	values[TFKubeVersion] = cc.Spec.KubeVersion
 	values[TFSecurityGroupIds] = awsConf.SecurityGroups
 	values[TFVPCId] = awsConf.Vpc
+	values[TFAdminGroups] = awsConf.AdminGroups
 	clusterTf, err := NewEKSClusterTFAction(values, terraform.OptionDisplayOutput)
 	if err != nil {
 		return err
@@ -225,6 +228,7 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 
 	awsConf.AlbRoleArn = clusterTfOut.AlbIngressRoleArn
 	awsConf.NodeRoleArn = clusterTfOut.NodeRoleArn
+	awsConf.AdminRoleArn = clusterTfOut.AdminRoleArn
 
 	// tag subnets
 	sess, err := a.awsSession()
@@ -675,6 +679,11 @@ func (a *AWSManager) updateVPCInfo(awsConf *v1alpha1.AWSClusterSpec) error {
 				SubnetId:         *subnet.SubnetId,
 				Ipv4Cidr:         *subnet.CidrBlock,
 				AvailabilityZone: *subnet.AvailabilityZone,
+			}
+			for _, as := range subnet.Ipv6CidrBlockAssociationSet {
+				if as.Ipv6CidrBlock != nil {
+					awsSubnet.Ipv6Cidr = *as.Ipv6CidrBlock
+				}
 			}
 			for _, tag := range subnet.Tags {
 				if *tag.Key == kaws.TagSubnetScope {

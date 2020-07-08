@@ -3,12 +3,15 @@ package providers
 import (
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/cloud"
+	"github.com/k11n/konstellation/pkg/components"
 )
 
 type CloudProvider interface {
 	ID() string
 	IsSetup() bool
 	Setup() error
+
+	GetComponents() []components.ComponentInstaller
 }
 
 type ClusterConfigGenerator interface {

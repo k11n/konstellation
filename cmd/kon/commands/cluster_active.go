@@ -13,7 +13,6 @@ import (
 	"github.com/k11n/konstellation/cmd/kon/providers"
 	"github.com/k11n/konstellation/cmd/kon/utils"
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
-	"github.com/k11n/konstellation/pkg/components"
 	"github.com/k11n/konstellation/pkg/resources"
 )
 
@@ -134,28 +133,18 @@ func (c *activeCluster) installComponents(force bool) error {
 		installed[comp.Name] = comp.Version
 	}
 
-	for _, comp := range cc.Spec.Components {
-		if !force && installed[comp.Name] != "" {
+	provider := GetCloud(c.Manager.Cloud())
+	for _, compInstaller := range provider.GetComponents() {
+		if !force && installed[compInstaller.Name()] != "" {
 			continue
 		}
-		compInstaller := components.GetComponentByName(comp.Name)
-		if compInstaller == nil {
-			return fmt.Errorf("Cluster requires %s, which is no longer available", comp.Name)
-		}
-
 		if !messagesPrinted {
 			messagesPrinted = true
 			fmt.Println("\nInstalling required components onto the current cluster...")
 		}
 		fmt.Println("\nInstalling Kubernetes components for", compInstaller.Name())
 
-		// TODO: better handle versions
 		compVersion := compInstaller.VersionForKube(cc.Spec.KubeVersion)
-		if compVersion != comp.Version {
-			fmt.Printf("Warning: version mismatch for %s: specified: %s, current: %s\n",
-				compInstaller.Name(), comp.Version, compVersion)
-		}
-
 		err = compInstaller.InstallComponent(kclient)
 		if err != nil {
 			return err
