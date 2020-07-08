@@ -6,8 +6,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
+	"github.com/gammazero/workerpool"
 
 	"github.com/k11n/konstellation/pkg/cloud/types"
+	"github.com/k11n/konstellation/pkg/utils/async"
 )
 
 type ACMService struct {
@@ -28,15 +30,29 @@ func (a *ACMService) ListCertificates(ctx context.Context) (certificates []*type
 		return
 	}
 
-	for _, summary := range out.CertificateSummaryList {
-		var res *acm.DescribeCertificateOutput
-		res, err = a.ACM.DescribeCertificateWithContext(ctx, &acm.DescribeCertificateInput{
-			CertificateArn: summary.CertificateArn,
+	wp := workerpool.New(10)
+	tasks := make([]*async.Task, 0, len(out.CertificateSummaryList))
+	for i := range out.CertificateSummaryList {
+		summary := out.CertificateSummaryList[i]
+		task := async.NewTask(func() (interface{}, error) {
+			res, err := a.ACM.DescribeCertificateWithContext(ctx, &acm.DescribeCertificateInput{
+				CertificateArn: summary.CertificateArn,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return certificateFromDetails(res.Certificate), nil
 		})
-		if err != nil {
-			return
+		tasks = append(tasks, task)
+		wp.Submit(task.Run)
+	}
+
+	wp.StopWait()
+	for _, t := range tasks {
+		if t.Err != nil {
+			return nil, t.Err
 		}
-		certificates = append(certificates, certificateFromDetails(res.Certificate))
+		certificates = append(certificates, t.Result.(*types.Certificate))
 	}
 	return
 }

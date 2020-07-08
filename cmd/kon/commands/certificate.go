@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/gammazero/workerpool"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
@@ -16,6 +17,7 @@ import (
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/cloud/types"
 	"github.com/k11n/konstellation/pkg/resources"
+	"github.com/k11n/konstellation/pkg/utils/async"
 	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
@@ -91,7 +93,7 @@ func certList(c *cli.Context) error {
 	for _, c := range certs {
 		cs := &c.Spec
 		table.Append([]string{
-			c.Name,
+			cs.ProviderID,
 			cs.Domain,
 			cs.Issuer,
 			cs.ExpiresAt.Format("2006-01-02"),
@@ -123,11 +125,25 @@ func certSync(c *cli.Context) error {
 
 	seenCerts := map[string]bool{}
 	count := 0
-	for _, cert := range certs {
+	wp := workerpool.New(10)
+	tasks := make([]*async.Task, 0, len(certs))
+	for i := range certs {
+		cert := certs[i]
 		seenCerts[cert.ID] = true
-		if updated, err := syncCertificate(kclient, cert); err != nil {
-			return err
-		} else if updated {
+		t := async.NewTask(func() (interface{}, error) {
+			return syncCertificate(kclient, cert)
+		})
+		tasks = append(tasks, t)
+		wp.Submit(t.Run)
+	}
+	wp.StopWait()
+
+	for _, t := range tasks {
+		if t.Err != nil {
+			return t.Err
+		}
+		updated := t.Result.(bool)
+		if updated {
 			count += 1
 		}
 	}

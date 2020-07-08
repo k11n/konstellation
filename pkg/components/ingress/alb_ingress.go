@@ -3,12 +3,14 @@ package ingress
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/components"
@@ -21,6 +23,8 @@ const (
 	albRoleAnnotation    = "eks.amazonaws.com/role-arn"
 	albControllerVersion = "1.1.8"
 )
+
+var alblog = logf.Log.WithName("component.ALBIngress")
 
 func init() {
 	components.RegisterComponent(&AWSALBIngress{})
@@ -81,6 +85,7 @@ func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, tlsHosts []
 	if len(tlsHosts) > 0 {
 		listeners = `[{"HTTP": 80}, {"HTTPS": 443}]`
 	}
+
 	annotations = map[string]string{
 		"kubernetes.io/ingress.class":                "alb",
 		"alb.ingress.kubernetes.io/healthcheck-port": resources.IngressHealthPort,
@@ -88,6 +93,41 @@ func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, tlsHosts []
 		"alb.ingress.kubernetes.io/ip-address-type":  "dualstack",
 		"alb.ingress.kubernetes.io/listen-ports":     listeners,
 		"alb.ingress.kubernetes.io/scheme":           "internet-facing",
+	}
+
+	// get all certs and match against
+	certs, err := resources.ListCertificates(kclient)
+	if err != nil {
+		return
+	}
+
+	arns := make([]string, 0)
+	seenCerts := make(map[string]bool, 0)
+	for _, host := range tlsHosts {
+		var matchingCert *v1alpha1.CertificateRef
+		for i := range certs {
+			cert := &certs[i]
+			if resources.CertificateCovers(cert.Spec.Domain, host) {
+				if matchingCert == nil || cert.Spec.ExpiresAt.After(matchingCert.Spec.ExpiresAt.Time) {
+					matchingCert = cert
+				}
+			}
+		}
+		if matchingCert != nil {
+			//alblog.Info("certificate matching host", "certDomain", matchingCert.Spec.Domain,
+			//	"certID", matchingCert.Name, "hostDomain", host)
+			arn := matchingCert.Spec.ProviderID
+			if seenCerts[arn] {
+				// certificate already included
+				continue
+			}
+			seenCerts[arn] = true
+			arns = append(arns, arn)
+		}
+	}
+
+	if len(arns) > 0 {
+		annotations["alb.ingress.kubernetes.io/certificate-arn"] = strings.Join(arns, ",")
 	}
 	return
 }

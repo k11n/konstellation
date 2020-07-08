@@ -37,6 +37,7 @@ func GetCertificateForDomain(kclient client.Client, domain string) (cert *v1alph
 }
 
 func GetCertificateThatMatchDomain(kclient client.Client, domain string) (cert *v1alpha1.CertificateRef, err error) {
+	// TODO: this should be more efficient
 	certList := v1alpha1.CertificateRefList{}
 	err = kclient.List(context.TODO(), &certList, client.MatchingLabels{
 		DomainLabel: TopLevelDomain(domain),

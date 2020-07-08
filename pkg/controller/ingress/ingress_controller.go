@@ -2,6 +2,7 @@ package ingress
 
 import (
 	"context"
+	"sort"
 
 	netv1beta1 "k8s.io/api/networking/v1beta1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -236,6 +237,8 @@ func (r *ReconcileIngressRequest) ingressForRequests(requests []v1alpha1.Ingress
 			tlsHosts = append(tlsHosts, host)
 		}
 	}
+	// sort to ensure stable ordering
+	sort.Strings(tlsHosts)
 	annotations, err := ingressComponent.GetIngressAnnotations(r.client, tlsHosts)
 	if err != nil {
 		return nil, err

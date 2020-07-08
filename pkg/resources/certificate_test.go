@@ -20,4 +20,5 @@ func TestCertificateCovers(t *testing.T) {
 	assert.True(t, CertificateCovers("*.mydomain.com", "sub.mydomain.com"))
 	assert.False(t, CertificateCovers("*.mydomain.com", "sub.sub.mydomain.com"))
 	assert.False(t, CertificateCovers("mydomain.com", "wrongdomain.com"))
+	assert.False(t, CertificateCovers("*.mydomain.com", "my.otherdomain.com"))
 }
