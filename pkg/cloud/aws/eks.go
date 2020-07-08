@@ -8,13 +8,17 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/gammazero/workerpool"
 
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/cloud/types"
+	"github.com/k11n/konstellation/pkg/utils/async"
 )
 
 const (
@@ -63,18 +67,40 @@ func (s *EKSService) ListClusters(ctx context.Context) (clusters []*types.Cluste
 	if err != nil {
 		return
 	}
+
+	wp := workerpool.New(10)
+	tasks := make([]*async.Task, 0)
+
 	// describe each cluster
-	for _, clusterName := range clusterNames {
-		descOut, err := s.EKS.DescribeClusterWithContext(ctx, &eks.DescribeClusterInput{
-			Name: clusterName,
+	for i, _ := range clusterNames {
+		clusterName := clusterNames[i]
+		t := async.NewTask(func() (interface{}, error) {
+			descOut, err := s.EKS.DescribeClusterWithContext(ctx, &eks.DescribeClusterInput{
+				Name: clusterName,
+			})
+			if err != nil {
+				return nil, err
+			}
+			if descOut.Cluster.Tags[TagKonstellation] != nil && *descOut.Cluster.Tags[TagKonstellation] == TagValue1 {
+				return clusterFromEksCluster(descOut.Cluster), nil
+			}
+			return nil, nil
 		})
-		if err != nil {
-			return nil, err
-		}
-		if descOut.Cluster.Tags[TagKonstellation] != nil && *descOut.Cluster.Tags[TagKonstellation] == TagValue1 {
-			clusters = append(clusters, clusterFromEksCluster(descOut.Cluster))
-		}
+		tasks = append(tasks, t)
+		wp.Submit(t.Run)
 	}
+	wp.StopWait()
+
+	for _, t := range tasks {
+		if t.Err != nil {
+			return nil, t.Err
+		}
+		if t.Result == nil {
+			continue
+		}
+		clusters = append(clusters, t.Result.(*types.Cluster))
+	}
+
 	return
 }
 
@@ -89,8 +115,45 @@ func (s *EKSService) GetCluster(ctx context.Context, name string) (cluster *type
 	return
 }
 
-func (s *EKSService) GetAuthToken(ctx context.Context, cluster string) (authToken *types.AuthToken, err error) {
-	stsSvc := sts.New(s.session)
+func (s *EKSService) GetAuthToken(ctx context.Context, cluster string, status types.ClusterStatus) (authToken *types.AuthToken, err error) {
+	var stsSvc *sts.STS
+
+	// when fully configured, we should always be using the admin role when providing kube auth token
+	// normally with EKS only the user who's created the cluster has access
+	if status == types.StatusActive {
+		stsSvc = sts.New(s.session)
+		// get current user and account info
+		res, err := stsSvc.GetCallerIdentityWithContext(ctx, &sts.GetCallerIdentityInput{})
+		if err != nil {
+			return nil, err
+		}
+
+		roleArn := arn.ARN{
+			Partition: "aws",
+			Service:   "iam",
+			AccountID: *res.Account,
+			Resource:  fmt.Sprintf("role/kon-%s-admin-role", cluster),
+		}
+
+		callerArn, err := arn.Parse(*res.Arn)
+		if err != nil {
+			return nil, err
+		}
+		parts := strings.Split(callerArn.Resource, "/")
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("unexpected AWS identity: %s, expected user/<name>", callerArn.Resource)
+		}
+		userName := parts[1]
+		creds := stscreds.NewCredentials(s.session, roleArn.String(), func(p *stscreds.AssumeRoleProvider) {
+			p.RoleSessionName = userName
+		})
+
+		// create new STS with the role
+		stsSvc = sts.New(s.session, &aws.Config{Credentials: creds})
+	} else {
+		stsSvc = sts.New(s.session)
+	}
+
 	req, _ := stsSvc.GetCallerIdentityRequest(&sts.GetCallerIdentityInput{})
 	req.HTTPRequest.Header.Set("x-k8s-aws-id", cluster)
 	signedUrl, err := req.Presign(URL_TIMEOUT_SECONDS * time.Second)
@@ -318,6 +381,13 @@ func clusterFromEksCluster(ec *eks.Cluster) *types.Cluster {
 		decoded, err := base64.StdEncoding.DecodeString(*ec.CertificateAuthority.Data)
 		if err == nil {
 			cluster.CertificateAuthorityData = decoded
+		}
+	}
+
+	// consider unactivated clusters as unconfigured
+	if cluster.Status == types.StatusActive {
+		if ec.Tags[TagClusterActivated] == nil {
+			cluster.Status = types.StatusUnconfigured
 		}
 	}
 	return cluster

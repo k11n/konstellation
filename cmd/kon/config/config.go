@@ -7,6 +7,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/k11n/konstellation/pkg/cloud/types"
 	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
@@ -20,16 +21,17 @@ const (
 	ExecutableName = "kon"
 )
 
-type ClusterLocation struct {
+type ClusterInfo struct {
 	Cloud  string
 	Region string
+	Status types.ClusterStatus
 }
 
 type ClientConfig struct {
 	Clouds struct {
 		AWS AWSConfig `yaml:"aws,omitempty"`
 	} `yaml:"clouds,omitempty"`
-	Clusters        map[string]*ClusterLocation
+	Clusters        map[string]*ClusterInfo
 	SelectedCluster string
 
 	persisted bool
@@ -73,7 +75,7 @@ func (c *ClientConfig) IsClusterSelected() bool {
 	return c.SelectedCluster != ""
 }
 
-func (c *ClientConfig) GetClusterLocation(cluster string) (*ClusterLocation, error) {
+func (c *ClientConfig) GetClusterLocation(cluster string) (*ClusterInfo, error) {
 	cl := c.Clusters[cluster]
 	if cl == nil {
 		return nil, fmt.Errorf("Could not find cluster %s", cluster)

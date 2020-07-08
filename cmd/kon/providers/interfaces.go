@@ -29,6 +29,7 @@ type ClusterManager interface {
 	// Cluster
 	CreateCluster(cc *v1alpha1.ClusterConfig) error
 	CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) error
+	ActivateCluster(cc *v1alpha1.ClusterConfig) error
 	DeleteCluster(name string) error
 	DeleteNodepool(cluster string, nodepool string) error
 

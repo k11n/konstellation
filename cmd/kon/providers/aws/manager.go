@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -250,7 +251,12 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	}
 
 	// at last add thumbprint so the provider we created could work
-	return a.addCAThumbprintToProvider(cc.Name)
+	err = a.addCAThumbprintToProvider(cc.Name)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) error {
@@ -316,6 +322,31 @@ func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nod
 			return true
 		},
 	)
+
+	return err
+}
+
+func (a *AWSManager) ActivateCluster(cc *v1alpha1.ClusterConfig) error {
+	if err := a.addAdminRole(cc.Name, cc.Spec.AWS.AdminRoleArn); err != nil {
+		return err
+	}
+
+	eksSvc := eks.New(session.Must(a.awsSession()))
+
+	res, err := eksSvc.DescribeCluster(&eks.DescribeClusterInput{
+		Name: &cc.Name,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	_, err = eksSvc.TagResource(&eks.TagResourceInput{
+		ResourceArn: res.Cluster.Arn,
+		Tags: map[string]*string{
+			kaws.TagClusterActivated: aws.String(kaws.TagValue1),
+		},
+	})
 
 	return err
 }
@@ -784,6 +815,43 @@ func (a *AWSManager) addCAThumbprintToProvider(cluster string) error {
 	}
 
 	return nil
+}
+
+func (a *AWSManager) addAdminRole(cluster, roleArn string) error {
+	kclient, err := a.kubernetesClient(cluster)
+	if err != nil {
+		return err
+	}
+
+	// load the configmap
+	confMap, err := resources.GetConfigMap(kclient, resources.KubeSystemNamespace, "aws-auth")
+	if err != nil {
+		return err
+	}
+
+	mappingList, err := ParseRoleMappingList(confMap.Data["mapRoles"])
+	if err != nil {
+		return err
+	}
+
+	r := mappingList.GetRole(roleArn)
+	if r == nil {
+		r = &IAMRoleMapping{RoleArn: roleArn}
+		mappingList = append(mappingList, r)
+	}
+
+	r.Groups = []string{"system:masters"}
+	r.Username = "user:{{SessionName}}"
+
+	// serialize back and save
+	data, err := yaml.Marshal(mappingList)
+	if err != nil {
+		return err
+	}
+
+	confMap.Data["mapRoles"] = string(data)
+
+	return kclient.Update(context.Background(), confMap)
 }
 
 func (a *AWSManager) quotaConsoleUrl() string {

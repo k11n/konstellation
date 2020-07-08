@@ -5,26 +5,19 @@ import (
 	"time"
 )
 
-type ClusterStatus int
+type ClusterStatus string
 
 const (
-	StatusCreating ClusterStatus = iota
-	StatusActive
-	StatusDeleting
-	StatusFailed
-	StatusUpdating
-	StatusUnconfigured
+	StatusCreating     ClusterStatus = "creating"
+	StatusActive       ClusterStatus = "active"
+	StatusDeleting     ClusterStatus = "deleting"
+	StatusFailed       ClusterStatus = "failed"
+	StatusUpdating     ClusterStatus = "updating"
+	StatusUnconfigured ClusterStatus = "unconfigured"
 )
 
 func (s ClusterStatus) String() string {
-	return [...]string{
-		"CREATING",
-		"ACTIVE",
-		"DELETING",
-		"FAILED",
-		"UPDATING",
-		"UNCONFIGURED",
-	}[s]
+	return string(s)
 }
 
 type Cluster struct {

@@ -11,6 +11,7 @@ require (
 	github.com/coreos/prometheus-operator v0.38.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/daaku/go.zipexe v1.0.1 // indirect
+	github.com/gammazero/workerpool v0.0.0-20200608033439-1a5ca90a5753
 	github.com/go-logr/logr v0.1.0
 	github.com/hako/durafmt v0.0.0-20200605151348-3a43fc422dd9
 	github.com/hashicorp/golang-lru v0.5.4 // indirect

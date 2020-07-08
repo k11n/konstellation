@@ -370,6 +370,11 @@ func clusterCreate(c *cli.Context) error {
 		return err
 	}
 
+	// activate
+	if err = cm.ActivateCluster(cc); err != nil {
+		return err
+	}
+
 	// delete state files to clear up half completed state
 	os.Remove(clusterConfigFile)
 	os.Remove(nodepoolConfigFile)
@@ -635,7 +640,14 @@ func clusterGetToken(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	token, err := cm.KubernetesProvider().GetAuthToken(context.TODO(), clusterName)
+
+	conf := config.GetConfig()
+	var status types.ClusterStatus
+	if conf.Clusters[clusterName] != nil {
+		status = conf.Clusters[clusterName].Status
+	}
+
+	token, err := cm.KubernetesProvider().GetAuthToken(context.TODO(), clusterName, status)
 	if err != nil {
 		return err
 	}
@@ -783,7 +795,7 @@ func loadExistingConfigs(ccPath, npPath string) (cc *v1alpha1.ClusterConfig, np 
 
 func updateClusterLocations() error {
 	conf := config.GetConfig()
-	conf.Clusters = make(map[string]*config.ClusterLocation)
+	conf.Clusters = make(map[string]*config.ClusterInfo)
 
 	for _, cm := range GetClusterManagers() {
 		ksvc := cm.KubernetesProvider()
@@ -796,9 +808,10 @@ func updateClusterLocations() error {
 		}
 
 		for _, cluster := range clusters {
-			conf.Clusters[cluster.Name] = &config.ClusterLocation{
+			conf.Clusters[cluster.Name] = &config.ClusterInfo{
 				Cloud:  cm.Cloud(),
 				Region: cm.Region(),
+				Status: cluster.Status,
 			}
 		}
 	}

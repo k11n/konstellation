@@ -5,6 +5,7 @@ import "fmt"
 const (
 	TagSubnetScope       = "k11n.dev/subnetScope"
 	TagClusterName       = "k11n.dev/clusterName"
+	TagClusterActivated  = "k11n.dev/clusterActivated"
 	TagAutoscalerEnabled = "k8s.io/cluster-autoscaler/enabled"
 	TagKonstellation     = "Konstellation"
 	TagEKSNodeGroupName  = "eks:nodegroup-name"

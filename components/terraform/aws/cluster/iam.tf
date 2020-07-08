@@ -96,8 +96,7 @@ resource "aws_iam_role_policy_attachment" "eks_node_role_eks_container_registry_
 data "aws_caller_identity" "current" {}
 
 resource "aws_iam_role" "cluster_admin_role" {
-  name        = "kon-${var.cluster}-admin-role"
-
+  name               = "kon-${var.cluster}-admin-role"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -107,7 +106,12 @@ resource "aws_iam_role" "cluster_admin_role" {
       "Principal": {
         "AWS": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
       },
-      "Action": "sts:AssumeRole"
+      "Action": "sts:AssumeRole",
+      "Condition": {
+        "StringEqualsIgnoreCase": {
+          "sts:RoleSessionName": "$${aws:username}"
+        }
+      }
     }
   ]
 }
