@@ -97,6 +97,7 @@ data "aws_caller_identity" "current" {}
 
 resource "aws_iam_role" "cluster_admin_role" {
   name               = "kon-${var.cluster}-admin-role"
+  description        = "Kubernetes admin role for ${var.cluster}"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
