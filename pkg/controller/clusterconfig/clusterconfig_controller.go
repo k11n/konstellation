@@ -36,6 +36,7 @@ const (
 	k8sName                   = "k8s"
 	defaultScrapeInterval     = "15s"
 	defaultEvaluationInterval = "30s"
+	defaultRetentionPeriod    = "7d"
 )
 
 func Add(mgr manager.Manager) error {
@@ -227,6 +228,7 @@ func newPrometheus(config map[string]string, storageClass string) *promv1.Promet
 					corev1.ResourceMemory: resource.MustParse("400Mi"),
 				},
 			},
+			Retention: defaultRetentionPeriod,
 			RuleSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					prometheusName: k8sName,
