@@ -17,7 +17,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 29,
-  "iteration": 1594247888344,
+  "iteration": 1594361592945,
   "links": [],
   "panels": [
     {
@@ -197,7 +197,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Throughput",
+      "title": "Requests by status",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -272,11 +272,18 @@
       "seriesOverrides": [
         {
           "alias": "% utilization",
+          "color": "#8AB8FF",
           "fill": 0,
           "yaxis": 2
         },
         {
           "alias": "cores requested",
+          "color": "#FF9830",
+          "fill": 0
+        },
+        {
+          "alias": "cores limit",
+          "color": "#F2495C",
           "fill": 0
         }
       ],
@@ -290,14 +297,19 @@
           "refId": "C"
         },
         {
+          "expr": "sum(namespace_pod_container:container_cpu_usage_seconds_total:rate5m{namespace=\"${target}\", pod=~\"${app}-\\\\d{8}.*\", container!=\"istio-proxy\"})/ sum(namespace_pod_container:kube_pod_container_resource_requests_cpu_cores{namespace=\"${target}\", pod=~\"${app}-\\\\d{8}.*\", container!=\"istio-proxy\"})",
+          "legendFormat": "% utilization",
+          "refId": "B"
+        },
+        {
           "expr": "max(namespace_pod_container:kube_pod_container_resource_requests_cpu_cores{namespace=\"${target}\", pod=~\"${app}-\\\\d{8}.*\", container!=\"istio-proxy\"})",
           "legendFormat": "cores requested",
           "refId": "A"
         },
         {
-          "expr": "sum(namespace_pod_container:container_cpu_usage_seconds_total:rate5m{namespace=\"${target}\", pod=~\"${app}-\\\\d{8}.*\", container!=\"istio-proxy\"})/ sum(namespace_pod_container:kube_pod_container_resource_requests_cpu_cores{namespace=\"${target}\", pod=~\"${app}-\\\\d{8}.*\", container!=\"istio-proxy\"})",
-          "legendFormat": "% utilization",
-          "refId": "B"
+          "expr": "max(namespace_pod_container:kube_pod_container_resource_limits_cpu_cores{namespace=\"${target}\", pod=~\"${app}-\\\\d{8}.*\", container!=\"istio-proxy\"})",
+          "legendFormat": "cores limit",
+          "refId": "D"
         }
       ],
       "thresholds": [],
@@ -332,7 +344,7 @@
           "format": "percentunit",
           "label": null,
           "logBase": 1,
-          "max": "1",
+          "max": null,
           "min": "0",
           "show": true
         }
@@ -382,6 +394,12 @@
       "seriesOverrides": [
         {
           "alias": "limit",
+          "color": "#E02F44",
+          "fill": 0
+        },
+        {
+          "alias": "requested",
+          "color": "#FF9830",
           "fill": 0
         }
       ],
@@ -393,6 +411,11 @@
           "expr": "avg(label_replace(\n\tnamespace_pod_container:container_memory_working_set_bytes{namespace=\"${target}\", container!=\"istio-proxy\", pod=~\"${app}-\\\\d{8}.*\"},\n\t\"release\", \"$1\", \"pod\", \"([a-zA-Z0-9-]+-[0-9]+-[0-9]+-[a-z0-9]+).+\")\n\t) by (release)",
           "legendFormat": "{{release}}",
           "refId": "A"
+        },
+        {
+          "expr": "max(namespace_pod_container:kube_pod_container_resource_requests_memory_bytes{namespace=\"${target}\", container!=\"istio-proxy\", pod=~\"${app}-\\\\d{8}.*\"})",
+          "legendFormat": "requested",
+          "refId": "C"
         },
         {
           "expr": "max(namespace_pod_container:kube_pod_container_resource_limits_memory_bytes{namespace=\"${target}\", container!=\"istio-proxy\", pod=~\"${app}-\\\\d{8}.*\"})",
@@ -737,6 +760,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "description": "Inbound bytes/s split by source",
       "fill": 5,
       "fillGradient": 0,
       "gridPos": {
@@ -781,7 +805,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Bytes/sec by source",
+      "title": "Throughput by source",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1013,6 +1037,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "description": "Outbound bytes/s split by destination",
       "fill": 3,
       "fillGradient": 0,
       "gridPos": {
@@ -1057,7 +1082,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Bytes/sec by destination",
+      "title": "Throughput by destination",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1164,5 +1189,5 @@
   "timezone": "",
   "title": "App Overview",
   "uid": "thZnaFGGk",
-  "version": 9
+  "version": 12
 }

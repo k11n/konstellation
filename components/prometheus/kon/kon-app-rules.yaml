@@ -40,26 +40,43 @@ spec:
           irate(istio_request_duration_milliseconds_count{app_kubernetes_io_managed_by="konstellation", reporter="destination"}[1m])
         ) by (destination_service, source_app, k11n_dev_appRelease)
       record: destination_service_source_release:istio_request_duration_milliseconds_count:irate1m
+      # cpu requests
     - expr: |
         sum(
           kube_pod_container_resource_requests_cpu_cores{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}
         ) by (namespace, pod, container)
       record: namespace_pod_container:kube_pod_container_resource_requests_cpu_cores
+      # cpu limit
+    - expr: |
+        sum(
+          kube_pod_container_resource_limits_cpu_cores{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}
+        ) by (namespace, pod, container)
+      record: namespace_pod_container:kube_pod_container_resource_limits_cpu_cores
+      # cpu used
     - expr: |
         sum(
           rate(container_cpu_usage_seconds_total{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}[5m])
         ) by (namespace, pod, container)
       record: namespace_pod_container:container_cpu_usage_seconds_total:rate5m
+    # cpu throttled
     - expr: |
         sum(
           rate(container_cpu_cfs_throttled_seconds_total{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}[5m])
         ) by (namespace, pod, container)
       record: namespace_pod_container:container_cpu_cfs_throttled_seconds_total:rate5m
+      # memory used
     - expr: |
         sum(
           container_memory_working_set_bytes{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}
         ) by (namespace, pod, container)
       record: namespace_pod_container:container_memory_working_set_bytes
+      # memory requests
+    - expr: |
+        sum(
+          kube_pod_container_resource_requests_memory_bytes{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}
+        ) by (namespace, pod, container)
+      record: namespace_pod_container:kube_pod_container_resource_requests_memory_bytes
+      # memory limits
     - expr: |
         sum(
           kube_pod_container_resource_limits_memory_bytes{container!="POD", container=~".+", namespace!~".*-system", namespace!="grafana", namespace=~".+"}
