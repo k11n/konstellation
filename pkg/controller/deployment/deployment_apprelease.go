@@ -370,10 +370,8 @@ func (r *ReconcileDeployment) reconcileAutoScaler(at *v1alpha1.AppTarget, releas
 	scaler := newAutoscalerForAppTarget(at, activeRelease)
 	// see if any of the existing scalers match the current template
 	for _, s := range scalerList.Items {
-		if s.Labels[resources.AppReleaseLabel] == scaler.Labels[resources.AppReleaseLabel] {
-			scaler = &s
-		} else {
-			// delete the other ones (there should be only one scaler at any time
+		if s.Labels[resources.AppReleaseLabel] != scaler.Labels[resources.AppReleaseLabel] {
+			// delete the other scalers on older releases
 			log.Info("Deleting autoscaler for old releases", "appTarget", at.Name)
 			if err := r.client.Delete(ctx, &s); err != nil {
 				return err
