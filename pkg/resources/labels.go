@@ -11,6 +11,7 @@ const (
 	BuildTypeLabel     = "k11n.dev/buildType"
 	AppReleaseLabel    = "k11n.dev/appRelease"
 	DomainLabel        = "k11n.dev/domain"
+	TargetReleaseLabel = "k11n.dev/targetRelease"
 
 	KubeManagedByLabel   = "app.kubernetes.io/managed-by"
 	KubeAppLabel         = "app"

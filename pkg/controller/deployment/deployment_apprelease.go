@@ -125,6 +125,7 @@ func (r *ReconcileDeployment) reconcileAppReleases(at *v1alpha1.AppTarget, confi
  * Determine current releases and flip release switch
  */
 func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) (res *reconcile.Result, err error) {
+	// need a way to test this controller
 	logger := log.WithValues("appTarget", at.Name)
 
 	if len(releases) == 0 {
@@ -165,14 +166,14 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		return
 	}
 
-	// first deploy, turn on immediately
+	// choose target release
 	if activeRelease == nil {
+		// first deploy, turn on immediately
 		activeRelease = firstDeployableRelease
 		targetRelease = activeRelease
 		logger.Info("Deploying initial release", "release", activeRelease.Name)
 		hasChanges = true
 	} else {
-		// TODO: don't deploy additional builds when outside of schedule
 		// see if there's a new target release (try to deploy latest if possible)
 		// TODO: check if autorelease is enabled for this target..
 		newTarget := firstDeployableRelease
@@ -189,6 +190,7 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		}
 	}
 
+	// TODO: don't deploy additional builds when outside of schedule
 	// TODO: when there are canaries, compute remaining percentage here
 	desiredInstances := at.DesiredInstances()
 	targetTrafficPercentage := targetRelease.Spec.TrafficPercentage
@@ -199,17 +201,19 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		increment = 1.0
 	}
 
-	if targetRelease == activeRelease {
-		targetTrafficPercentage = 100
-		targetRelease.Spec.NumDesired = desiredInstances
-	} else if desiredInstances == 0 {
+	if desiredInstances == 0 {
 		logger.Info("Scaling target to 0 instances", "release", targetRelease.Name)
 		// technically nothing should be getting traffic.. but if it's not set to 100% istio will reject config
 		targetTrafficPercentage = 100
+		if targetRelease.Spec.NumDesired != 0 {
+			hasChanges = true
+		}
 		targetRelease.Spec.NumDesired = desiredInstances
-		hasChanges = true
 		// flip to active
 		activeRelease = targetRelease
+	} else if targetRelease == activeRelease {
+		targetTrafficPercentage = 100
+		targetRelease.Spec.NumDesired = desiredInstances
 	} else {
 		// increase by up to rampIncrement
 		maxIncrement := int32(float32(desiredInstances) * increment)
@@ -269,9 +273,11 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 			} else {
 				// scale down pods as a proportion of traffic
 				instanceCount := int32(float32(desiredInstances) * float32(ar.Spec.TrafficPercentage) / 100)
-				if instanceCount < 1 && ar.Spec.TrafficPercentage != 0 {
+				if desiredInstances > 0 && instanceCount < 1 && ar.Spec.TrafficPercentage != 0 {
 					instanceCount = 1
 				}
+
+				logger.Info("scaling down activeRelease instance", "count", instanceCount)
 				ar.Spec.NumDesired = instanceCount
 				ar.Spec.TrafficPercentage = 100 - targetTrafficPercentage
 			}
@@ -308,6 +314,15 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		totalTraffic += ar.Spec.TrafficPercentage
 	}
 
+	// update target label
+	for _, ar := range releases {
+		if ar == targetRelease {
+			ar.Labels[resources.TargetReleaseLabel] = "1"
+		} else {
+			delete(ar.Labels, resources.TargetReleaseLabel)
+		}
+	}
+
 	// if we have over 100%, then lower target until we are within threshold
 	if totalTraffic != 100 {
 		overage := totalTraffic - 100
@@ -320,7 +335,8 @@ func (r *ReconcileDeployment) deployReleases(at *v1alpha1.AppTarget, releases []
 		at.Status.DeployUpdatedAt = metav1.Now()
 	}
 
-	if !activeRelease.CreationTimestamp.IsZero() {
+	// only update app target status when it's not in the middle of a deployment
+	if !activeRelease.CreationTimestamp.IsZero() && activeRelease == targetRelease {
 		at.Status.NumDesired = activeRelease.Status.NumDesired
 		at.Status.NumReady = activeRelease.Status.NumReady
 		at.Status.NumAvailable = activeRelease.Status.NumAvailable

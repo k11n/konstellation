@@ -109,7 +109,7 @@ func (r *ReconcileAppRelease) Reconcile(request reconcile.Request) (reconcile.Re
 	}
 
 	shouldUpdate := true
-	if ar.Spec.Role == v1alpha1.ReleaseRoleActive {
+	if ar.Spec.Role == v1alpha1.ReleaseRoleActive && ar.Labels[resources.TargetReleaseLabel] == "1" {
 		// when we are reconciling the active release, it means autoscaler is in charge of setting the numDesired field
 		// on the replicaset. We don't want to proceed with updates
 		key, err := client.ObjectKeyFromObject(rs)
