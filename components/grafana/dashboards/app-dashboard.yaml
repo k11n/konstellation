@@ -26,8 +26,8 @@ spec:
       "editable": true,
       "gnetId": null,
       "graphTooltip": 0,
-      "id": 31,
-      "iteration": 1593813405797,
+      "id": 29,
+      "iteration": 1594698657326,
       "links": [],
       "panels": [
         {
@@ -187,9 +187,10 @@ spec:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code!=\"0\"}",
-              "legendFormat": "{{response_code}}",
-              "refId": "A"
+              "expr": "sum(destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code=\"200\"}) / sum(destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code!=\"0\"})",
+              "instant": false,
+              "legendFormat": "success rate",
+              "refId": "C"
             },
             {
               "expr": "sum(destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code!=\"0\"})",
@@ -197,17 +198,16 @@ spec:
               "refId": "B"
             },
             {
-              "expr": "sum(destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code=\"200\"}) / sum(destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code!=\"0\"})",
-              "instant": false,
-              "legendFormat": "success rate",
-              "refId": "C"
+              "expr": "destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code!=\"0\"}",
+              "legendFormat": "{{response_code}}",
+              "refId": "A"
             }
           ],
           "thresholds": [],
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Throughput",
+          "title": "Requests by status",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -234,8 +234,8 @@ spec:
               "format": "percentunit",
               "label": "success rate",
               "logBase": 1,
-              "max": null,
-              "min": null,
+              "max": "1",
+              "min": "0",
               "show": true
             }
           ],
@@ -271,7 +271,7 @@ spec:
           },
           "lines": true,
           "linewidth": 1,
-          "nullPointMode": "null",
+          "nullPointMode": "connected",
           "options": {
             "dataLinks": []
           },
@@ -282,10 +282,18 @@ spec:
           "seriesOverrides": [
             {
               "alias": "% utilization",
+              "color": "#8AB8FF",
+              "fill": 0,
               "yaxis": 2
             },
             {
               "alias": "cores requested",
+              "color": "#FF9830",
+              "fill": 0
+            },
+            {
+              "alias": "cores limit",
+              "color": "#F2495C",
               "fill": 0
             }
           ],
@@ -293,6 +301,11 @@ spec:
           "stack": false,
           "steppedLine": false,
           "targets": [
+            {
+              "expr": "avg(namespace_pod_container:container_cpu_usage_seconds_total:rate5m{namespace=\"${target}\", pod=~\"${app}-\\\\d{8}.*\", container!=\"istio-proxy\"})",
+              "legendFormat": "cores used",
+              "refId": "C"
+            },
             {
               "expr": "sum(namespace_pod_container:container_cpu_usage_seconds_total:rate5m{namespace=\"${target}\", pod=~\"${app}-\\\\d{8}.*\", container!=\"istio-proxy\"})/ sum(namespace_pod_container:kube_pod_container_resource_requests_cpu_cores{namespace=\"${target}\", pod=~\"${app}-\\\\d{8}.*\", container!=\"istio-proxy\"})",
               "legendFormat": "% utilization",
@@ -304,9 +317,9 @@ spec:
               "refId": "A"
             },
             {
-              "expr": "avg(namespace_pod_container:container_cpu_usage_seconds_total:rate5m{namespace=\"${target}\", pod=~\"${app}-\\\\d{8}.*\", container!=\"istio-proxy\"})",
-              "legendFormat": "cores used",
-              "refId": "C"
+              "expr": "max(namespace_pod_container:kube_pod_container_resource_limits_cpu_cores{namespace=\"${target}\", pod=~\"${app}-\\\\d{8}.*\", container!=\"istio-proxy\"})",
+              "legendFormat": "cores limit",
+              "refId": "D"
             }
           ],
           "thresholds": [],
@@ -337,11 +350,12 @@ spec:
               "show": true
             },
             {
+              "decimals": null,
               "format": "percentunit",
               "label": null,
               "logBase": 1,
               "max": null,
-              "min": null,
+              "min": "0",
               "show": true
             }
           ],
@@ -390,6 +404,12 @@ spec:
           "seriesOverrides": [
             {
               "alias": "limit",
+              "color": "#E02F44",
+              "fill": 0
+            },
+            {
+              "alias": "requested",
+              "color": "#FF9830",
               "fill": 0
             }
           ],
@@ -398,9 +418,14 @@ spec:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "avg(label_replace(\n\tnamespace_pod_container:container_memory_working_set_bytes{namespace=\"${target}\", container!=\"istio-proxy\", pod=~\"${app}-\\\\d{8}.*\"},\n\t\"release\", \"$1\", \"pod\", \"([a-zA-Z0-9-]+-[0-9]+-[0-9]+-[a-z0-9]+).+\")\n\t) by (release)",
-              "legendFormat": "{{release}}",
+              "expr": "max(label_replace(\n\tnamespace_pod_container:container_memory_working_set_bytes{namespace=\"${target}\", container!=\"istio-proxy\", pod=~\"${app}-\\\\d{8}.*\"},\n\t\"release\", \"$1\", \"pod\", \"([a-zA-Z0-9-]+-[0-9]+-[0-9]+-[a-z0-9]+).+\")\n\t) by (release)",
+              "legendFormat": "max use for {{release}}",
               "refId": "A"
+            },
+            {
+              "expr": "max(namespace_pod_container:kube_pod_container_resource_requests_memory_bytes{namespace=\"${target}\", container!=\"istio-proxy\", pod=~\"${app}-\\\\d{8}.*\"})",
+              "legendFormat": "requested",
+              "refId": "C"
             },
             {
               "expr": "max(namespace_pod_container:kube_pod_container_resource_limits_memory_bytes{namespace=\"${target}\", container!=\"istio-proxy\", pod=~\"${app}-\\\\d{8}.*\"})",
@@ -428,7 +453,7 @@ spec:
           },
           "yaxes": [
             {
-              "format": "short",
+              "format": "decbytes",
               "label": null,
               "logBase": 1,
               "max": null,
@@ -460,7 +485,7 @@ spec:
           },
           "id": 12,
           "panels": [],
-          "title": "Service Stats",
+          "title": "Inbound requests",
           "type": "row"
         },
         {
@@ -658,100 +683,12 @@ spec:
           "dashLength": 10,
           "dashes": false,
           "datasource": null,
-          "description": "Requests per second per instance",
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 26
-          },
-          "hiddenSeries": false,
-          "id": 18,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "dataLinks": []
-          },
-          "percentage": false,
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "expr": "sum(destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code!=\"0\"}) /\nsum(namespace_release:kon_running_pods:rate5m{namespace=\"${target}\", release=~\"${app}-\\\\d{8}-.*\"})",
-              "legendFormat": "rps",
-              "refId": "A"
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeRegions": [],
-          "timeShift": null,
-          "title": "RPS per instance",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": null,
           "fill": 5,
           "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 12,
-            "x": 12,
+            "x": 0,
             "y": 26
           },
           "hiddenSeries": false,
@@ -833,13 +770,14 @@ spec:
           "dashLength": 10,
           "dashes": false,
           "datasource": null,
+          "description": "Inbound bytes/s split by source",
           "fill": 5,
           "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 12,
-            "x": 0,
-            "y": 34
+            "x": 12,
+            "y": 26
           },
           "hiddenSeries": false,
           "id": 22,
@@ -868,7 +806,7 @@ spec:
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum(destination_service_release_source:istio_request_bytes_sum:rate5m) by (source_app) + sum(destination_service_release_source:istio_response_bytes_sum:rate5m) by (source_app)",
+              "expr": "sum(destination_service_release_source:istio_request_bytes_sum:rate5m{destination_service=\"${app}.${target}.svc.cluster.local\"}) by (source_app) + sum(destination_service_release_source:istio_response_bytes_sum:rate5m{destination_service=\"${app}.${target}.svc.cluster.local\"}) by (source_app)",
               "legendFormat": "{{source_app}}",
               "refId": "A"
             }
@@ -877,7 +815,7 @@ spec:
           "timeFrom": null,
           "timeRegions": [],
           "timeShift": null,
-          "title": "Traffic by source",
+          "title": "Throughput by source",
           "tooltip": {
             "shared": true,
             "sort": 0,
@@ -913,8 +851,286 @@ spec:
             "align": false,
             "alignLevel": null
           }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "Requests per second per instance",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 34
+          },
+          "hiddenSeries": false,
+          "id": 18,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(destination_service_response_code:istio_requests_total:irate5m{destination_service=\"${app}.${target}.svc.cluster.local\", response_code!=\"0\"}) /\nsum(namespace_release:kon_running_pods:rate5m{namespace=\"${target}\", release=~\"${app}-\\\\d{8}-.*\"})",
+              "legendFormat": "rps",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "RPS per instance",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "collapsed": false,
+          "datasource": null,
+          "gridPos": {
+            "h": 1,
+            "w": 24,
+            "x": 0,
+            "y": 42
+          },
+          "id": 24,
+          "panels": [],
+          "title": "Outbound requests",
+          "type": "row"
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "fill": 3,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 43
+          },
+          "hiddenSeries": false,
+          "id": 26,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "connected",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(app_target_release_destination:istio_response_bytes_count:rate5m{app=\"${app}\", k11n_dev_target=\"${target}\"}) by (destination_app)",
+              "legendFormat": "{{destination_app}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Requests by destination",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "reqps",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "description": "Outbound bytes/s split by destination",
+          "fill": 3,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 43
+          },
+          "hiddenSeries": false,
+          "id": 28,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "connected",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": true,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(app_target_release_destination:istio_request_bytes_sum:rate5m{app=\"${app}\", k11n_dev_target=\"${target}\"}) by (destination_app) + sum(app_target_release_destination:istio_response_bytes_sum:rate5m{app=\"${app}\", k11n_dev_target=\"${target}\"}) by (destination_app)",
+              "legendFormat": "{{destination_app}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Throughput by destination",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "decbytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
         }
       ],
+      "refresh": "30s",
       "schemaVersion": 21,
       "style": "dark",
       "tags": [],
@@ -922,6 +1138,10 @@ spec:
         "list": [
           {
             "allValue": null,
+            "current": {
+              "text": "apiserver",
+              "value": "apiserver"
+            },
             "datasource": "prometheus",
             "definition": "istio_requests_total",
             "hide": 0,
@@ -943,6 +1163,10 @@ spec:
           },
           {
             "allValue": null,
+            "current": {
+              "text": "production",
+              "value": "production"
+            },
             "datasource": "prometheus",
             "definition": "istio_requests_total",
             "hide": 0,
@@ -965,7 +1189,7 @@ spec:
         ]
       },
       "time": {
-        "from": "now-1h",
+        "from": "now-30m",
         "to": "now"
       },
       "timepicker": {
@@ -983,5 +1207,5 @@ spec:
       "timezone": "",
       "title": "App Overview",
       "uid": "thZnaFGGk",
-      "version": 23
+      "version": 13
     }

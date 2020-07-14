@@ -17,7 +17,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 29,
-  "iteration": 1594361592945,
+  "iteration": 1594698657326,
   "links": [],
   "panels": [
     {
@@ -408,8 +408,8 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(label_replace(\n\tnamespace_pod_container:container_memory_working_set_bytes{namespace=\"${target}\", container!=\"istio-proxy\", pod=~\"${app}-\\\\d{8}.*\"},\n\t\"release\", \"$1\", \"pod\", \"([a-zA-Z0-9-]+-[0-9]+-[0-9]+-[a-z0-9]+).+\")\n\t) by (release)",
-          "legendFormat": "{{release}}",
+          "expr": "max(label_replace(\n\tnamespace_pod_container:container_memory_working_set_bytes{namespace=\"${target}\", container!=\"istio-proxy\", pod=~\"${app}-\\\\d{8}.*\"},\n\t\"release\", \"$1\", \"pod\", \"([a-zA-Z0-9-]+-[0-9]+-[0-9]+-[a-z0-9]+).+\")\n\t) by (release)",
+          "legendFormat": "max use for {{release}}",
           "refId": "A"
         },
         {
@@ -1171,7 +1171,7 @@
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {
@@ -1189,5 +1189,5 @@
   "timezone": "",
   "title": "App Overview",
   "uid": "thZnaFGGk",
-  "version": 12
+  "version": 13
 }

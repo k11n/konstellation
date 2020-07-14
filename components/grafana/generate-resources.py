@@ -30,7 +30,7 @@ def main():
 
     files = [
         'grafana-instance.yaml',
-        'dashboards/datasource.yaml',
+        'datasource.yaml',
     ]
     for item in content['items']:
         json_name = list(item['data'].keys())[0]

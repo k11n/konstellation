@@ -35,7 +35,7 @@ const (
 	prometheusName            = "prometheus"
 	k8sName                   = "k8s"
 	defaultScrapeInterval     = "15s"
-	defaultEvaluationInterval = "30s"
+	defaultEvaluationInterval = "15s"
 	defaultRetentionPeriod    = "7d"
 )
 

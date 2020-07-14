@@ -137,8 +137,7 @@ spec:
             deployment:
               properties:
                 affinity:
-                  description: Additonal labels for running grafana pods with affinity
-                    properties.
+                  description: Additonal labels for running grafana pods with affinity properties.
                   type: object
                 annotations:
                   description: Additional annotations for the service
@@ -147,12 +146,10 @@ spec:
                   description: Additional labels for the service
                   type: object
                 nodeSelector:
-                  description: Additional labels for the running grafana pods in a
-                    labeled node.
+                  description: Additional labels for the running grafana pods in a labeled node.
                   type: object
                 tolerations:
-                  description: Additonal labels for running grafana pods in tained
-                    nodes.
+                  description: Additonal labels for running grafana pods in tained nodes.
                   type: array
               type: object
             disableLoginForm:
