@@ -1,0 +1,19 @@
+apiVersion: integreatly.org/v1alpha1
+kind: GrafanaDataSource
+metadata:
+  name: kon-datasource
+  namespace: grafana
+spec:
+  name: middleware.yaml
+  datasources:
+    - name: prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus-k8s.kon-system.svc:9090
+      isDefault: true
+      version: 1
+      editable: false
+      jsonData:
+        tlsSkipVerify: true
+        # this matches default scrape interval set in defaultScrapeInterval
+        timeInterval: "15s"
