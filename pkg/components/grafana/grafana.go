@@ -7,7 +7,7 @@ import (
 	"github.com/k11n/konstellation/pkg/components"
 )
 
-const grafanaVersion = "3.3.0"
+const grafanaVersion = "3.4.0"
 
 func init() {
 	components.RegisterComponent(&GrafanaOperator{})
