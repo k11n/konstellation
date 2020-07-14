@@ -129,14 +129,17 @@ func ForEach(kclient client.Client, listObj runtime.Object, eachFunc func(item i
 	shouldRun := true
 	var contToken string
 	ctx := context.Background()
+
 	for shouldRun {
 		shouldRun = false
 
-		options := append(opts, client.Limit(20))
+		options := make([]client.ListOption, 0, len(opts)+2)
+		options = append(options, opts...)
+		options = append(options, client.Limit(20))
 		if contToken != "" {
 			options = append(options, client.Continue(contToken))
 		}
-		err := kclient.List(ctx, listObj, opts...)
+		err := kclient.List(ctx, listObj, options...)
 		if err != nil {
 			return err
 		}

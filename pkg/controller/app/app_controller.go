@@ -215,7 +215,7 @@ func (r *ReconcileApp) reconcileBuild(app *v1alpha1.App) (*v1alpha1.Build, error
 
 	// is the build the latest? if not we should fetch the latest
 	// app controller should not deploy older builds. that's the job of build controller
-	if existing.Labels != nil && existing.Labels[resources.BuildTypeLabel] == resources.BuildTypeLatest {
+	if existing.Labels != nil && existing.Labels[resources.BuildTypeLabel] != resources.BuildTypeLatest {
 		// find latest build
 		return resources.GetLatestBuild(r.client, app.Spec.Registry, app.Spec.Image)
 	}
