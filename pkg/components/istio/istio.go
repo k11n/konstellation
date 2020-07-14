@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	istioVersion = "1.6.2"
+	istioVersion = "1.6.5"
 )
 
 func init() {
