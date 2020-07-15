@@ -17,3 +17,23 @@ Once declared, Konstellation resolves dependent services for you and places conn
 :::caution
 Konstellation doesn't validate that dependencies actually exist. If the app is dependent on an app that doesn't exist, it will never start.
 :::
+
+As an example
+
+```yaml title="app.yaml"
+...
+dependencies:
+  - name: reviews
+    port: grpc
+  - name: orders
+    port: http
+```
+
+This app will receive the following env vars. They can be used to connect to the respective services.
+
+```bash
+REVIEWS_GRPC_HOST=reviews.target.svc.cluster.local:3001
+ORDERS_HTTP_HOST=orders.target.svc.cluster.local:80
+```
+
+When [running locally](/develop#runninglocally), the same environment variables are made available. Since they cannot access private Kubernetes addresses, Konstellation will automatically set up local proxies to your dependencies, then setting the same env vars to the proxy addresses.

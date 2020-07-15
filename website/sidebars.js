@@ -26,6 +26,7 @@ module.exports = {
       label: 'Cluster Operation',
       items: [
         'clusters/creation',
+        'clusters/users',
         'clusters/upgrading',
       ],
     },

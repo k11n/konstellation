@@ -33,26 +33,6 @@ References an app as a dependency. Once you specify another app as a dependency,
 | target        | string          | no       | Target you are dependent upon, by default, it's the same target as the current running app
 | port          | string          | no       | Name of the port you need, when undefined, it references all defined ports.
 
-If you have the following dependencies declared
-
-```yaml
-...
-dependencies:
-  - name: reviews
-    port: grpc
-  - name: orders
-    port: http
-```
-
-It'll will receive the following env vars. They can be used to connect to the respective services.
-
-```bash
-REVIEWS_GRPC_HOST=reviews.target.svc.cluster.local:3001
-ORDERS_HTTP_HOST=orders.target.svc.cluster.local:80
-```
-
-When [running locally](../apps/develop#runninglocally), the same environment variables are made available. Since they cannot access private Kubernetes addresses, Konstellation will automatically set up local proxies to your dependencies, then setting the same env vars to the proxy addresses.
-
 ## IngressConfig
 
 Specification for an Ingress. An Ingress always listens on port 80/443 externally. SSL is terminated automatically at the load balancer automatically as long if there's a matching certificate on ACM. See [Setting up SSL](../apps/basics.mdx#setting-up-ssl)

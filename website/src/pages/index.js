@@ -10,7 +10,7 @@ import dracula from 'prism-react-renderer/themes/dracula';
 
 const features = [
   {
-    title: <>Easy to Use</>,
+    title: <>Easy to use</>,
     imageUrl: 'img/undraw_docusaurus_mountain.svg',
     description: (
       <>
@@ -19,20 +19,20 @@ const features = [
     ),
   },
   {
-    title: <>Production ready</>,
+    title: <>Build for microservices</>,
     imageUrl: 'img/undraw_docusaurus_tree.svg',
     description: (
       <>
-        Built on years of experience with running production Kubernetes clusters. Konstellation provides an integrated stack including load balancing, autoscaling, service mesh, release management, and observability.
+        Built on years of experience with running services on Kubernetes. Konstellation provides an integrated stack including load balancing, autoscaling, service mesh, release management, and observability.
       </>
     ),
   },
   {
-    title: <>Optimized for AWS</>,
+    title: <>Integrated with AWS</>,
     imageUrl: 'img/undraw_docusaurus_react.svg',
     description: (
       <>
-        Konstellation has been optimized to work with AWS. It helps you to set up and manage EKS clusters, nodepools, VPCs, and load balancers. It integrates with other AWS services to provide a secure and robust apps platform.
+        Konstellation has been optimized to work on AWS. It manages EKS clusters, nodepools, VPCs, and load balancers. It integrates with other AWS services to provide a secure and robust apps platform.
       </>
     ),
   },

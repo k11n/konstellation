@@ -81,7 +81,7 @@ If you have a SSL certificate for the configured domain, Konstellation can [set 
 
 ### Configuring your app
 
-For most non-trivial apps, you'd likely want to pass in configuration. Konstellation lets you manage both app and shared configs. See [Configuration](../apps.md#configuration) for details.
+For most non-trivial apps, you'd likely want to pass in configuration. Konstellation lets you manage both app and shared configs. See [Configuration](../apps/configuration.md) for details.
 
 ## Cleaning it all up
 

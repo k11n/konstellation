@@ -2,7 +2,7 @@
 title: Monitoring
 ---
 
-Observability is a critical piece of any production infrastructure. Konstellation comes configured with Kube dashboard, Prometheus, Grafana, AlertManager, as well as a set of dashboards for the apps that you deploy.
+Observability is a critical piece of any production infrastructure. Konstellation comes configured with Kube dashboard, Prometheus ([prometheus-operator](https://github.com/coreos/prometheus-operator)), Grafana, AlertManager, as well as a set of dashboards for the apps that are deploy.
 
 You can also use the same Prometheus instance to collect additional metrics about your apps.
 
@@ -32,6 +32,10 @@ This dashboard is a quick way of getting the key metrics about apps, including r
 
 An overview of the health of the service mesh. It's useful when it comes to diagnosing the current flow of traffic.
 
+### Adding new dashboards
+
+Konstellation uses [Grafana Operator](https://github.com/integr8ly/grafana-operator), and you can define additional dashboards via the CRD [GrafanaDashboard](https://github.com/integr8ly/grafana-operator/blob/master/documentation/dashboards.md). Once created, it'll be applied to Grafana automatically.
+
 ## Prometheus
 
 The pre-configured Prometheus install runs redundant with two instances. Metric data is stored on an EBS volume attached to each instance (set up as a persistent volume). Launch Prometheus web UI with `kon launch prometheus`.
@@ -40,7 +44,7 @@ This Prometheus install is configured to collect metrics for the cluster and Ist
 
 ### Collecting app metrics
 
-The default setup could provide basic metrics observable from outside of apps, but to measure app-specific metrics, you need to integrate one of the Prometheus [client libraries](https://prometheus.io/docs/instrumenting/clientlibs/) and expose a metric endpoint on one of the ports. You can enable Prometheus scraping by setting the [prometheus]() field in the manifest.
+The default setup could provide basic metrics observable from outside of apps, but to measure app-specific metrics, you need to integrate one of the Prometheus [client libraries](https://prometheus.io/docs/instrumenting/clientlibs/) and expose a metric endpoint on one of the ports. You can enable Prometheus scraping by setting the [prometheus](../reference/manifest#prometheusspec) field in the manifest.
 
 ```yaml title="App.yaml"
 apiVersion: k11n.dev/v1alpha1
@@ -52,7 +56,7 @@ spec:
   prometheus:
     endpoints:
     - port: http
-      interval: 10s  # s, m suffixes
+      interval: 15s  # s, m suffixes
       # override path if you aren't able to surface metrics on the default /metrics path
       # path: /metrics
 ```

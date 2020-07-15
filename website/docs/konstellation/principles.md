@@ -10,13 +10,11 @@ When upgrading third party components, we choose versions of components that hav
 
 ## Abstraction with extensibility
 
-In order to simplify complex systems, we create abstractions as software engineers. Sometimes, the abstraction becomes the only way to interact with that complex system, and it becomes limiting.
+In order to simplify complex systems, we create abstractions as software engineers. We believe the right type of abtractions would make the common case much less painful, but yet does not make it opaque so it becomes impossible access the underlying engine.
 
-We believe in extensible abstractions, where the abstraction applies to the common uses cases, and yet does not prevent access to the underlying engine.
+Konstellation achieves this with its operator and Custom Resource Definitions. While it drastically simplifies what's involved in creating and managing apps, it does so by managing underlying native Kubernetes resources.
 
-While Konstellation is an abstraction on top of Kubernetes, you may still use raw Kubernetes and create resources directly with `kubectl`; it doesn't take away any of the existing functionality of Kube.
-
-
+You can access and inspect the Kube resources created by Konstellation, and they will continue to function in absense of the Konstellation operator.
 
 ## Reproducibility and undo
 

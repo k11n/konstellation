@@ -38,7 +38,7 @@ Documentation for this is coming.
 
 ## Targets
 
-Target is a concept in Konstellation that provides a namespace for apps. A target is roughly equivalent to a specific environment of an app. For example, you could specify a production and a development target, with different configurations for hostnames, scale parameters, and receive target-specific configs.
+Target is a concept in Konstellation that provides a namespace for apps. A target is roughly equivalent to a specific environment of an app. Targets are designed so that you can easily [achieve parity across environments](https://12factor.net/dev-prod-parity). For example, you could specify a production and a development target, with different configurations for hostnames, scale parameters, and even define [target specific app configs](configuration#target-specific-overrides).
 
 Each cluster would define the targets that it supports with `kon cluster configure`. When deploying an app to a cluster, it will set up a deployment for each target that the cluster has declared. This configuration allows for the flexibility of using the same `app.yaml` across multiple clusters, if you prefer to have dedicated clusters for each target.
 
@@ -99,19 +99,27 @@ max: 20
 
 ## Releases
 
-A release is a base unit of an app's deployment. It locks in the app's build along with any configurations. Each change in the app's build or config would trigger a new release to be created. You could list the releases with `kon app status <yourapp>`
+A release is [a base unit of an app's deployment](https://12factor.net/build-release-run). It locks in the app's build along with any configurations. Each change in the app's build or config would trigger a new release to be created. You could list the releases with `kon app status <yourapp>`
 
 To deploy a new build, use `kon app deploy --tag <docker tag> <yourapp>`
 
 Konstellation would scale up the new release incrementally, and gradually shift over traffic to it. If there's a problem with a particular build or configuration, you could rollback to a prior working release with the `kon app rollback` command. Rollback marks a particular release as bad, and will cause the system to automatically deploy the previous working version.
 
+## Ports
+
+Ports are [the way](https://12factor.net/port-binding) to enable your app to serve requests from other apps, and the internet at large.
+
+In Konstellation, ports are required to have a name, and those names are used to reference that port in Ingress as well as [app dependencies](services#connecting-to-services).
+
+The port number can be whichever that the app wants to listen on. There will not be any collision issues with other apps that might use the same port, due to the way [Kubernetes' networking layer is designed](https://kubernetes.io/docs/concepts/cluster-administration/networking/#the-kubernetes-network-model).
+
 ## Ingress
 
-If the app needs to be surfaced to the internet, you'd have to declare an [ingress](../reference/manifest#ingressconfig) in order to create a load balancer.
+If the app needs to be surfaced to the internet, you'd want to declare an [Ingress](../reference/manifest#ingressconfig) in order to create a load balancer.
 
-In the ingress config, list all of the domains that you wish the load balancer to handle. Konstellation will manage a AWS ALB and configure it to listen for all the traffic for your domains.
+In the Ingress config, list all of the domains that you wish the load balancer to handle. Konstellation will manage a AWS ALB and configure it to listen for all the traffic for your domains. With Ingress, the public port it surfaces will always be 80 for HTTP and 443 for HTTPS.
 
-Once created, you can check the address of the load balancer with `kon app status <yourapp>`. Then, set up an ALIAS or CNAME with your DNS provider pointing the domain to that address.
+Once created, you can get the address of the load balancer with `kon app status <yourapp>`. Then, set up an ALIAS or CNAME with your DNS provider pointing the domain to that address.
 
 To test the app before changing DNS, you can run
 

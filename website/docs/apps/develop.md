@@ -6,15 +6,32 @@ One of the shortcomings of Kubernetes is that it's hard to know what's going on 
 
 Konstellation simplifies the debugging & development process by giving you an app-centric way of
 
-## Getting logs
+## Logging
+
+Apps should [write logs to stdout](https://12factor.net/logs), in JSON. It should not have to worry about the underlying storage of logs, or be concerned with uploading logs to another service. Konstellation can work with Kubernetes logging to perform standard log operations.
 
 To pull app logs from production, or to tail the logs, you would run the `kon app logs <yourapp>` command. It will guide you through the process of picking a pod to inspect.
 
 By default, it'll print the last 100 lines of logs from your container. To follow logs, run `kon app logs -f <yourapp>`.
 
+For more advanced log management, you could use third party solutions that integrate with Kubernetes, such as [Fluentd](https://docs.fluentd.org/container-deployment/kubernetes), [Datadog](https://docs.datadoghq.com/integrations/kubernetes/), or [Sematext](https://sematext.com/docs/agents/sematext-agent/kubernetes/installation/), to name a few.
+
+## Proxy
+
+When apps are running inside Kubernetes, they are typically behind various security groups and inaccessible from developer machines. It's helpful to be able to load the responses manually to inspect it. Kubernetes has a [built-in proxy](https://kubernetes.io/docs/tasks/extend-kubernetes/http-proxy-access-api/) that can map of a cluster address to localhost.
+
+Konstellation integrates with the proxy and makes it easier to reach your apps. `launch proxy` command would open a new proxy to a specific app, mapping it to the app's usual port onto localhost.
+
+```
+% kon launch proxy --app myapp
+Proxy to production.apiserver: started on http://localhost:9000
+```
+
+You can also proxy to non-Konstellation services, by passing in `--service` and `--namespace` flags.
+
 ## Running locally
 
-When you need to replicate the in-cluster setup to test an app locally, Konstellation provides a shortcut in doing so.
+When you need to replicate the in-cluster setup to run an app locally, Konstellation provides a shortcut in doing so.
 
 It has a `local` mode that replicates the in-cluster config for the app. To use this, run `kon app local [--target target] <yourapp>`
 
