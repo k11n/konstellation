@@ -61,6 +61,7 @@ func nodepoolList(c *cli.Context) error {
 	table.SetHeader([]string{
 		"Name",
 		"Machine Type",
+		"Num Nodes",
 		"Min Size",
 		"Max Size",
 		"Disk Size",
@@ -72,6 +73,7 @@ func nodepoolList(c *cli.Context) error {
 		table.Append([]string{
 			np.Name,
 			np.Spec.MachineType,
+			cast.ToString(np.Status.NumReady),
 			cast.ToString(np.Spec.MinSize),
 			cast.ToString(np.Spec.MaxSize),
 			fmt.Sprintf("%d GiB", np.Spec.DiskSizeGiB),

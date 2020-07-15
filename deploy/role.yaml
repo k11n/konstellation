@@ -16,6 +16,7 @@ rules:
   - configmaps
   - secrets
   - namespaces
+  - node
   verbs:
   - create
   - delete
@@ -97,7 +98,8 @@ rules:
   - certificates
   - appreleases
   - appconfigs
-  - rolebasedserviceaccounts
+  - nodepools
+  - linkedserviceaccounts
   verbs:
   - create
   - delete

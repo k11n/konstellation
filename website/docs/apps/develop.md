@@ -2,13 +2,13 @@
 title: Development & Debugging
 ---
 
-One of the shortcomings of Kubernetes is that it's hard to know what's going on within the cluster. It could sometimes feel like a blackbox, with limited tools in seeing what's in there. And if your app is failing in production, how do you replicate the setup to reproduce the error locally?
+One of the shortcomings of Kubernetes is that it can be difficult to know what's going on within the cluster. It sometimes feels like a blackbox, with limited tools in seeing what's in there. And if your app is failing in production, how do you replicate the setup to reproduce the error locally?
 
-Konstellation simplifies the debugging & development process by giving you an app-centric way of
+Konstellation simplifies the debugging & development process by giving you an app-centric tools to obtain visibility.
 
 ## Logging
 
-Apps should [write logs to stdout](https://12factor.net/logs), in JSON. It should not have to worry about the underlying storage of logs, or be concerned with uploading logs to another service. Konstellation can work with Kubernetes logging to perform standard log operations.
+Apps should [write logs to stdout](https://12factor.net/logs), in JSON. It should not have to worry about the underlying storage of logs, or be concerned with uploading logs to another service. Konstellation works with Kubernetes logging to perform standard log operations.
 
 To pull app logs from production, or to tail the logs, you would run the `kon app logs <yourapp>` command. It will guide you through the process of picking a pod to inspect.
 
