@@ -58,6 +58,10 @@ module.exports = {
           title: 'Docs',
           items: [
             {
+              label: 'Getting Started',
+              to: 'docs/',
+            },
+            {
               label: 'Working with Apps',
               to: 'docs/apps/basics',
             },
