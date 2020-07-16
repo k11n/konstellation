@@ -4,9 +4,9 @@ title: Cluster Creation
 
 ## Network topology
 
-Konstellation operates within its own VPC due to the complexities in networking setup. When you create the VPC, there are two network topologies to choose from for the VPC.
+Konstellation needs to operate in a VPC that it has created due to complexities in networking setup. You may place other AWS services into the same VPC once it's created.
 
-Both topologies ensures your load balancers are accessible from the internet. The tradeoffs are between levels of security and cost.
+There are two network topologies to choose from when creating the VPC. Both topologies ensures your load balancers are accessible from the internet. The tradeoffs are between levels of security and cost.
 
 We recommend using a /16 CIDR block. Konstellation will use one bit to denote public vs private, and 3 bits for the availability zones, leaving 12 bits or 4000 available IP addresses for each subnet.
 
