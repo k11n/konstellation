@@ -15,6 +15,7 @@
     "prism-react-renderer": "^1.1.1",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
+    "react-twitter-embed": "^3.0.3",
     "rehype-truncate": "^1.1.0",
     "remark-images": "^2.0.0"
   },
