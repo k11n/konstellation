@@ -19,6 +19,10 @@ Together, it's designed for you to deploy well architected, scalable apps and se
 
 We'll be linking to the best practices throughout this documentation.
 
+## How it works
+
+![How it works](/img/how-it-works.svg)
+
 ## AWS EKS
 
 The ambition of Konstellation is to provide an abstraction over Kubernetes implementations across cloud providers so that apps remain portable. However, we need to start by doing one thing _really_ _really_ _well_. We've decided that the initial target would be Amazon AWS. Konstellation will create and manage clusters on EKS, as well as work with the rest of the AWS ecosystem (load balancers, IAM).
