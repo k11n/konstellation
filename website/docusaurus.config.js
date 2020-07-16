@@ -78,16 +78,28 @@ module.exports = {
               label: 'GitHub',
               href: repoUrl,
             },
-            {
-              label: 'Support',
-              to: 'docs/support',
-            }
+            // {
+            //   label: 'Support',
+            //   to: 'docs/support',
+            // }
           ],
         },
       ],
       // Copyright © ${new Date().getFullYear()} Konstellation, LLC.
       copyright: `Apache 2.0 Licensed.`,
     },
+    announcementBar: {
+      id: 'private_beta',
+      content: 'Konstellation is currently in private beta, interested in early access? <a href="https://forms.gle/Eh9je8GmS7NRSXf69" target="_blank">Sign up here</a>',
+      backgroundColor: '#141e59',
+      textColor: '#FFFFFF',
+    },
+    // algolia: {
+    //   apiKey: 'api-key',
+    //   indexName: 'index-name',
+    //   appId: 'app-id', // Optional, if you run the DocSearch crawler on your own
+    //   algoliaOptions: {}, // Optional, if provided by Algolia
+    // },
   },
   presets: [
     [
@@ -105,6 +117,11 @@ module.exports = {
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
+        },
+        sitemap: {
+          cacheTime: 6000 * 1000, // 600 sec - cache purge period
+          changefreq: 'weekly',
+          priority: 0.5,
         },
       },
     ],

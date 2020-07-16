@@ -27,6 +27,7 @@ module.exports = {
       items: [
         'clusters/creation',
         'clusters/users',
+        'clusters/networking',
         'clusters/upgrading',
       ],
     },
@@ -38,9 +39,9 @@ module.exports = {
         'reference/linkedserviceaccount',
       ],
     },
-    {
-      type: 'doc',
-      id: 'support',
-    },
+    // {
+    //   type: 'doc',
+    //   id: 'support',
+    // },
   ],
 };

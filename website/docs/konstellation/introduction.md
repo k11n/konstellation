@@ -25,6 +25,6 @@ The ambition of Konstellation is to provide an abstraction over Kubernetes imple
 
 Konstellation itself is designed to be as cloud agnostic as possible, making it simple to plug in additional cloud providers in the future. If you are interested in making this happen, please consider contributing.
 
-## Beta software
+## Private beta
 
-Konstellation is currently in beta. As with most beta software, you should expect bugs to be there and be willing to [report them](https://github.com/k11n/konstellation/issues). We'll do our best at addressing incoming issues as quickly as possible.
+Konstellation is currently in private beta. If you are interested in trying it during the beta, [sign up here](https://forms.gle/Eh9je8GmS7NRSXf69).

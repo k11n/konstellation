@@ -10,6 +10,8 @@ Both topologies ensures your load balancers are accessible from the internet. Th
 
 We recommend using a /16 CIDR block. Konstellation will use one bit to denote public vs private, and 3 bits for the availability zones, leaving 12 bits or 4000 available IP addresses for each subnet.
 
+When you create multiple clusters, they can either be put into the same VPC, or different VPCs. We'd recommend using the same VPC to reduce the amount of overhead in administration.
+
 ### Public
 
 With this configuration, there's a single public subnet (per availability zone), and an internet gateway (IGW) to allow bidirectional communication over the internet. This means that every EKS node (EC2 instances) are reachable via the internet. To fine tune security and connection settings, use security groups associated with the EKS cluster.
