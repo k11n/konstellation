@@ -12,6 +12,8 @@ Konstellation works with EKS today. Google GKE and Azure AKS are both on the roa
 
 Before you start, ensure that you have [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) and [terraform](https://learn.hashicorp.com/terraform/getting-started/install.html) installed.
 
+Konstellation requires an S3 bucket to store state related to the cloud resources that you create. It doesn't rely on any other databases. App-specific configurations & attributes are stored in Kubernetes itself as resources.
+
 ## Installation
 
 Konstellation CLI is be compatible with Mac, Linux, and Windows. On Mac it's available via Brew. Otherwise you could build it from source.

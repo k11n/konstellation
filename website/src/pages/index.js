@@ -23,7 +23,7 @@ const features = [
     imageUrl: 'img/undraw_docusaurus_tree.svg',
     description: (
       <>
-        Built on years of experience with running services on Kubernetes. Konstellation provides an integrated stack including load balancing, autoscaling, service mesh, release management, and observability.
+        Built on years of experience with running services on Kubernetes. Konstellation provides an integrated stack including load balancing, autoscaling, service discovery, release management, and observability.
       </>
     ),
   },
@@ -94,8 +94,9 @@ function Home() {
       description="Description will go into a meta tag in <head />">
       <header className={clsx('hero hero--primary', styles.heroBanner)}>
         <div className="container">
-          <h1 className="hero__title">{siteConfig.title}</h1>
-          <p className="hero__subtitle">{siteConfig.tagline}</p>
+          <h1 className="heroTagline">{siteConfig.tagline}</h1>
+          {/* <h1 className="hero__title">{siteConfig.title}</h1>
+          <p className="hero_tagline">{siteConfig.tagline}</p> */}
           <div className={styles.buttons}>
             <Link
               className={clsx(

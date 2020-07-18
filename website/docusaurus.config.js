@@ -6,7 +6,7 @@ var repoUrl = 'https://github.com/k11n/konstellation'
 
 module.exports = {
   title: 'Konstellation',
-  tagline: 'Open source application platform for Kubernetes',
+  tagline: 'A simple framework to deploy resilient applications on Kubernetes',
   url: 'https://konstellation.dev',
   baseUrl: '/',
   favicon: 'img/favicon.ico',

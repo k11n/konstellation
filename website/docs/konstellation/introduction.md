@@ -2,20 +2,20 @@
 title: Introduction
 ---
 
-Konstellation is an open source app platform that helps developers to deploy apps & services quickly on Kubernetes. It's a production-grade system that lets you manage a scalable infrastructure, without having to deal with the layers of complexities that comes with Kubernetes.
+Konstellation is an open source application platform that helps developers to deploy and manage apps on Kubernetes. It provides a scalable infrastructure, give you a simple, and yet robust, interface on top of Kubernetes.
 
 ## What is it
 
-Konstellation is set of software components working together on top of Kubernetes. It consists of
+Konstellation is a complete software stack working on top of Kubernetes. It consists of
 
 * a management CLI that runs on your dev machine (`kon`)
-* [custom resource definitions](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRDs) that allows you to specify Apps as a first class resource
+* [custom resource definitions](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRDs) that allows you to specify Apps as a resource
 * a set of best of breed components (Istio, Ingress controller, Prometheus, Grafana) configured to compatible with the version of Kubernetes on the cluster.
 * a [Kubernetes operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) that makes all of the components work together
 * Grafana dashboards for observability into health of apps
-* Terraform based automation that manages cloud resources related to clusters.
+* Terraform based automation that creates and manages clusters and other cloud resources.
 
-Together, it's designed for you to deploy well architected, scalable apps and services; making it simple to achieve many of the patterns described in [the twelve factor app](https://12factor.net/).
+Together, it's designed for you to deploy resilient, scalable apps and services; making it simple to achieve many of the patterns described in [the twelve factor app](https://12factor.net/).
 
 We'll be linking to the best practices throughout this documentation.
 
