@@ -28,3 +28,9 @@ h1.heroTagline {
   color: #fff;
   font-size: 60px;
 }
+
+.buttonCta {
+  font-size: 24px;
+  font-weight: 700;
+  border-width: 2px;
+}
