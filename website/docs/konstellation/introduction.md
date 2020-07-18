@@ -32,3 +32,17 @@ Konstellation itself is designed to be as cloud agnostic as possible, making it 
 ## Private beta
 
 Konstellation is currently in private beta. If you are interested in trying it during the beta, [sign up here](https://forms.gle/Eh9je8GmS7NRSXf69).
+
+## Third-party software and licensing
+
+Konstellation is Apache 2.0 licensed. It makes of use of other Apache 2.0 licensed software. When a cluster is created with Konstellation, the following components will be installed onto your cluster:
+
+* [ALB Ingress Controller](https://github.com/kubernetes-sigs/aws-alb-ingress-controller)
+* [Grafana Operator](https://github.com/integr8ly/grafana-operator)
+* [Grafana](https://github.com/grafana/grafana)
+* [Istio](https://istio.io/)
+* [Kubernetes Autoscaler](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler)
+* [Kubernetes Dashboard](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/)
+* [Kubernetes Metrics Server](https://github.com/kubernetes-sigs/metrics-server)
+* [Prometheus Operator](https://github.com/coreos/prometheus-operator)
+* [Prometheus](https://prometheus.io/)
