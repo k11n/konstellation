@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sort"
 	"strings"
 	"syscall"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -18,8 +20,10 @@ import (
 	"github.com/k11n/konstellation/cmd/kon/config"
 	"github.com/k11n/konstellation/cmd/kon/kube"
 	"github.com/k11n/konstellation/cmd/kon/utils"
+	kaws "github.com/k11n/konstellation/pkg/cloud/aws"
 	"github.com/k11n/konstellation/pkg/components"
 	"github.com/k11n/konstellation/pkg/components/ingress"
+	"github.com/k11n/konstellation/pkg/utils/async"
 )
 
 type AWSProvider struct {
@@ -77,7 +81,7 @@ func (a *AWSProvider) Setup() error {
 	// prompt for regions
 	regions := awsConf.Regions
 	if len(regions) == 0 {
-		regions = []string{"us-west-2", "us-east-2"}
+		regions = []string{"us-east-1", "us-west-2"}
 	}
 	validRegions := map[string]bool{}
 	resolver := endpoints.DefaultResolver()
@@ -178,15 +182,97 @@ func (a *AWSProvider) GetComponents() []components.ComponentInstaller {
 }
 
 func (a *AWSProvider) createStateBucket(sess *session.Session, defaultBucket string) (bucketName string, bucketRegion string, err error) {
-	fmt.Println("Konstellation needs to store configuration in a S3 bucket, enter name of an existing or new bucket.")
-	fmt.Println("If you've already created a bucket on a different machine, please enter the same one.")
-	bucketPrompt := promptui.Prompt{
-		Label:   "Bucket name",
-		Default: defaultBucket,
+	s3Svc := s3.New(sess)
+
+	listRes, err := s3Svc.ListBuckets(&s3.ListBucketsInput{})
+	if err != nil {
+		return
 	}
-	utils.FixPromptBell(&bucketPrompt)
+
+	wp := async.NewWorkerPool()
+	for i := range listRes.Buckets {
+		bucket := listRes.Buckets[i]
+		wp.AddTask(func() (interface{}, error) {
+			bi, err := getBucketInfo(*bucket.Name, sess)
+			if err != nil {
+				return false, err
+			}
+
+			regionS3 := s3.New(sess, &aws.Config{
+				Region: &bi.region,
+			})
+			res, err := regionS3.GetBucketTagging(&s3.GetBucketTaggingInput{
+				Bucket: bucket.Name,
+			})
+			if err != nil {
+				// ignore tag errors, when there are no tags, it returns NoSuchTagSetError
+				return false, nil
+			}
+
+			for _, tag := range res.TagSet {
+				if *tag.Key == kaws.TagKonstellation {
+					return true, nil
+				}
+			}
+			return false, nil
+		})
+	}
+	wp.StopWait()
+
+	konBuckets := make(map[string]bool)
+	bucketNames := make([]string, 0)
+	for i, task := range wp.GetTasks() {
+		bucket := listRes.Buckets[i]
+		// return error
+		if task.Err != nil {
+			err = errors.Wrapf(task.Err, "could not get bucket info: %s", *bucket.Name)
+			return
+		}
+
+		if res, ok := task.Result.(bool); ok && res {
+			konBuckets[*bucket.Name] = res
+			bucketNames = append(bucketNames, *bucket.Name)
+		}
+	}
+
+	// sort, ensure kon buckets appear first
+	sort.Slice(bucketNames, func(i, j int) bool {
+		if konBuckets[bucketNames[i]] == konBuckets[bucketNames[j]] {
+			return strings.Compare(bucketNames[i], bucketNames[j]) < 0
+		}
+		if konBuckets[bucketNames[i]] {
+			return true
+		}
+		return false
+	})
+
+	fmt.Println("Konstellation needs to store configuration in a S3 bucket, select an existing one or create new.")
+	fmt.Println("WARNING: if you are trying to manage existing Konstellation clusters, select the same state bucket.")
+
+	// select existing bucket
+	bucketNames = append(bucketNames, "Create new")
+	bucketSelect := utils.NewPromptSelect("Select state bucket", bucketNames)
+	idx, bucketName, err := bucketSelect.Run()
+	if err != nil {
+		return
+	}
+
+	// selected existing bucket
+	if idx != len(bucketNames)-1 {
+		bi, err := getBucketInfo(bucketName, sess)
+		if err != nil {
+			return "", "", err
+		}
+		return bucketName, bi.region, nil
+	}
 
 	bucketPromptFunc := func() (string, error) {
+		// create new bucket
+		bucketPrompt := promptui.Prompt{
+			Label:   "Bucket name",
+			Default: defaultBucket,
+		}
+		utils.FixPromptBell(&bucketPrompt)
 		bn, err := bucketPrompt.Run()
 		if err != nil {
 			return "", err
@@ -229,9 +315,10 @@ func (a *AWSProvider) createStateBucket(sess *session.Session, defaultBucket str
 	}
 
 	bucketRegion = bi.region
+
 	if !bi.exists {
 		// bucket doesn't exist, try to create it
-		bucketPrompt = promptui.Prompt{
+		bucketPrompt := promptui.Prompt{
 			Label:     fmt.Sprintf("Bucket %s doesn't exist, ok to create?", bucketName),
 			IsConfirm: true,
 		}
@@ -240,14 +327,27 @@ func (a *AWSProvider) createStateBucket(sess *session.Session, defaultBucket str
 			return
 		}
 
-		s3Svc := s3.New(sess)
 		bucketRegion = *s3Svc.Config.Region
 		_, err = s3Svc.CreateBucket(&s3.CreateBucketInput{
 			Bucket: &bucketName,
 		})
 		if err != nil {
 			err = errors.Wrap(err, "Could not create bucket")
+			return
 		}
+
+		// tag selected bucket
+		_, err = s3Svc.PutBucketTagging(&s3.PutBucketTaggingInput{
+			Bucket: &bucketName,
+			Tagging: &s3.Tagging{
+				TagSet: []*s3.Tag{
+					{
+						Key:   aws.String(kaws.TagKonstellation),
+						Value: aws.String(kaws.TagValue1),
+					},
+				},
+			},
+		})
 	}
 
 	return
@@ -280,13 +380,18 @@ func getBucketInfo(bucket string, session *session.Session) (*bucketInfo, error)
 			// new bucket, we'll create it
 			bi.hasPermission = true
 			bi.exists = false
-		case "BadRequest":
+		case "BadRequest", "BucketRegionError":
 			// see if we can get region info
 			res, err := s3Svc.GetBucketLocation(&s3.GetBucketLocationInput{Bucket: &bucket})
 			if err != nil {
-				return nil, err
+				return nil, aerr
 			}
-			bi.region = *res.LocationConstraint
+			if res.LocationConstraint == nil {
+				// legacy: us-east-1 has a constraint of null
+				bi.region = "us-east-1"
+			} else {
+				bi.region = *res.LocationConstraint
+			}
 			bi.exists = true
 			bi.hasPermission = true
 		default:

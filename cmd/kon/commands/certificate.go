@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gammazero/workerpool"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
@@ -125,20 +124,17 @@ func certSync(c *cli.Context) error {
 
 	seenCerts := map[string]bool{}
 	count := 0
-	wp := workerpool.New(10)
-	tasks := make([]*async.Task, 0, len(certs))
+	wp := async.NewWorkerPool()
 	for i := range certs {
 		cert := certs[i]
 		seenCerts[cert.ID] = true
-		t := async.NewTask(func() (interface{}, error) {
+		wp.AddTask(func() (interface{}, error) {
 			return syncCertificate(kclient, cert)
 		})
-		tasks = append(tasks, t)
-		wp.Submit(t.Run)
 	}
 	wp.StopWait()
 
-	for _, t := range tasks {
+	for _, t := range wp.GetTasks() {
 		if t.Err != nil {
 			return t.Err
 		}

@@ -14,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/gammazero/workerpool"
 
 	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/cloud/types"
@@ -68,13 +67,12 @@ func (s *EKSService) ListClusters(ctx context.Context) (clusters []*types.Cluste
 		return
 	}
 
-	wp := workerpool.New(10)
-	tasks := make([]*async.Task, 0)
+	wp := async.NewWorkerPool()
 
 	// describe each cluster
 	for i, _ := range clusterNames {
 		clusterName := clusterNames[i]
-		t := async.NewTask(func() (interface{}, error) {
+		wp.AddTask(func() (interface{}, error) {
 			descOut, err := s.EKS.DescribeClusterWithContext(ctx, &eks.DescribeClusterInput{
 				Name: clusterName,
 			})
@@ -86,12 +84,10 @@ func (s *EKSService) ListClusters(ctx context.Context) (clusters []*types.Cluste
 			}
 			return nil, nil
 		})
-		tasks = append(tasks, t)
-		wp.Submit(t.Run)
 	}
 	wp.StopWait()
 
-	for _, t := range tasks {
+	for _, t := range wp.GetTasks() {
 		if t.Err != nil {
 			return nil, t.Err
 		}

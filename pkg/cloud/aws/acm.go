@@ -6,7 +6,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/acm"
-	"github.com/gammazero/workerpool"
 
 	"github.com/k11n/konstellation/pkg/cloud/types"
 	"github.com/k11n/konstellation/pkg/utils/async"
@@ -30,11 +29,10 @@ func (a *ACMService) ListCertificates(ctx context.Context) (certificates []*type
 		return
 	}
 
-	wp := workerpool.New(10)
-	tasks := make([]*async.Task, 0, len(out.CertificateSummaryList))
+	wp := async.NewWorkerPool()
 	for i := range out.CertificateSummaryList {
 		summary := out.CertificateSummaryList[i]
-		task := async.NewTask(func() (interface{}, error) {
+		wp.AddTask(func() (interface{}, error) {
 			res, err := a.ACM.DescribeCertificateWithContext(ctx, &acm.DescribeCertificateInput{
 				CertificateArn: summary.CertificateArn,
 			})
@@ -43,12 +41,10 @@ func (a *ACMService) ListCertificates(ctx context.Context) (certificates []*type
 			}
 			return certificateFromDetails(res.Certificate), nil
 		})
-		tasks = append(tasks, task)
-		wp.Submit(task.Run)
 	}
 
 	wp.StopWait()
-	for _, t := range tasks {
+	for _, t := range wp.GetTasks() {
 		if t.Err != nil {
 			return nil, t.Err
 		}
