@@ -27,7 +27,17 @@ type AppReleaseStatus struct {
 	NumDesired     int32        `json:"numDesired"`
 	NumReady       int32        `json:"numReady"`
 	NumAvailable   int32        `json:"numAvailable"`
-	Reason         string       `json:"reason"`
+
+	// contains pods that are failing to become ready
+	// +kubebuilder:validation:Optional
+	// +nullable
+	PodErrors []PodStatus `json:"podErrors,omitempty"`
+}
+
+type PodStatus struct {
+	Pod     string `json:"pod"`
+	Reason  string `json:"reason"`
+	Message string `json:"message"`
 }
 
 type ReleaseState string

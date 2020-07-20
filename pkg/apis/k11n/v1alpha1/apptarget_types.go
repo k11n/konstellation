@@ -44,22 +44,27 @@ type AppTargetSpec struct {
 	Prometheus *PrometheusSpec `json:"prometheus,omitempty"`
 }
 
+type AppTargetPhase string
+
+var (
+	AppTargetPhaseRunning   AppTargetPhase = "running"   // normal
+	AppTargetPhaseDeploying AppTargetPhase = "deploying" // deploying a new release
+	AppTargetPhaseHalted    AppTargetPhase = "halted"    // target halted
+)
+
 // AppTargetStatus defines the observed state of AppTarget
 type AppTargetStatus struct {
-	TargetRelease   string      `json:"targetRelease"`
-	ActiveRelease   string      `json:"activeRelease"`
-	DeployUpdatedAt metav1.Time `json:"deployUpdatedAt"`
+	Phase           AppTargetPhase `json:"phase"`
+	TargetRelease   string         `json:"targetRelease"`
+	ActiveRelease   string         `json:"activeRelease"`
+	DeployUpdatedAt metav1.Time    `json:"deployUpdatedAt"`
 	// +kubebuilder:validation:Optional
 	// +nullable
 	LastScaledAt *metav1.Time `json:"lastScaledAt"`
 	NumDesired   int32        `json:"numDesired"`
 	NumReady     int32        `json:"numReady"`
 	NumAvailable int32        `json:"numAvailable"`
-	// +optional
-	Hostname string `json:"hostname,omitempty"`
-	// +optional
-	Ingress  string   `json:"ingress,omitempty"`
-	Messages []string `json:"messages,omitempty"`
+	Hostname     string       `json:"hostname,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -846,16 +846,10 @@ spec:
               type: string
             hostname:
               type: string
-            ingress:
-              type: string
             lastScaledAt:
               format: date-time
               nullable: true
               type: string
-            messages:
-              items:
-                type: string
-              type: array
             numAvailable:
               format: int32
               type: integer
@@ -865,6 +859,8 @@ spec:
             numReady:
               format: int32
               type: integer
+            phase:
+              type: string
             targetRelease:
               type: string
           required:
@@ -873,6 +869,7 @@ spec:
           - numAvailable
           - numDesired
           - numReady
+          - phase
           - targetRelease
           type: object
       type: object

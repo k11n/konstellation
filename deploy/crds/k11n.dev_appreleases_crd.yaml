@@ -415,8 +415,22 @@ spec:
             numReady:
               format: int32
               type: integer
-            reason:
-              type: string
+            podErrors:
+              items:
+                properties:
+                  message:
+                    type: string
+                  pod:
+                    type: string
+                  reason:
+                    type: string
+                required:
+                - message
+                - pod
+                - reason
+                type: object
+              nullable: true
+              type: array
             state:
               type: string
             stateChangedAt:
@@ -426,7 +440,6 @@ spec:
           - numAvailable
           - numDesired
           - numReady
-          - reason
           - state
           - stateChangedAt
           type: object
