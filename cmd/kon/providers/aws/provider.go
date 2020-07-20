@@ -139,18 +139,17 @@ func (a *AWSProvider) Setup() error {
 		return errors.Wrapf(err, "Couldn't make authenticated calls using provided credentials")
 	}
 
-	p := func(s string) *string { return &s }
 	resp, err := iamSvc.SimulatePrincipalPolicy(&iam.SimulatePrincipalPolicyInput{
 		ActionNames: []*string{
 			// State bucket
-			p("s3:GetObject"),
-			p("s3:CreateBucket"),
-			p("s3:ListBucket"),
-			p("s3:GetBucketLocation"),
+			aws.String("s3:GetObject"),
+			aws.String("s3:CreateBucket"),
+			aws.String("s3:ListBucket"),
+			aws.String("s3:GetBucketLocation"),
 			// Cluster info
-			p("eks:ListClusters"),
-			p("eks:DescribeCluster"),
-			p("eks:DescribeNodegroup"),
+			aws.String("eks:ListClusters"),
+			aws.String("eks:DescribeCluster"),
+			aws.String("eks:DescribeNodegroup"),
 		},
 		PolicySourceArn: user.User.Arn,
 	})
@@ -321,6 +320,7 @@ func (a *AWSProvider) createStateBucket(sess *session.Session, defaultBucket str
 		bucketPrompt := promptui.Prompt{
 			Label:     fmt.Sprintf("Bucket %s doesn't exist, ok to create?", bucketName),
 			IsConfirm: true,
+			Default:   "Y",
 		}
 		utils.FixPromptBell(&bucketPrompt)
 		if _, err = bucketPrompt.Run(); err != nil {
@@ -360,6 +360,7 @@ type bucketInfo struct {
 	exists        bool
 }
 
+// TODO: functional test for this
 func getBucketInfo(bucket string, session *session.Session) (*bucketInfo, error) {
 	s3Svc := s3.New(session)
 	_, err := s3Svc.HeadBucket(&s3.HeadBucketInput{
@@ -375,31 +376,38 @@ func getBucketInfo(bucket string, session *session.Session) (*bucketInfo, error)
 		return bi, nil
 	}
 	if aerr, ok := err.(awserr.Error); ok {
-		switch aerr.Code() {
-		case "NotFound":
+		if aerr.Code() == "NotFound" {
 			// new bucket, we'll create it
 			bi.hasPermission = true
 			bi.exists = false
-		case "BadRequest", "BucketRegionError":
-			// see if we can get region info
-			res, err := s3Svc.GetBucketLocation(&s3.GetBucketLocationInput{Bucket: &bucket})
-			if err != nil {
-				return nil, aerr
-			}
-			if res.LocationConstraint == nil {
-				// legacy: us-east-1 has a constraint of null
-				bi.region = "us-east-1"
-			} else {
-				bi.region = *res.LocationConstraint
-			}
-			bi.exists = true
-			bi.hasPermission = true
-		default:
-			bi.exists = true
-			bi.hasPermission = false
-			fmt.Println("AWS Error: ", aerr.Code())
+			return bi, nil
 		}
-		return bi, nil
+	} else {
+		return nil, err
 	}
-	return nil, err
+
+	// at this point, we got an AWS error, which either means we don't have perms, or it's not in the right region
+	// see if we can get region info
+	res, err := s3Svc.GetBucketLocation(&s3.GetBucketLocationInput{Bucket: &bucket})
+	if err != nil {
+		// when we receive an AWS error for this, that likely means it belongs to someone else.
+		if _, ok := err.(awserr.Error); ok {
+			bi.hasPermission = false
+			bi.exists = true
+			return bi, nil
+		}
+		return nil, err
+	}
+
+	// not in the current location
+	if res.LocationConstraint == nil {
+		// legacy: us-east-1 has a constraint of null
+		bi.region = "us-east-1"
+	} else {
+		bi.region = *res.LocationConstraint
+	}
+	bi.exists = true
+	bi.hasPermission = true
+
+	return bi, nil
 }
