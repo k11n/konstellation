@@ -15,7 +15,7 @@ The main entry point, the app manifest is the single source of truth to how an a
 | command        | List[string]    | no       | Override for your docker image's ENTRYPOINT
 | args           | List[string]    | no       | Arguments to the entrypoint. The docker image's CMD is used if this is not provided.
 | configs        | List[string]    | no       | [Shared Configs](../apps/configuration.md#shared-config) that the app needs
-| dependencies   | List[[AppReference](#appreference)] | no    | List of other apps the current app depends ons
+| dependencies   | List[[AppReference](#appreference)] | no    | List of other apps the current app depends on
 | serviceAccount | string          | no       | Name of [LinkedServiceAccount](linkedserviceaccount) or [ServiceAccount](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) that the app should use.
 | resources      | [ResourceRequirements](#resource-requirements) | no | Define CPU/Memory requests and limits
 | scale          | [ScaleSpec](#scalespec) | no | Scaling limits and behavior

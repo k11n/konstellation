@@ -3,8 +3,6 @@ package aws
 var EKSAvailableVersions = []string{
 	"1.17",
 	"1.16",
-	"1.15",
-	"1.14",
 }
 
 var EKSAllowedInstanceSeries = map[string]bool{
