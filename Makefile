@@ -1,25 +1,128 @@
-version = $(shell sed -n 's/.*Version = "\(.*\)"/\1/p' < version/version.go)
+# Current Operator version
+VERSION = $(shell sed -n 's/.*Version = "\(.*\)"/\1/p' < version/version.go)
 
-deps:
-	go get github.com/GeertJohan/go.rice/rice
+# Image URL to use all building/pushing image targets
+IMG ?= "k11n/operator:$(VERSION)"
+# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
+CRD_OPTIONS ?= "crd:trivialVersions=true"
 
-cli: deps
-	./cmd/kon/build.sh
-	go install ./cmd/kon
+# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
 
-operator:
-	operator-sdk build "k11n/operator:v$(version)"
+all: manager
 
-release-operator: operator
-	docker push "k11n/operator:v$(version)"
-	sed -i.bak 's/\(k11n\/operator:v\).*/\1$(version)/g' deploy/operator.yaml && rm deploy/operator.yaml.bak
+# Run tests
+test: generate fmt vet manifests
+	go test ./... -coverprofile cover.out
 
-run-operator:
-	OPERATOR_NAME=k11n-operator operator-sdk run --local --operator-flags="--zap-devel"
+# Build manager binary
+manager: generate fmt vet
+	go build -o bin/manager main.go
 
-generate:
-	operator-sdk generate k8s
-	operator-sdk generate crds
+# Run against the configured Kubernetes cluster in ~/.kube/config
+run: generate fmt vet manifests
+	go run ./main.go
+
+# Generate deployable manifests to deploy/
+deploy: manifests kustomize components
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/crd > deploy/crds.yaml
+	$(KUSTOMIZE) build config/default > deploy/operator.yaml
+
+# Installs operator onto the current cluster
+install-operator: deploy
+	kubectl apply -f deploy/operator.yaml
+
+uninstall-operator:
+	kubectl delete -n kon-system deployment konstellation
+
+# Generate manifests e.g. CRD, RBAC etc.
+manifests: controller-gen
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=konstellation webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+
+# Run go fmt against code
+fmt:
+	go fmt ./...
+
+# Run go vet against code
+vet:
+	go vet ./...
+
+# Generate code
+generate: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+# Build the docker image
+docker-build:
+	docker build . -t ${IMG}
+
+# Push the docker image
+docker-push:
+	docker push ${IMG}
+
+# find or download controller-gen
+# download controller-gen if necessary
+controller-gen:
+ifeq (, $(shell which controller-gen))
+	@{ \
+	set -e ;\
+	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
+	cd $$CONTROLLER_GEN_TMP_DIR ;\
+	go mod init tmp ;\
+	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
+	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
+	}
+CONTROLLER_GEN=$(GOBIN)/controller-gen
+else
+CONTROLLER_GEN=$(shell which controller-gen)
+endif
+
+kustomize:
+ifeq (, $(shell which kustomize))
+	@{ \
+	set -e ;\
+	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
+	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
+	go mod init tmp ;\
+	go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
+	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
+	}
+KUSTOMIZE=$(GOBIN)/kustomize
+else
+KUSTOMIZE=$(shell which kustomize)
+endif
+
+
+# konstellation added rules
+rice:
+ifeq (, $(shell which rice))
+	@{ \
+	set -e ;\
+	RICE_GEN_TMP_DIR=$$(mktemp -d) ;\
+	cd $$RICE_GEN_TMP_DIR ;\
+	go mod init tmp ;\
+	go get github.com/GeertJohan/go.rice/rice ;\
+	rm -rf $$RICE_GEN_TMP_DIR ;\
+	}
+RICE=$(GOBIN)/rice
+else
+RICE=$(shell which rice)
+endif
+
+
+cli: rice
+	@{ \
+  		set -e ;\
+  		cd cmd/kon ;\
+  		find ../../components/terraform -name ".terraform" -exec rm -r {} \; ;\
+  		$(RICE) embed-go --import-path github.com/k11n/konstellation/cmd/kon/utils ;\
+  		go build -i ;\
+	}
+	mv cmd/kon/kon bin/kon
 
 prometheus-0.4:
 	components/prometheus/build.py 0.4
@@ -37,9 +140,3 @@ grafana: prometheus-0.4
 
 components: prometheus-0.3 prometheus-0.4 grafana
 
-test:
-	go test ./...
-
-all: cli operator
-
-.PHONEY: deps release-operator run-operator test

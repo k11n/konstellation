@@ -1,0 +1,48 @@
+# This kustomization.yaml is not intended to be run by itself,
+# since it depends on service name and namespace that are out of this kustomize package.
+# It should be run by config/default
+resources:
+- bases/k11n.dev_clusterconfigs.yaml
+- bases/k11n.dev_apps.yaml
+- bases/k11n.dev_apptargets.yaml
+- bases/k11n.dev_appconfigs.yaml
+- bases/k11n.dev_appreleases.yaml
+- bases/k11n.dev_builds.yaml
+- bases/k11n.dev_certificaterefs.yaml
+- bases/k11n.dev_ingressrequests.yaml
+- bases/k11n.dev_linkedserviceaccounts.yaml
+- bases/k11n.dev_nodepools.yaml
+# +kubebuilder:scaffold:crdkustomizeresource
+
+patchesStrategicMerge:
+# [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.
+# patches here are for enabling the conversion webhook for each CRD
+#- patches/webhook_in_clusterconfigs.yaml
+#- patches/webhook_in_apps.yaml
+#- patches/webhook_in_apptargets.yaml
+#- patches/webhook_in_appconfigs.yaml
+#- patches/webhook_in_appreleases.yaml
+#- patches/webhook_in_builds.yaml
+#- patches/webhook_in_certificaterefs.yaml
+#- patches/webhook_in_ingressrequests.yaml
+#- patches/webhook_in_linkedserviceaccounts.yaml
+#- patches/webhook_in_nodepools.yaml
+# +kubebuilder:scaffold:crdkustomizewebhookpatch
+
+# [CERTMANAGER] To enable webhook, uncomment all the sections with [CERTMANAGER] prefix.
+# patches here are for enabling the CA injection for each CRD
+#- patches/cainjection_in_clusterconfigs.yaml
+#- patches/cainjection_in_apps.yaml
+#- patches/cainjection_in_apptargets.yaml
+#- patches/cainjection_in_appconfigs.yaml
+#- patches/cainjection_in_appreleases.yaml
+#- patches/cainjection_in_builds.yaml
+#- patches/cainjection_in_certificaterefs.yaml
+#- patches/cainjection_in_ingressrequests.yaml
+#- patches/cainjection_in_linkedserviceaccounts.yaml
+#- patches/cainjection_in_nodepools.yaml
+# +kubebuilder:scaffold:crdkustomizecainjectionpatch
+
+# the following config is for teaching kustomize how to do kustomization for CRDs.
+configurations:
+- kustomizeconfig.yaml

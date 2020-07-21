@@ -3,8 +3,9 @@ package grafana
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/k11n/konstellation/cmd/kon/utils"
 	"github.com/k11n/konstellation/pkg/components"
+	"github.com/k11n/konstellation/pkg/utils/cli"
+	"github.com/k11n/konstellation/pkg/utils/retry"
 )
 
 const grafanaVersion = "3.4.0"
@@ -25,15 +26,15 @@ func (d *GrafanaOperator) VersionForKube(version string) string {
 }
 
 func (d *GrafanaOperator) InstallComponent(kclient client.Client) error {
-	err := utils.Retry(func() error {
-		return utils.KubeApplyFile("grafana/operator.yaml", "")
+	err := retry.Retry(func() error {
+		return cli.KubeApplyFromBox("grafana/operator.yaml", "")
 	}, 8, 0)
 	if err != nil {
 		return err
 	}
 
-	err = utils.Retry(func() error {
-		return utils.KubeApplyFile("grafana/dashboards.yaml", "")
+	err = retry.Retry(func() error {
+		return cli.KubeApplyFromBox("grafana/dashboards.yaml", "")
 	}, 8, 0)
 	if err != nil {
 		return err

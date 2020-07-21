@@ -10,8 +10,8 @@ import (
 	"github.com/urfave/cli/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/cmd/kon/utils"
-	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/resources"
 )
 

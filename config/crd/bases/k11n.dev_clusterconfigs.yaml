@@ -1,0 +1,182 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: clusterconfigs.k11n.dev
+spec:
+  group: k11n.dev
+  names:
+    kind: ClusterConfig
+    listKind: ClusterConfigList
+    plural: clusterconfigs
+    singular: clusterconfig
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: ClusterConfig is the Schema for the clusterconfigs API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: ClusterConfigSpec defines the desired state of ClusterConfig
+          properties:
+            aws:
+              nullable: true
+              properties:
+                adminGroups:
+                  items:
+                    type: string
+                  nullable: true
+                  type: array
+                adminRoleArn:
+                  type: string
+                albRoleArn:
+                  type: string
+                availabilityZone:
+                  items:
+                    type: string
+                  type: array
+                ipv6Cidr:
+                  description: set after cluster is created
+                  type: string
+                nodeRoleArn:
+                  type: string
+                privateSubnets:
+                  items:
+                    properties:
+                      availabilityZone:
+                        type: string
+                      ipv4Cidr:
+                        type: string
+                      ipv6Cidr:
+                        type: string
+                      isPublic:
+                        type: boolean
+                      subnetId:
+                        type: string
+                    required:
+                    - availabilityZone
+                    - ipv4Cidr
+                    - isPublic
+                    - subnetId
+                    type: object
+                  nullable: true
+                  type: array
+                publicSubnets:
+                  items:
+                    properties:
+                      availabilityZone:
+                        type: string
+                      ipv4Cidr:
+                        type: string
+                      ipv6Cidr:
+                        type: string
+                      isPublic:
+                        type: boolean
+                      subnetId:
+                        type: string
+                    required:
+                    - availabilityZone
+                    - ipv4Cidr
+                    - isPublic
+                    - subnetId
+                    type: object
+                  type: array
+                securityGroups:
+                  items:
+                    type: string
+                  type: array
+                topology:
+                  type: string
+                vpc:
+                  description: optional, only if it's using an existing VPC
+                  type: string
+                vpcCidr:
+                  description: input values
+                  type: string
+              required:
+              - adminRoleArn
+              - albRoleArn
+              - availabilityZone
+              - nodeRoleArn
+              - publicSubnets
+              - securityGroups
+              - topology
+              - vpc
+              - vpcCidr
+              type: object
+            cloud:
+              type: string
+            componentConfig:
+              additionalProperties:
+                additionalProperties:
+                  type: string
+                type: object
+              nullable: true
+              type: object
+            enableIpv6:
+              type: boolean
+            kubeVersion:
+              type: string
+            region:
+              type: string
+            targets:
+              items:
+                type: string
+              nullable: true
+              type: array
+            version:
+              type: string
+          required:
+          - cloud
+          - enableIpv6
+          - kubeVersion
+          - region
+          - version
+          type: object
+        status:
+          description: ClusterConfigStatus defines the observed state of ClusterConfig
+          properties:
+            components:
+              items:
+                properties:
+                  name:
+                    type: string
+                  version:
+                    type: string
+                required:
+                - name
+                - version
+                type: object
+              type: array
+          required:
+          - components
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

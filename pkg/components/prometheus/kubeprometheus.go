@@ -3,9 +3,11 @@ package prometheus
 import (
 	"fmt"
 
-	"github.com/k11n/konstellation/cmd/kon/utils"
 	"github.com/k11n/konstellation/pkg/components"
 	"github.com/k11n/konstellation/pkg/resources"
+	"github.com/k11n/konstellation/pkg/utils/cli"
+	"github.com/k11n/konstellation/pkg/utils/retry"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -48,15 +50,15 @@ func (d *KubePrometheus) InstallComponent(kclient client.Client) error {
 
 	version := d.VersionForKube(cc.Spec.KubeVersion)
 
-	err = utils.Retry(func() error {
-		return utils.KubeApplyFile(fmt.Sprintf("kube-prometheus/%s/prometheus-operator.yaml", version), "")
+	err = retry.Retry(func() error {
+		return cli.KubeApplyFromBox(fmt.Sprintf("kube-prometheus/%s/prometheus-operator.yaml", version), "")
 	}, 8, 0)
 	if err != nil {
 		return err
 	}
 
-	err = utils.Retry(func() error {
-		return utils.KubeApplyFile(fmt.Sprintf("kube-prometheus/%s/prometheus-k8s.yaml", version), "")
+	err = retry.Retry(func() error {
+		return cli.KubeApplyFromBox(fmt.Sprintf("kube-prometheus/%s/prometheus-k8s.yaml", version), "")
 	}, 8, 0)
 	return err
 }

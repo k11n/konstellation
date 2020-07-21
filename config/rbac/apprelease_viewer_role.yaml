@@ -1,0 +1,20 @@
+# permissions for end users to view appreleases.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: apprelease-viewer-role
+rules:
+- apiGroups:
+  - k11n.dev
+  resources:
+  - appreleases
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - k11n.dev
+  resources:
+  - appreleases/status
+  verbs:
+  - get

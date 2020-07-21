@@ -1,0 +1,37 @@
+domain: dev
+layout: go.kubebuilder.io/v2
+repo: github.com/k11n/konstellation
+resources:
+- group: k11n
+  kind: ClusterConfig
+  version: v1alpha1
+- group: k11n
+  kind: App
+  version: v1alpha1
+- group: k11n
+  kind: AppTarget
+  version: v1alpha1
+- group: k11n
+  kind: AppConfig
+  version: v1alpha1
+- group: k11n
+  kind: AppRelease
+  version: v1alpha1
+- group: k11n
+  kind: Build
+  version: v1alpha1
+- group: k11n
+  kind: CertificateRef
+  version: v1alpha1
+- group: k11n
+  kind: IngressRequest
+  version: v1alpha1
+- group: k11n
+  kind: LinkedServiceAccount
+  version: v1alpha1
+- group: k11n
+  kind: Nodepool
+  version: v1alpha1
+version: 3-alpha
+plugins:
+  go.operator-sdk.io/v2-alpha: {}

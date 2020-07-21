@@ -1,7 +1,7 @@
 package kube
 
 import (
-	istiov1alpha3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	istioapi "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -9,11 +9,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	kconf "sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"github.com/k11n/konstellation/pkg/apis"
+	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/pkg/components"
 	"github.com/k11n/konstellation/pkg/components/autoscaler"
 	"github.com/k11n/konstellation/pkg/components/grafana"
 	"github.com/k11n/konstellation/pkg/components/istio"
+	"github.com/k11n/konstellation/pkg/components/konstellation"
 	"github.com/k11n/konstellation/pkg/components/kubedash"
 	"github.com/k11n/konstellation/pkg/components/metricsserver"
 	"github.com/k11n/konstellation/pkg/components/prometheus"
@@ -22,20 +23,7 @@ import (
 var (
 	KUBE_RESOURCES = []string{
 		"admin_account.yaml",
-		"service_account.yaml",
-		"role.yaml",
-		"role_binding.yaml",
-		"crds/k11n.dev_apps_crd.yaml",
-		"crds/k11n.dev_appconfigs_crd.yaml",
-		"crds/k11n.dev_appreleases_crd.yaml",
-		"crds/k11n.dev_apptargets_crd.yaml",
-		"crds/k11n.dev_builds_crd.yaml",
-		"crds/k11n.dev_certificaterefs_crd.yaml",
-		"crds/k11n.dev_clusterconfigs_crd.yaml",
-		"crds/k11n.dev_ingressrequests_crd.yaml",
-		"crds/k11n.dev_linkedserviceaccounts_crd.yaml",
-		"crds/k11n.dev_nodepools_crd.yaml",
-		"operator.yaml",
+		"crds.yaml",
 	}
 
 	KubeComponents = []components.ComponentInstaller{
@@ -46,6 +34,7 @@ var (
 		&grafana.GrafanaOperator{},
 		// TODO: this might not be required on some installs
 		&metricsserver.MetricsServer{},
+		&konstellation.Konstellation{},
 	}
 )
 
@@ -56,10 +45,10 @@ var (
 
 func init() {
 	// register both our scheme and konstellation scheme
-	apis.AddToScheme(scheme)
+	v1alpha1.AddToScheme(scheme)
 	clientgoscheme.AddToScheme(scheme)
 	metrics.AddToScheme(scheme)
-	istiov1alpha3.AddToScheme(scheme)
+	istioapi.AddToScheme(scheme)
 }
 
 func KubernetesClientWithContext(contextName string) (client.Client, error) {

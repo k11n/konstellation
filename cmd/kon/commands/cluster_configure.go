@@ -8,8 +8,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/thoas/go-funk"
 
+	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/cmd/kon/utils"
-	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/resources"
 )
 

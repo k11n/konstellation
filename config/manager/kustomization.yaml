@@ -1,0 +1,10 @@
+resources:
+- namespace.yaml
+- service_account.yaml
+- manager.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: controller
+  newName: k11n/operator
+  newTag: 0.4.0

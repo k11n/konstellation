@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/pkg/resources"
+	"github.com/k11n/konstellation/pkg/utils/assets"
 )
 
 var KubeDisplayOutput = false
@@ -38,6 +39,22 @@ func KubeApplyReader(reader io.Reader) error {
 		cmd.Stderr = os.Stderr
 	}
 	return cmd.Run()
+}
+
+func KubeApplyFromBox(filename string, context string) error {
+	filepath, err := assets.TempfileFromDeployResource(filename)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(filepath)
+
+	args := []string{
+		"apply", "-f", filepath,
+	}
+	if context != "" {
+		args = append(args, "--context", context)
+	}
+	return KubeCtl(args...)
 }
 
 func KubeApply(url string) error {

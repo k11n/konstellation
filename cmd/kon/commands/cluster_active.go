@@ -8,12 +8,13 @@ import (
 	"github.com/pkg/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/cmd/kon/config"
 	"github.com/k11n/konstellation/cmd/kon/kube"
 	"github.com/k11n/konstellation/cmd/kon/providers"
 	"github.com/k11n/konstellation/cmd/kon/utils"
-	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/resources"
+	utilscli "github.com/k11n/konstellation/pkg/utils/cli"
 )
 
 func getActiveCluster() (*activeCluster, error) {
@@ -50,7 +51,7 @@ func (c *activeCluster) loadResourcesIntoKube() error {
 	fmt.Println("Loading custom resource definitions into Kubernetes...")
 	contextName := resources.ContextNameForCluster(c.Manager.Cloud(), c.Cluster)
 	for _, file := range kube.KUBE_RESOURCES {
-		err := utils.KubeApplyFile(file, contextName)
+		err := utilscli.KubeApplyFromBox(file, contextName)
 		if err != nil {
 			return errors.Wrapf(err, "Unable to apply config %s", file)
 		}

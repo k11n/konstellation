@@ -7,9 +7,9 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/k11n/konstellation/cmd/kon/utils"
 	"github.com/k11n/konstellation/pkg/components"
 	"github.com/k11n/konstellation/pkg/resources"
+	"github.com/k11n/konstellation/pkg/utils/assets"
 	"github.com/k11n/konstellation/pkg/utils/cli"
 )
 
@@ -49,7 +49,7 @@ func (s *ClusterAutoScaler) InstallComponent(kclient client.Client) error {
 		return err
 	}
 
-	box := utils.DeployResourcesBox()
+	box := assets.DeployResourcesBox()
 	f, err := box.Open("templates/cluster-autoscaler.yaml")
 	if err != nil {
 		return err

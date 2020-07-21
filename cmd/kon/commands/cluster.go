@@ -25,11 +25,11 @@ import (
 	metrics "k8s.io/metrics/pkg/apis/metrics/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/cmd/kon/config"
 	"github.com/k11n/konstellation/cmd/kon/kube"
 	"github.com/k11n/konstellation/cmd/kon/providers"
 	"github.com/k11n/konstellation/cmd/kon/utils"
-	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/cloud/types"
 	"github.com/k11n/konstellation/pkg/resources"
 	"github.com/k11n/konstellation/pkg/utils/files"
@@ -712,6 +712,9 @@ func printClusterSection(section providers.ClusterManager, clusters []*clusterIn
 		targets := make([]string, 0)
 		konVersion := ""
 		if ci.Config != nil {
+			if len(ci.Config.Status.InstalledComponents) == 0 || len(ci.Config.Spec.Targets) == 0 {
+				c.Status = types.StatusUnconfigured
+			}
 			targets = ci.Config.Spec.Targets
 			konVersion = ci.Config.Spec.Version
 			if konVersion != version.Version {

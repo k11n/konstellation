@@ -2493,10 +2493,6 @@ spec:
         "list": [
           {
             "allValue": null,
-            "current": {
-              "text": "apiserver",
-              "value": "apiserver"
-            },
             "datasource": "prometheus",
             "definition": "istio_requests_total",
             "hide": 0,
@@ -2518,10 +2514,6 @@ spec:
           },
           {
             "allValue": null,
-            "current": {
-              "text": "production",
-              "value": "production"
-            },
             "datasource": "prometheus",
             "definition": "istio_requests_total",
             "hide": 0,
@@ -2544,7 +2536,7 @@ spec:
         ]
       },
       "time": {
-        "from": "now-30m",
+        "from": "now-1h",
         "to": "now"
       },
       "timepicker": {

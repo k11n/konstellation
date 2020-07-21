@@ -12,8 +12,8 @@ import (
 	"github.com/urfave/cli/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/cmd/kon/utils"
-	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
 	"github.com/k11n/konstellation/pkg/resources"
 	utilscli "github.com/k11n/konstellation/pkg/utils/cli"
 )

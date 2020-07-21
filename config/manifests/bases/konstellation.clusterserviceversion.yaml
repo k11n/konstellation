@@ -1,0 +1,87 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+    operators.operatorframework.io/builder: operator-sdk-v0.19.0
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
+  name: konstellation.vX.Y.Z
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: ClusterConfig is the Schema for the clusterconfigs API
+      kind: ClusterConfig
+      name: clusterconfigs.k11n.dev
+      version: v1alpha1
+    - description: App is the Schema for the apps API
+      kind: App
+      name: apps.k11n.dev
+      version: v1alpha1
+    - description: AppTarget is the Schema for the apptargets API
+      kind: AppTarget
+      name: apptargets.k11n.dev
+      version: v1alpha1
+    - description: AppConfig is the Schema for the appconfigs API
+      kind: AppConfig
+      name: appconfigs.k11n.dev
+      version: v1alpha1
+    - description: AppRelease is the Schema for the appreleases API
+      kind: AppRelease
+      name: appreleases.k11n.dev
+      version: v1alpha1
+    - description: Build is the Schema for the builds API
+      kind: Build
+      name: builds.k11n.dev
+      version: v1alpha1
+    - description: CertificateRef is the Schema for the certificaterefs API
+      kind: CertificateRef
+      name: certificaterefs.k11n.dev
+      version: v1alpha1
+    - description: IngressRequest is the Schema for the ingressrequests API
+      kind: IngressRequest
+      name: ingressrequests.k11n.dev
+      version: v1alpha1
+    - description: LinkedServiceAccount is the Schema for the linkedserviceaccounts
+        API
+      kind: LinkedServiceAccount
+      name: linkedserviceaccounts.k11n.dev
+      version: v1alpha1
+    - description: Nodepool is the Schema for the nodepools API
+      kind: Nodepool
+      name: nodepools.k11n.dev
+      version: v1alpha1
+  description: Application platform for Kubernetes
+  displayName: Konstellation
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - application platform
+  - microservices
+  links:
+  - name: Konstellation
+    url: https://konstellation.domain
+  maintainers:
+  - email: dz@konstellation.dev
+    name: David Zhao
+  maturity: alpha
+  provider:
+    name: Konstellation, LLC
+    url: https://konstellation.dev
+  version: 0.0.0

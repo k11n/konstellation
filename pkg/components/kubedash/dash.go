@@ -3,8 +3,8 @@ package kubedash
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/k11n/konstellation/cmd/kon/utils"
 	"github.com/k11n/konstellation/pkg/components"
+	"github.com/k11n/konstellation/pkg/utils/cli"
 )
 
 const (
@@ -27,5 +27,5 @@ func (d *KubeDash) VersionForKube(version string) string {
 }
 
 func (d *KubeDash) InstallComponent(kclient client.Client) error {
-	return utils.KubeApplyFile("kube-dashboard.yaml", "")
+	return cli.KubeApplyFromBox("kube-dashboard.yaml", "")
 }

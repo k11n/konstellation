@@ -1,0 +1,2685 @@
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: appconfigs.k11n.dev
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .type
+    name: Type
+    type: string
+  group: k11n.dev
+  names:
+    kind: AppConfig
+    listKind: AppConfigList
+    plural: appconfigs
+    singular: appconfig
+  scope: Cluster
+  subresources: {}
+  validation:
+    openAPIV3Schema:
+      description: AppConfig is the Schema for the appconfigs API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        config:
+          format: byte
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        type:
+          type: string
+      required:
+      - config
+      - type
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: appreleases.k11n.dev
+spec:
+  group: k11n.dev
+  names:
+    kind: AppRelease
+    listKind: AppReleaseList
+    plural: appreleases
+    singular: apprelease
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: AppRelease is the Schema for the appreleases API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: AppReleaseSpec defines a release of AppTarget
+          properties:
+            app:
+              type: string
+            args:
+              items:
+                type: string
+              nullable: true
+              type: array
+            build:
+              type: string
+            command:
+              items:
+                type: string
+              nullable: true
+              type: array
+            config:
+              type: string
+            dependencies:
+              items:
+                properties:
+                  name:
+                    type: string
+                  port:
+                    type: string
+                  target:
+                    type: string
+                required:
+                - name
+                type: object
+              nullable: true
+              type: array
+            numDesired:
+              description: num desired default state, autoscaling could change desired in status
+              format: int32
+              type: integer
+            ports:
+              items:
+                properties:
+                  name:
+                    type: string
+                  port:
+                    format: int32
+                    type: integer
+                  protocol:
+                    description: TCP by default. Ingress works only with HTTP services
+                    type: string
+                required:
+                - name
+                - port
+                type: object
+              nullable: true
+              type: array
+            probes:
+              properties:
+                liveness:
+                  description: '---------------------------------------------------------------------------// a duplication of core Kube types, repeated here to avoid dependency on intOrString type Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.'
+                  properties:
+                    exec:
+                      description: One and only one of the following should be specified. Exec specifies the action to take.
+                      properties:
+                        command:
+                          description: Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    failureThreshold:
+                      description: Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    httpGet:
+                      description: HTTPGet specifies the http request to perform.
+                      properties:
+                        host:
+                          description: Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
+                          type: string
+                        httpHeaders:
+                          description: Custom headers to set in the request. HTTP allows repeated headers.
+                          items:
+                            description: HTTPHeader describes a custom header to be used in HTTP probes
+                            properties:
+                              name:
+                                description: The header field name
+                                type: string
+                              value:
+                                description: The header field value
+                                type: string
+                            required:
+                            - name
+                            - value
+                            type: object
+                          type: array
+                        path:
+                          description: Path to access on the HTTP server.
+                          type: string
+                        port:
+                          description: Name of the port to access on the container. Name must be an IANA_SVC_NAME.
+                          type: string
+                        scheme:
+                          description: Scheme to use for connecting to the host. Defaults to HTTP.
+                          type: string
+                      required:
+                      - port
+                      type: object
+                    initialDelaySeconds:
+                      description: 'Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                    periodSeconds:
+                      description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    successThreshold:
+                      description: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    timeoutSeconds:
+                      description: 'Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                  type: object
+                readiness:
+                  description: '---------------------------------------------------------------------------// a duplication of core Kube types, repeated here to avoid dependency on intOrString type Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.'
+                  properties:
+                    exec:
+                      description: One and only one of the following should be specified. Exec specifies the action to take.
+                      properties:
+                        command:
+                          description: Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    failureThreshold:
+                      description: Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    httpGet:
+                      description: HTTPGet specifies the http request to perform.
+                      properties:
+                        host:
+                          description: Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
+                          type: string
+                        httpHeaders:
+                          description: Custom headers to set in the request. HTTP allows repeated headers.
+                          items:
+                            description: HTTPHeader describes a custom header to be used in HTTP probes
+                            properties:
+                              name:
+                                description: The header field name
+                                type: string
+                              value:
+                                description: The header field value
+                                type: string
+                            required:
+                            - name
+                            - value
+                            type: object
+                          type: array
+                        path:
+                          description: Path to access on the HTTP server.
+                          type: string
+                        port:
+                          description: Name of the port to access on the container. Name must be an IANA_SVC_NAME.
+                          type: string
+                        scheme:
+                          description: Scheme to use for connecting to the host. Defaults to HTTP.
+                          type: string
+                      required:
+                      - port
+                      type: object
+                    initialDelaySeconds:
+                      description: 'Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                    periodSeconds:
+                      description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    successThreshold:
+                      description: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    timeoutSeconds:
+                      description: 'Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                  type: object
+                startup:
+                  description: '---------------------------------------------------------------------------// a duplication of core Kube types, repeated here to avoid dependency on intOrString type Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.'
+                  properties:
+                    exec:
+                      description: One and only one of the following should be specified. Exec specifies the action to take.
+                      properties:
+                        command:
+                          description: Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    failureThreshold:
+                      description: Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    httpGet:
+                      description: HTTPGet specifies the http request to perform.
+                      properties:
+                        host:
+                          description: Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
+                          type: string
+                        httpHeaders:
+                          description: Custom headers to set in the request. HTTP allows repeated headers.
+                          items:
+                            description: HTTPHeader describes a custom header to be used in HTTP probes
+                            properties:
+                              name:
+                                description: The header field name
+                                type: string
+                              value:
+                                description: The header field value
+                                type: string
+                            required:
+                            - name
+                            - value
+                            type: object
+                          type: array
+                        path:
+                          description: Path to access on the HTTP server.
+                          type: string
+                        port:
+                          description: Name of the port to access on the container. Name must be an IANA_SVC_NAME.
+                          type: string
+                        scheme:
+                          description: Scheme to use for connecting to the host. Defaults to HTTP.
+                          type: string
+                      required:
+                      - port
+                      type: object
+                    initialDelaySeconds:
+                      description: 'Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                    periodSeconds:
+                      description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    successThreshold:
+                      description: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    timeoutSeconds:
+                      description: 'Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                  type: object
+              type: object
+            resources:
+              description: ResourceRequirements describes the compute resource requirements.
+              properties:
+                limits:
+                  additionalProperties:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  description: 'Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                  type: object
+                requests:
+                  additionalProperties:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  description: 'Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                  type: object
+              type: object
+            role:
+              type: string
+            serviceAccount:
+              type: string
+            target:
+              type: string
+            trafficPercentage:
+              format: int32
+              type: integer
+          required:
+          - app
+          - build
+          - config
+          - numDesired
+          - role
+          - target
+          - trafficPercentage
+          type: object
+        status:
+          description: AppReleaseStatus defines the observed state of AppRelease
+          properties:
+            numAvailable:
+              format: int32
+              type: integer
+            numDesired:
+              format: int32
+              type: integer
+            numReady:
+              format: int32
+              type: integer
+            podErrors:
+              description: contains pods that are failing to become ready
+              items:
+                properties:
+                  message:
+                    type: string
+                  pod:
+                    type: string
+                  reason:
+                    type: string
+                required:
+                - message
+                - pod
+                - reason
+                type: object
+              nullable: true
+              type: array
+            state:
+              type: string
+            stateChangedAt:
+              format: date-time
+              type: string
+          required:
+          - numAvailable
+          - numDesired
+          - numReady
+          - state
+          - stateChangedAt
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: apps.k11n.dev
+spec:
+  group: k11n.dev
+  names:
+    kind: App
+    listKind: AppList
+    plural: apps
+    singular: app
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: App is the Schema for the apps API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: AppSpec defines the desired state of App
+          properties:
+            args:
+              items:
+                type: string
+              nullable: true
+              type: array
+            command:
+              items:
+                type: string
+              nullable: true
+              type: array
+            configs:
+              items:
+                type: string
+              nullable: true
+              type: array
+            dependencies:
+              items:
+                properties:
+                  name:
+                    type: string
+                  port:
+                    type: string
+                  target:
+                    type: string
+                required:
+                - name
+                type: object
+              nullable: true
+              type: array
+            image:
+              type: string
+            imageTag:
+              type: string
+            ports:
+              items:
+                properties:
+                  name:
+                    type: string
+                  port:
+                    format: int32
+                    type: integer
+                  protocol:
+                    description: TCP by default. Ingress works only with HTTP services
+                    type: string
+                required:
+                - name
+                - port
+                type: object
+              nullable: true
+              type: array
+            probes:
+              properties:
+                liveness:
+                  description: '---------------------------------------------------------------------------// a duplication of core Kube types, repeated here to avoid dependency on intOrString type Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.'
+                  properties:
+                    exec:
+                      description: One and only one of the following should be specified. Exec specifies the action to take.
+                      properties:
+                        command:
+                          description: Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    failureThreshold:
+                      description: Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    httpGet:
+                      description: HTTPGet specifies the http request to perform.
+                      properties:
+                        host:
+                          description: Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
+                          type: string
+                        httpHeaders:
+                          description: Custom headers to set in the request. HTTP allows repeated headers.
+                          items:
+                            description: HTTPHeader describes a custom header to be used in HTTP probes
+                            properties:
+                              name:
+                                description: The header field name
+                                type: string
+                              value:
+                                description: The header field value
+                                type: string
+                            required:
+                            - name
+                            - value
+                            type: object
+                          type: array
+                        path:
+                          description: Path to access on the HTTP server.
+                          type: string
+                        port:
+                          description: Name of the port to access on the container. Name must be an IANA_SVC_NAME.
+                          type: string
+                        scheme:
+                          description: Scheme to use for connecting to the host. Defaults to HTTP.
+                          type: string
+                      required:
+                      - port
+                      type: object
+                    initialDelaySeconds:
+                      description: 'Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                    periodSeconds:
+                      description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    successThreshold:
+                      description: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    timeoutSeconds:
+                      description: 'Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                  type: object
+                readiness:
+                  description: '---------------------------------------------------------------------------// a duplication of core Kube types, repeated here to avoid dependency on intOrString type Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.'
+                  properties:
+                    exec:
+                      description: One and only one of the following should be specified. Exec specifies the action to take.
+                      properties:
+                        command:
+                          description: Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    failureThreshold:
+                      description: Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    httpGet:
+                      description: HTTPGet specifies the http request to perform.
+                      properties:
+                        host:
+                          description: Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
+                          type: string
+                        httpHeaders:
+                          description: Custom headers to set in the request. HTTP allows repeated headers.
+                          items:
+                            description: HTTPHeader describes a custom header to be used in HTTP probes
+                            properties:
+                              name:
+                                description: The header field name
+                                type: string
+                              value:
+                                description: The header field value
+                                type: string
+                            required:
+                            - name
+                            - value
+                            type: object
+                          type: array
+                        path:
+                          description: Path to access on the HTTP server.
+                          type: string
+                        port:
+                          description: Name of the port to access on the container. Name must be an IANA_SVC_NAME.
+                          type: string
+                        scheme:
+                          description: Scheme to use for connecting to the host. Defaults to HTTP.
+                          type: string
+                      required:
+                      - port
+                      type: object
+                    initialDelaySeconds:
+                      description: 'Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                    periodSeconds:
+                      description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    successThreshold:
+                      description: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    timeoutSeconds:
+                      description: 'Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                  type: object
+                startup:
+                  description: '---------------------------------------------------------------------------// a duplication of core Kube types, repeated here to avoid dependency on intOrString type Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.'
+                  properties:
+                    exec:
+                      description: One and only one of the following should be specified. Exec specifies the action to take.
+                      properties:
+                        command:
+                          description: Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    failureThreshold:
+                      description: Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    httpGet:
+                      description: HTTPGet specifies the http request to perform.
+                      properties:
+                        host:
+                          description: Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
+                          type: string
+                        httpHeaders:
+                          description: Custom headers to set in the request. HTTP allows repeated headers.
+                          items:
+                            description: HTTPHeader describes a custom header to be used in HTTP probes
+                            properties:
+                              name:
+                                description: The header field name
+                                type: string
+                              value:
+                                description: The header field value
+                                type: string
+                            required:
+                            - name
+                            - value
+                            type: object
+                          type: array
+                        path:
+                          description: Path to access on the HTTP server.
+                          type: string
+                        port:
+                          description: Name of the port to access on the container. Name must be an IANA_SVC_NAME.
+                          type: string
+                        scheme:
+                          description: Scheme to use for connecting to the host. Defaults to HTTP.
+                          type: string
+                      required:
+                      - port
+                      type: object
+                    initialDelaySeconds:
+                      description: 'Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                    periodSeconds:
+                      description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    successThreshold:
+                      description: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    timeoutSeconds:
+                      description: 'Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                  type: object
+              type: object
+            prometheus:
+              nullable: true
+              properties:
+                endpoints:
+                  items:
+                    description: Endpoint defines a scrapeable endpoint serving Prometheus metrics.
+                    properties:
+                      basicAuth:
+                        description: 'BasicAuth allow an endpoint to authenticate over basic authentication More info: https://prometheus.io/docs/operating/configuration/#endpoints'
+                        properties:
+                          password:
+                            description: The secret in the service monitor namespace that contains the password for authentication.
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must be a valid secret key.
+                                type: string
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                          username:
+                            description: The secret in the service monitor namespace that contains the username for authentication.
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must be a valid secret key.
+                                type: string
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                        type: object
+                      bearerTokenFile:
+                        description: File to read bearer token for scraping targets.
+                        type: string
+                      bearerTokenSecret:
+                        description: Secret to mount to read bearer token for scraping targets. The secret needs to be in the same namespace as the service monitor and accessible by the Prometheus Operator.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must be a valid secret key.
+                            type: string
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                      honorLabels:
+                        description: HonorLabels chooses the metric's labels on collisions with target labels.
+                        type: boolean
+                      honorTimestamps:
+                        description: HonorTimestamps controls whether Prometheus respects the timestamps present in scraped data.
+                        type: boolean
+                      interval:
+                        description: Interval at which metrics should be scraped
+                        type: string
+                      metricRelabelings:
+                        description: MetricRelabelConfigs to apply to samples before ingestion.
+                        items:
+                          description: 'RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion. It defines `<metric_relabel_configs>`-section of Prometheus configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs'
+                          properties:
+                            action:
+                              description: Action to perform based on regex matching. Default is 'replace'
+                              type: string
+                            modulus:
+                              description: Modulus to take of the hash of the source label values.
+                              format: int64
+                              type: integer
+                            regex:
+                              description: Regular expression against which the extracted value is matched. Default is '(.*)'
+                              type: string
+                            replacement:
+                              description: Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'
+                              type: string
+                            separator:
+                              description: Separator placed between concatenated source label values. default is ';'.
+                              type: string
+                            sourceLabels:
+                              description: The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.
+                              items:
+                                type: string
+                              type: array
+                            targetLabel:
+                              description: Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.
+                              type: string
+                          type: object
+                        type: array
+                      params:
+                        additionalProperties:
+                          items:
+                            type: string
+                          type: array
+                        description: Optional HTTP URL parameters
+                        type: object
+                      path:
+                        description: HTTP path to scrape for metrics.
+                        type: string
+                      port:
+                        description: Name of the service port this endpoint refers to. Mutually exclusive with targetPort.
+                        type: string
+                      proxyUrl:
+                        description: ProxyURL eg http://proxyserver:2195 Directs scrapes to proxy through this endpoint.
+                        type: string
+                      relabelings:
+                        description: 'RelabelConfigs to apply to samples before scraping. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config'
+                        items:
+                          description: 'RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion. It defines `<metric_relabel_configs>`-section of Prometheus configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs'
+                          properties:
+                            action:
+                              description: Action to perform based on regex matching. Default is 'replace'
+                              type: string
+                            modulus:
+                              description: Modulus to take of the hash of the source label values.
+                              format: int64
+                              type: integer
+                            regex:
+                              description: Regular expression against which the extracted value is matched. Default is '(.*)'
+                              type: string
+                            replacement:
+                              description: Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'
+                              type: string
+                            separator:
+                              description: Separator placed between concatenated source label values. default is ';'.
+                              type: string
+                            sourceLabels:
+                              description: The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.
+                              items:
+                                type: string
+                              type: array
+                            targetLabel:
+                              description: Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.
+                              type: string
+                          type: object
+                        type: array
+                      scheme:
+                        description: HTTP scheme to use for scraping.
+                        type: string
+                      scrapeTimeout:
+                        description: Timeout after which the scrape is ended
+                        type: string
+                      targetPort:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: Name or number of the pod port this endpoint refers to. Mutually exclusive with port.
+                        x-kubernetes-int-or-string: true
+                      tlsConfig:
+                        description: TLS configuration to use when scraping the endpoint
+                        properties:
+                          ca:
+                            description: Stuct containing the CA cert to use for the targets.
+                            properties:
+                              configMap:
+                                description: ConfigMap containing data to use for the targets.
+                                properties:
+                                  key:
+                                    description: The key to select.
+                                    type: string
+                                  name:
+                                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the ConfigMap or its key must be defined
+                                    type: boolean
+                                required:
+                                - key
+                                type: object
+                              secret:
+                                description: Secret containing data to use for the targets.
+                                properties:
+                                  key:
+                                    description: The key of the secret to select from.  Must be a valid secret key.
+                                    type: string
+                                  name:
+                                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the Secret or its key must be defined
+                                    type: boolean
+                                required:
+                                - key
+                                type: object
+                            type: object
+                          caFile:
+                            description: Path to the CA cert in the Prometheus container to use for the targets.
+                            type: string
+                          cert:
+                            description: Struct containing the client cert file for the targets.
+                            properties:
+                              configMap:
+                                description: ConfigMap containing data to use for the targets.
+                                properties:
+                                  key:
+                                    description: The key to select.
+                                    type: string
+                                  name:
+                                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the ConfigMap or its key must be defined
+                                    type: boolean
+                                required:
+                                - key
+                                type: object
+                              secret:
+                                description: Secret containing data to use for the targets.
+                                properties:
+                                  key:
+                                    description: The key of the secret to select from.  Must be a valid secret key.
+                                    type: string
+                                  name:
+                                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the Secret or its key must be defined
+                                    type: boolean
+                                required:
+                                - key
+                                type: object
+                            type: object
+                          certFile:
+                            description: Path to the client cert file in the Prometheus container for the targets.
+                            type: string
+                          insecureSkipVerify:
+                            description: Disable target certificate validation.
+                            type: boolean
+                          keyFile:
+                            description: Path to the client key file in the Prometheus container for the targets.
+                            type: string
+                          keySecret:
+                            description: Secret containing the client key file for the targets.
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must be a valid secret key.
+                                type: string
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                          serverName:
+                            description: Used to verify the hostname for the targets.
+                            type: string
+                        type: object
+                    type: object
+                  type: array
+                rules:
+                  items:
+                    description: Rule describes an alerting or recording rule.
+                    properties:
+                      alert:
+                        type: string
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      expr:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        x-kubernetes-int-or-string: true
+                      for:
+                        type: string
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      record:
+                        type: string
+                    required:
+                    - expr
+                    type: object
+                  type: array
+              required:
+              - endpoints
+              type: object
+            registry:
+              type: string
+            resources:
+              description: ResourceRequirements describes the compute resource requirements.
+              properties:
+                limits:
+                  additionalProperties:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  description: 'Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                  type: object
+                requests:
+                  additionalProperties:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  description: 'Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                  type: object
+              type: object
+            scale:
+              properties:
+                max:
+                  format: int32
+                  type: integer
+                min:
+                  format: int32
+                  type: integer
+                scaleDown:
+                  properties:
+                    delay:
+                      format: int32
+                      type: integer
+                    step:
+                      format: int32
+                      type: integer
+                  type: object
+                scaleUp:
+                  properties:
+                    delay:
+                      format: int32
+                      type: integer
+                    step:
+                      format: int32
+                      type: integer
+                  type: object
+                targetCPUUtilizationPercentage:
+                  format: int32
+                  type: integer
+              type: object
+            serviceAccount:
+              type: string
+            targets:
+              items:
+                properties:
+                  deployMode:
+                    enum:
+                    - latest
+                    - halt
+                    type: string
+                  ingress:
+                    description: if ingress is needed
+                    properties:
+                      hosts:
+                        items:
+                          type: string
+                        type: array
+                      port:
+                        type: string
+                    required:
+                    - hosts
+                    - port
+                    type: object
+                  name:
+                    type: string
+                  probes:
+                    properties:
+                      liveness:
+                        description: '---------------------------------------------------------------------------// a duplication of core Kube types, repeated here to avoid dependency on intOrString type Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.'
+                        properties:
+                          exec:
+                            description: One and only one of the following should be specified. Exec specifies the action to take.
+                            properties:
+                              command:
+                                description: Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          failureThreshold:
+                            description: Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3. Minimum value is 1.
+                            format: int32
+                            type: integer
+                          httpGet:
+                            description: HTTPGet specifies the http request to perform.
+                            properties:
+                              host:
+                                description: Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
+                                type: string
+                              httpHeaders:
+                                description: Custom headers to set in the request. HTTP allows repeated headers.
+                                items:
+                                  description: HTTPHeader describes a custom header to be used in HTTP probes
+                                  properties:
+                                    name:
+                                      description: The header field name
+                                      type: string
+                                    value:
+                                      description: The header field value
+                                      type: string
+                                  required:
+                                  - name
+                                  - value
+                                  type: object
+                                type: array
+                              path:
+                                description: Path to access on the HTTP server.
+                                type: string
+                              port:
+                                description: Name of the port to access on the container. Name must be an IANA_SVC_NAME.
+                                type: string
+                              scheme:
+                                description: Scheme to use for connecting to the host. Defaults to HTTP.
+                                type: string
+                            required:
+                            - port
+                            type: object
+                          initialDelaySeconds:
+                            description: 'Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                            format: int32
+                            type: integer
+                          periodSeconds:
+                            description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+                            format: int32
+                            type: integer
+                          successThreshold:
+                            description: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                            format: int32
+                            type: integer
+                          timeoutSeconds:
+                            description: 'Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                            format: int32
+                            type: integer
+                        type: object
+                      readiness:
+                        description: '---------------------------------------------------------------------------// a duplication of core Kube types, repeated here to avoid dependency on intOrString type Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.'
+                        properties:
+                          exec:
+                            description: One and only one of the following should be specified. Exec specifies the action to take.
+                            properties:
+                              command:
+                                description: Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          failureThreshold:
+                            description: Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3. Minimum value is 1.
+                            format: int32
+                            type: integer
+                          httpGet:
+                            description: HTTPGet specifies the http request to perform.
+                            properties:
+                              host:
+                                description: Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
+                                type: string
+                              httpHeaders:
+                                description: Custom headers to set in the request. HTTP allows repeated headers.
+                                items:
+                                  description: HTTPHeader describes a custom header to be used in HTTP probes
+                                  properties:
+                                    name:
+                                      description: The header field name
+                                      type: string
+                                    value:
+                                      description: The header field value
+                                      type: string
+                                  required:
+                                  - name
+                                  - value
+                                  type: object
+                                type: array
+                              path:
+                                description: Path to access on the HTTP server.
+                                type: string
+                              port:
+                                description: Name of the port to access on the container. Name must be an IANA_SVC_NAME.
+                                type: string
+                              scheme:
+                                description: Scheme to use for connecting to the host. Defaults to HTTP.
+                                type: string
+                            required:
+                            - port
+                            type: object
+                          initialDelaySeconds:
+                            description: 'Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                            format: int32
+                            type: integer
+                          periodSeconds:
+                            description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+                            format: int32
+                            type: integer
+                          successThreshold:
+                            description: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                            format: int32
+                            type: integer
+                          timeoutSeconds:
+                            description: 'Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                            format: int32
+                            type: integer
+                        type: object
+                      startup:
+                        description: '---------------------------------------------------------------------------// a duplication of core Kube types, repeated here to avoid dependency on intOrString type Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.'
+                        properties:
+                          exec:
+                            description: One and only one of the following should be specified. Exec specifies the action to take.
+                            properties:
+                              command:
+                                description: Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
+                                items:
+                                  type: string
+                                type: array
+                            type: object
+                          failureThreshold:
+                            description: Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3. Minimum value is 1.
+                            format: int32
+                            type: integer
+                          httpGet:
+                            description: HTTPGet specifies the http request to perform.
+                            properties:
+                              host:
+                                description: Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
+                                type: string
+                              httpHeaders:
+                                description: Custom headers to set in the request. HTTP allows repeated headers.
+                                items:
+                                  description: HTTPHeader describes a custom header to be used in HTTP probes
+                                  properties:
+                                    name:
+                                      description: The header field name
+                                      type: string
+                                    value:
+                                      description: The header field value
+                                      type: string
+                                  required:
+                                  - name
+                                  - value
+                                  type: object
+                                type: array
+                              path:
+                                description: Path to access on the HTTP server.
+                                type: string
+                              port:
+                                description: Name of the port to access on the container. Name must be an IANA_SVC_NAME.
+                                type: string
+                              scheme:
+                                description: Scheme to use for connecting to the host. Defaults to HTTP.
+                                type: string
+                            required:
+                            - port
+                            type: object
+                          initialDelaySeconds:
+                            description: 'Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                            format: int32
+                            type: integer
+                          periodSeconds:
+                            description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+                            format: int32
+                            type: integer
+                          successThreshold:
+                            description: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                            format: int32
+                            type: integer
+                          timeoutSeconds:
+                            description: 'Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                            format: int32
+                            type: integer
+                        type: object
+                    type: object
+                  resources:
+                    description: ResourceRequirements describes the compute resource requirements.
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                        type: object
+                    type: object
+                  scale:
+                    properties:
+                      max:
+                        format: int32
+                        type: integer
+                      min:
+                        format: int32
+                        type: integer
+                      scaleDown:
+                        properties:
+                          delay:
+                            format: int32
+                            type: integer
+                          step:
+                            format: int32
+                            type: integer
+                        type: object
+                      scaleUp:
+                        properties:
+                          delay:
+                            format: int32
+                            type: integer
+                          step:
+                            format: int32
+                            type: integer
+                        type: object
+                      targetCPUUtilizationPercentage:
+                        format: int32
+                        type: integer
+                    type: object
+                required:
+                - name
+                type: object
+              nullable: true
+              type: array
+          required:
+          - image
+          type: object
+        status:
+          description: AppStatus defines the observed state of App
+          properties:
+            activeTargets:
+              items:
+                type: string
+              type: array
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: apptargets.k11n.dev
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.build
+    name: Build
+    type: string
+  - JSONPath: .status.numDesired
+    name: NumDesired
+    type: integer
+  - JSONPath: .status.numReady
+    name: NumReady
+    type: integer
+  - JSONPath: .spec.scale.min
+    name: Min
+    type: integer
+  - JSONPath: .spec.scale.max
+    name: Max
+    type: integer
+  - JSONPath: .status.hostname
+    name: Hostname
+    type: string
+  group: k11n.dev
+  names:
+    kind: AppTarget
+    listKind: AppTargetList
+    plural: apptargets
+    singular: apptarget
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: AppTarget is the Schema for the apptargets API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: AppTargetSpec defines a deployment target for App
+          properties:
+            app:
+              type: string
+            args:
+              items:
+                type: string
+              nullable: true
+              type: array
+            build:
+              type: string
+            command:
+              items:
+                type: string
+              nullable: true
+              type: array
+            configs:
+              items:
+                type: string
+              nullable: true
+              type: array
+            dependencies:
+              items:
+                properties:
+                  name:
+                    type: string
+                  port:
+                    type: string
+                  target:
+                    type: string
+                required:
+                - name
+                type: object
+              nullable: true
+              type: array
+            deployMode:
+              enum:
+              - latest
+              - halt
+              type: string
+            ingress:
+              nullable: true
+              properties:
+                hosts:
+                  items:
+                    type: string
+                  type: array
+                port:
+                  type: string
+              required:
+              - hosts
+              - port
+              type: object
+            ports:
+              items:
+                properties:
+                  name:
+                    type: string
+                  port:
+                    format: int32
+                    type: integer
+                  protocol:
+                    description: TCP by default. Ingress works only with HTTP services
+                    type: string
+                required:
+                - name
+                - port
+                type: object
+              nullable: true
+              type: array
+            probes:
+              properties:
+                liveness:
+                  description: '---------------------------------------------------------------------------// a duplication of core Kube types, repeated here to avoid dependency on intOrString type Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.'
+                  properties:
+                    exec:
+                      description: One and only one of the following should be specified. Exec specifies the action to take.
+                      properties:
+                        command:
+                          description: Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    failureThreshold:
+                      description: Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    httpGet:
+                      description: HTTPGet specifies the http request to perform.
+                      properties:
+                        host:
+                          description: Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
+                          type: string
+                        httpHeaders:
+                          description: Custom headers to set in the request. HTTP allows repeated headers.
+                          items:
+                            description: HTTPHeader describes a custom header to be used in HTTP probes
+                            properties:
+                              name:
+                                description: The header field name
+                                type: string
+                              value:
+                                description: The header field value
+                                type: string
+                            required:
+                            - name
+                            - value
+                            type: object
+                          type: array
+                        path:
+                          description: Path to access on the HTTP server.
+                          type: string
+                        port:
+                          description: Name of the port to access on the container. Name must be an IANA_SVC_NAME.
+                          type: string
+                        scheme:
+                          description: Scheme to use for connecting to the host. Defaults to HTTP.
+                          type: string
+                      required:
+                      - port
+                      type: object
+                    initialDelaySeconds:
+                      description: 'Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                    periodSeconds:
+                      description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    successThreshold:
+                      description: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    timeoutSeconds:
+                      description: 'Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                  type: object
+                readiness:
+                  description: '---------------------------------------------------------------------------// a duplication of core Kube types, repeated here to avoid dependency on intOrString type Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.'
+                  properties:
+                    exec:
+                      description: One and only one of the following should be specified. Exec specifies the action to take.
+                      properties:
+                        command:
+                          description: Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    failureThreshold:
+                      description: Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    httpGet:
+                      description: HTTPGet specifies the http request to perform.
+                      properties:
+                        host:
+                          description: Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
+                          type: string
+                        httpHeaders:
+                          description: Custom headers to set in the request. HTTP allows repeated headers.
+                          items:
+                            description: HTTPHeader describes a custom header to be used in HTTP probes
+                            properties:
+                              name:
+                                description: The header field name
+                                type: string
+                              value:
+                                description: The header field value
+                                type: string
+                            required:
+                            - name
+                            - value
+                            type: object
+                          type: array
+                        path:
+                          description: Path to access on the HTTP server.
+                          type: string
+                        port:
+                          description: Name of the port to access on the container. Name must be an IANA_SVC_NAME.
+                          type: string
+                        scheme:
+                          description: Scheme to use for connecting to the host. Defaults to HTTP.
+                          type: string
+                      required:
+                      - port
+                      type: object
+                    initialDelaySeconds:
+                      description: 'Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                    periodSeconds:
+                      description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    successThreshold:
+                      description: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    timeoutSeconds:
+                      description: 'Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                  type: object
+                startup:
+                  description: '---------------------------------------------------------------------------// a duplication of core Kube types, repeated here to avoid dependency on intOrString type Probe describes a health check to be performed against a container to determine whether it is alive or ready to receive traffic.'
+                  properties:
+                    exec:
+                      description: One and only one of the following should be specified. Exec specifies the action to take.
+                      properties:
+                        command:
+                          description: Command is the command line to execute inside the container, the working directory for the command  is root ('/') in the container's filesystem. The command is simply exec'd, it is not run inside a shell, so traditional shell instructions ('|', etc) won't work. To use a shell, you need to explicitly call out to that shell. Exit status of 0 is treated as live/healthy and non-zero is unhealthy.
+                          items:
+                            type: string
+                          type: array
+                      type: object
+                    failureThreshold:
+                      description: Minimum consecutive failures for the probe to be considered failed after having succeeded. Defaults to 3. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    httpGet:
+                      description: HTTPGet specifies the http request to perform.
+                      properties:
+                        host:
+                          description: Host name to connect to, defaults to the pod IP. You probably want to set "Host" in httpHeaders instead.
+                          type: string
+                        httpHeaders:
+                          description: Custom headers to set in the request. HTTP allows repeated headers.
+                          items:
+                            description: HTTPHeader describes a custom header to be used in HTTP probes
+                            properties:
+                              name:
+                                description: The header field name
+                                type: string
+                              value:
+                                description: The header field value
+                                type: string
+                            required:
+                            - name
+                            - value
+                            type: object
+                          type: array
+                        path:
+                          description: Path to access on the HTTP server.
+                          type: string
+                        port:
+                          description: Name of the port to access on the container. Name must be an IANA_SVC_NAME.
+                          type: string
+                        scheme:
+                          description: Scheme to use for connecting to the host. Defaults to HTTP.
+                          type: string
+                      required:
+                      - port
+                      type: object
+                    initialDelaySeconds:
+                      description: 'Number of seconds after the container has started before liveness probes are initiated. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                    periodSeconds:
+                      description: How often (in seconds) to perform the probe. Default to 10 seconds. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    successThreshold:
+                      description: Minimum consecutive successes for the probe to be considered successful after having failed. Defaults to 1. Must be 1 for liveness and startup. Minimum value is 1.
+                      format: int32
+                      type: integer
+                    timeoutSeconds:
+                      description: 'Number of seconds after which the probe times out. Defaults to 1 second. Minimum value is 1. More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes'
+                      format: int32
+                      type: integer
+                  type: object
+              type: object
+            prometheus:
+              nullable: true
+              properties:
+                endpoints:
+                  items:
+                    description: Endpoint defines a scrapeable endpoint serving Prometheus metrics.
+                    properties:
+                      basicAuth:
+                        description: 'BasicAuth allow an endpoint to authenticate over basic authentication More info: https://prometheus.io/docs/operating/configuration/#endpoints'
+                        properties:
+                          password:
+                            description: The secret in the service monitor namespace that contains the password for authentication.
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must be a valid secret key.
+                                type: string
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                          username:
+                            description: The secret in the service monitor namespace that contains the username for authentication.
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must be a valid secret key.
+                                type: string
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                        type: object
+                      bearerTokenFile:
+                        description: File to read bearer token for scraping targets.
+                        type: string
+                      bearerTokenSecret:
+                        description: Secret to mount to read bearer token for scraping targets. The secret needs to be in the same namespace as the service monitor and accessible by the Prometheus Operator.
+                        properties:
+                          key:
+                            description: The key of the secret to select from.  Must be a valid secret key.
+                            type: string
+                          name:
+                            description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                            type: string
+                          optional:
+                            description: Specify whether the Secret or its key must be defined
+                            type: boolean
+                        required:
+                        - key
+                        type: object
+                      honorLabels:
+                        description: HonorLabels chooses the metric's labels on collisions with target labels.
+                        type: boolean
+                      honorTimestamps:
+                        description: HonorTimestamps controls whether Prometheus respects the timestamps present in scraped data.
+                        type: boolean
+                      interval:
+                        description: Interval at which metrics should be scraped
+                        type: string
+                      metricRelabelings:
+                        description: MetricRelabelConfigs to apply to samples before ingestion.
+                        items:
+                          description: 'RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion. It defines `<metric_relabel_configs>`-section of Prometheus configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs'
+                          properties:
+                            action:
+                              description: Action to perform based on regex matching. Default is 'replace'
+                              type: string
+                            modulus:
+                              description: Modulus to take of the hash of the source label values.
+                              format: int64
+                              type: integer
+                            regex:
+                              description: Regular expression against which the extracted value is matched. Default is '(.*)'
+                              type: string
+                            replacement:
+                              description: Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'
+                              type: string
+                            separator:
+                              description: Separator placed between concatenated source label values. default is ';'.
+                              type: string
+                            sourceLabels:
+                              description: The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.
+                              items:
+                                type: string
+                              type: array
+                            targetLabel:
+                              description: Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.
+                              type: string
+                          type: object
+                        type: array
+                      params:
+                        additionalProperties:
+                          items:
+                            type: string
+                          type: array
+                        description: Optional HTTP URL parameters
+                        type: object
+                      path:
+                        description: HTTP path to scrape for metrics.
+                        type: string
+                      port:
+                        description: Name of the service port this endpoint refers to. Mutually exclusive with targetPort.
+                        type: string
+                      proxyUrl:
+                        description: ProxyURL eg http://proxyserver:2195 Directs scrapes to proxy through this endpoint.
+                        type: string
+                      relabelings:
+                        description: 'RelabelConfigs to apply to samples before scraping. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#relabel_config'
+                        items:
+                          description: 'RelabelConfig allows dynamic rewriting of the label set, being applied to samples before ingestion. It defines `<metric_relabel_configs>`-section of Prometheus configuration. More info: https://prometheus.io/docs/prometheus/latest/configuration/configuration/#metric_relabel_configs'
+                          properties:
+                            action:
+                              description: Action to perform based on regex matching. Default is 'replace'
+                              type: string
+                            modulus:
+                              description: Modulus to take of the hash of the source label values.
+                              format: int64
+                              type: integer
+                            regex:
+                              description: Regular expression against which the extracted value is matched. Default is '(.*)'
+                              type: string
+                            replacement:
+                              description: Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'
+                              type: string
+                            separator:
+                              description: Separator placed between concatenated source label values. default is ';'.
+                              type: string
+                            sourceLabels:
+                              description: The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.
+                              items:
+                                type: string
+                              type: array
+                            targetLabel:
+                              description: Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.
+                              type: string
+                          type: object
+                        type: array
+                      scheme:
+                        description: HTTP scheme to use for scraping.
+                        type: string
+                      scrapeTimeout:
+                        description: Timeout after which the scrape is ended
+                        type: string
+                      targetPort:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: Name or number of the pod port this endpoint refers to. Mutually exclusive with port.
+                        x-kubernetes-int-or-string: true
+                      tlsConfig:
+                        description: TLS configuration to use when scraping the endpoint
+                        properties:
+                          ca:
+                            description: Stuct containing the CA cert to use for the targets.
+                            properties:
+                              configMap:
+                                description: ConfigMap containing data to use for the targets.
+                                properties:
+                                  key:
+                                    description: The key to select.
+                                    type: string
+                                  name:
+                                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the ConfigMap or its key must be defined
+                                    type: boolean
+                                required:
+                                - key
+                                type: object
+                              secret:
+                                description: Secret containing data to use for the targets.
+                                properties:
+                                  key:
+                                    description: The key of the secret to select from.  Must be a valid secret key.
+                                    type: string
+                                  name:
+                                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the Secret or its key must be defined
+                                    type: boolean
+                                required:
+                                - key
+                                type: object
+                            type: object
+                          caFile:
+                            description: Path to the CA cert in the Prometheus container to use for the targets.
+                            type: string
+                          cert:
+                            description: Struct containing the client cert file for the targets.
+                            properties:
+                              configMap:
+                                description: ConfigMap containing data to use for the targets.
+                                properties:
+                                  key:
+                                    description: The key to select.
+                                    type: string
+                                  name:
+                                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the ConfigMap or its key must be defined
+                                    type: boolean
+                                required:
+                                - key
+                                type: object
+                              secret:
+                                description: Secret containing data to use for the targets.
+                                properties:
+                                  key:
+                                    description: The key of the secret to select from.  Must be a valid secret key.
+                                    type: string
+                                  name:
+                                    description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                    type: string
+                                  optional:
+                                    description: Specify whether the Secret or its key must be defined
+                                    type: boolean
+                                required:
+                                - key
+                                type: object
+                            type: object
+                          certFile:
+                            description: Path to the client cert file in the Prometheus container for the targets.
+                            type: string
+                          insecureSkipVerify:
+                            description: Disable target certificate validation.
+                            type: boolean
+                          keyFile:
+                            description: Path to the client key file in the Prometheus container for the targets.
+                            type: string
+                          keySecret:
+                            description: Secret containing the client key file for the targets.
+                            properties:
+                              key:
+                                description: The key of the secret to select from.  Must be a valid secret key.
+                                type: string
+                              name:
+                                description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names TODO: Add other useful fields. apiVersion, kind, uid?'
+                                type: string
+                              optional:
+                                description: Specify whether the Secret or its key must be defined
+                                type: boolean
+                            required:
+                            - key
+                            type: object
+                          serverName:
+                            description: Used to verify the hostname for the targets.
+                            type: string
+                        type: object
+                    type: object
+                  type: array
+                rules:
+                  items:
+                    description: Rule describes an alerting or recording rule.
+                    properties:
+                      alert:
+                        type: string
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      expr:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        x-kubernetes-int-or-string: true
+                      for:
+                        type: string
+                      labels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      record:
+                        type: string
+                    required:
+                    - expr
+                    type: object
+                  type: array
+              required:
+              - endpoints
+              type: object
+            resources:
+              description: ResourceRequirements describes the compute resource requirements.
+              properties:
+                limits:
+                  additionalProperties:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  description: 'Limits describes the maximum amount of compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                  type: object
+                requests:
+                  additionalProperties:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  description: 'Requests describes the minimum amount of compute resources required. If Requests is omitted for a container, it defaults to Limits if that is explicitly specified, otherwise to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                  type: object
+              type: object
+            scale:
+              properties:
+                max:
+                  format: int32
+                  type: integer
+                min:
+                  format: int32
+                  type: integer
+                scaleDown:
+                  properties:
+                    delay:
+                      format: int32
+                      type: integer
+                    step:
+                      format: int32
+                      type: integer
+                  type: object
+                scaleUp:
+                  properties:
+                    delay:
+                      format: int32
+                      type: integer
+                    step:
+                      format: int32
+                      type: integer
+                  type: object
+                targetCPUUtilizationPercentage:
+                  format: int32
+                  type: integer
+              type: object
+            serviceAccount:
+              type: string
+            target:
+              type: string
+          required:
+          - app
+          - build
+          - deployMode
+          - target
+          type: object
+        status:
+          description: AppTargetStatus defines the observed state of AppTarget
+          properties:
+            activeRelease:
+              type: string
+            deployUpdatedAt:
+              format: date-time
+              type: string
+            hostname:
+              type: string
+            lastScaledAt:
+              format: date-time
+              nullable: true
+              type: string
+            numAvailable:
+              format: int32
+              type: integer
+            numDesired:
+              format: int32
+              type: integer
+            numReady:
+              format: int32
+              type: integer
+            phase:
+              type: string
+            targetRelease:
+              type: string
+          required:
+          - activeRelease
+          - deployUpdatedAt
+          - numAvailable
+          - numDesired
+          - numReady
+          - phase
+          - targetRelease
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: builds.k11n.dev
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.registry
+    name: Registry
+    type: string
+  - JSONPath: .spec.image
+    name: Image
+    type: string
+  - JSONPath: .spec.tag
+    name: Tag
+    type: string
+  group: k11n.dev
+  names:
+    kind: Build
+    listKind: BuildList
+    plural: builds
+    singular: build
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: Build is the Schema for the builds API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: BuildSpec defines the desired state of Build
+          properties:
+            createdAt:
+              description: Timestamp is a struct that is equivalent to Time, but intended for protobuf marshalling/unmarshalling. It is generated into a serialization that matches Time. Do not use in Go structs.
+              properties:
+                nanos:
+                  description: Non-negative fractions of a second at nanosecond resolution. Negative second values with fractions must still have non-negative nanos values that count forward in time. Must be from 0 to 999,999,999 inclusive. This field may be limited in precision depending on context.
+                  format: int32
+                  type: integer
+                seconds:
+                  description: Represents seconds of UTC time since Unix epoch 1970-01-01T00:00:00Z. Must be from 0001-01-01T00:00:00Z to 9999-12-31T23:59:59Z inclusive.
+                  format: int64
+                  type: integer
+              required:
+              - nanos
+              - seconds
+              type: object
+            image:
+              type: string
+            registry:
+              type: string
+            tag:
+              type: string
+          required:
+          - createdAt
+          - image
+          - registry
+          - tag
+          type: object
+        status:
+          description: BuildStatus defines the observed state of Build
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: certificaterefs.k11n.dev
+spec:
+  group: k11n.dev
+  names:
+    kind: CertificateRef
+    listKind: CertificateRefList
+    plural: certificaterefs
+    singular: certificateref
+  scope: Cluster
+  validation:
+    openAPIV3Schema:
+      description: CertificateRef is the Schema for the certificaterefs API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: CertificateRefSpec defines the desired state of CertificateRef
+          properties:
+            domain:
+              type: string
+            expiresAt:
+              format: date-time
+              type: string
+            issuer:
+              type: string
+            keyAlgorithm:
+              type: string
+            providerId:
+              type: string
+            signatureAlgorithm:
+              type: string
+            status:
+              type: string
+          required:
+          - domain
+          - expiresAt
+          - issuer
+          - keyAlgorithm
+          - providerId
+          - signatureAlgorithm
+          - status
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: clusterconfigs.k11n.dev
+spec:
+  group: k11n.dev
+  names:
+    kind: ClusterConfig
+    listKind: ClusterConfigList
+    plural: clusterconfigs
+    singular: clusterconfig
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: ClusterConfig is the Schema for the clusterconfigs API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: ClusterConfigSpec defines the desired state of ClusterConfig
+          properties:
+            aws:
+              nullable: true
+              properties:
+                adminGroups:
+                  items:
+                    type: string
+                  nullable: true
+                  type: array
+                adminRoleArn:
+                  type: string
+                albRoleArn:
+                  type: string
+                availabilityZone:
+                  items:
+                    type: string
+                  type: array
+                ipv6Cidr:
+                  description: set after cluster is created
+                  type: string
+                nodeRoleArn:
+                  type: string
+                privateSubnets:
+                  items:
+                    properties:
+                      availabilityZone:
+                        type: string
+                      ipv4Cidr:
+                        type: string
+                      ipv6Cidr:
+                        type: string
+                      isPublic:
+                        type: boolean
+                      subnetId:
+                        type: string
+                    required:
+                    - availabilityZone
+                    - ipv4Cidr
+                    - isPublic
+                    - subnetId
+                    type: object
+                  nullable: true
+                  type: array
+                publicSubnets:
+                  items:
+                    properties:
+                      availabilityZone:
+                        type: string
+                      ipv4Cidr:
+                        type: string
+                      ipv6Cidr:
+                        type: string
+                      isPublic:
+                        type: boolean
+                      subnetId:
+                        type: string
+                    required:
+                    - availabilityZone
+                    - ipv4Cidr
+                    - isPublic
+                    - subnetId
+                    type: object
+                  type: array
+                securityGroups:
+                  items:
+                    type: string
+                  type: array
+                topology:
+                  type: string
+                vpc:
+                  description: optional, only if it's using an existing VPC
+                  type: string
+                vpcCidr:
+                  description: input values
+                  type: string
+              required:
+              - adminRoleArn
+              - albRoleArn
+              - availabilityZone
+              - nodeRoleArn
+              - publicSubnets
+              - securityGroups
+              - topology
+              - vpc
+              - vpcCidr
+              type: object
+            cloud:
+              type: string
+            componentConfig:
+              additionalProperties:
+                additionalProperties:
+                  type: string
+                type: object
+              nullable: true
+              type: object
+            enableIpv6:
+              type: boolean
+            kubeVersion:
+              type: string
+            region:
+              type: string
+            targets:
+              items:
+                type: string
+              nullable: true
+              type: array
+            version:
+              type: string
+          required:
+          - cloud
+          - enableIpv6
+          - kubeVersion
+          - region
+          - version
+          type: object
+        status:
+          description: ClusterConfigStatus defines the observed state of ClusterConfig
+          properties:
+            components:
+              items:
+                properties:
+                  name:
+                    type: string
+                  version:
+                    type: string
+                required:
+                - name
+                - version
+                type: object
+              type: array
+          required:
+          - components
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: ingressrequests.k11n.dev
+spec:
+  group: k11n.dev
+  names:
+    kind: IngressRequest
+    listKind: IngressRequestList
+    plural: ingressrequests
+    singular: ingressrequest
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: IngressRequest is the Schema for the ingressrequests API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: IngressRequestSpec defines the desired state of IngressRequest
+          properties:
+            hosts:
+              items:
+                type: string
+              type: array
+          required:
+          - hosts
+          type: object
+        status:
+          description: IngressRequestStatus defines the observed state of IngressRequest
+          properties:
+            address:
+              type: string
+            message:
+              type: string
+          required:
+          - address
+          - message
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: linkedserviceaccounts.k11n.dev
+spec:
+  group: k11n.dev
+  names:
+    kind: LinkedServiceAccount
+    listKind: LinkedServiceAccountList
+    plural: linkedserviceaccounts
+    singular: linkedserviceaccount
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: LinkedServiceAccount is the Schema for the linkedserviceaccounts API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: LinkedServiceAccountSpec defines the desired state of LinkedServiceAccount
+          properties:
+            aws:
+              properties:
+                policyArns:
+                  items:
+                    type: string
+                  minItems: 1
+                  type: array
+              required:
+              - policyArns
+              type: object
+            targets:
+              items:
+                type: string
+              type: array
+          required:
+          - targets
+          type: object
+        status:
+          description: ConnectedServiceAccountStatus defines the observed state of LinkedServiceAccount
+          properties:
+            linkedTargets:
+              items:
+                type: string
+              type: array
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: nodepools.k11n.dev
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .spec.autoscale
+    name: AutoScale
+    type: boolean
+  - JSONPath: .spec.machineType
+    name: MachineType
+    type: string
+  - JSONPath: .spec.minSize
+    name: MinSize
+    type: integer
+  - JSONPath: .spec.maxSize
+    name: MaxSize
+    type: integer
+  - JSONPath: .status.numReady
+    name: NumReady
+    type: string
+  group: k11n.dev
+  names:
+    kind: Nodepool
+    listKind: NodepoolList
+    plural: nodepools
+    singular: nodepool
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: Nodepool is the Schema for the nodepools API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: NodepoolSpec defines the desired state of Nodepool
+          properties:
+            autoscale:
+              type: boolean
+            aws:
+              properties:
+                amiType:
+                  type: string
+                asgId:
+                  description: set only after nodepool is created
+                  type: string
+                connectFromAnywhere:
+                  type: boolean
+                roleArn:
+                  type: string
+                securityGroupId:
+                  description: set only after cluster is created
+                  type: string
+                sshKeypair:
+                  type: string
+                subnetIds:
+                  items:
+                    type: string
+                  type: array
+              required:
+              - amiType
+              - connectFromAnywhere
+              - roleArn
+              - sshKeypair
+              type: object
+            diskSizeGiB:
+              type: integer
+            machineType:
+              type: string
+            maxSize:
+              format: int64
+              type: integer
+            minSize:
+              format: int64
+              type: integer
+            requiresGPU:
+              type: boolean
+          required:
+          - autoscale
+          - diskSizeGiB
+          - machineType
+          - maxSize
+          - minSize
+          - requiresGPU
+          type: object
+        status:
+          description: NodepoolStatus defines the observed state of Nodepool
+          properties:
+            nodes:
+              items:
+                type: string
+              type: array
+            numReady:
+              type: integer
+          required:
+          - nodes
+          - numReady
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

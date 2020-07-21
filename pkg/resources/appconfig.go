@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/k11n/konstellation/pkg/apis/k11n/v1alpha1"
+	"github.com/k11n/konstellation/api/v1alpha1"
 )
 
 func GetConfigForType(kclient client.Client, confType v1alpha1.ConfigType, name string, target string) (ac *v1alpha1.AppConfig, err error) {
