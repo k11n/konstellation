@@ -8,9 +8,13 @@ import (
 	"path"
 	"strings"
 
+	istionetworking "istio.io/api/networking/v1beta1"
+	istio "istio.io/client-go/pkg/apis/networking/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/pkg/components"
+	"github.com/k11n/konstellation/pkg/resources"
 	"github.com/k11n/konstellation/pkg/utils/cli"
 	"github.com/k11n/konstellation/pkg/utils/files"
 )
@@ -108,6 +112,33 @@ func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 		"--set", "values.gateways.istio-ingressgateway.type=NodePort",
 		"--set", "values.gateways.enabled=true",
 	)
+	if err != nil {
+		return err
+	}
+
+	// 1.6.5 stopped shipping with Gateway, we'll create it ourselves
+	gateway := &istio.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: resources.IstioNamespace,
+			Name:      "ingressgateway",
+		},
+		Spec: istionetworking.Gateway{
+			Selector: map[string]string{
+				"istio": "ingressgateway",
+			},
+			Servers: []*istionetworking.Server{
+				{
+					Port: &istionetworking.Port{
+						Name:     "http",
+						Number:   80,
+						Protocol: "HTTP",
+					},
+					Hosts: []string{"*"},
+				},
+			},
+		},
+	}
+	_, err = resources.UpdateResource(kclient, gateway, nil, nil)
 	if err != nil {
 		return err
 	}
