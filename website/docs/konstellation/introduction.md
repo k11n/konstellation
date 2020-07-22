@@ -2,7 +2,7 @@
 title: Introduction
 ---
 
-Konstellation is an open source application platform that helps developers to deploy and manage apps on Kubernetes. It provides a scalable infrastructure, give you a simple, and yet robust, interface on top of Kubernetes.
+Konstellation is an open source application platform that helps developers to deploy and manage apps on Kubernetes. It provides a scalable infrastructure, give you a simple, and yet robust interface on top of Kubernetes.
 
 ## What is it
 

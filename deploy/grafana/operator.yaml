@@ -375,12 +375,4 @@ spec:
         ports:
         - containerPort: 60000
           name: metrics
-        readinessProbe:
-          exec:
-            command:
-            - stat
-            - /tmp/operator-sdk-ready
-          failureThreshold: 1
-          initialDelaySeconds: 4
-          periodSeconds: 10
       serviceAccountName: grafana-operator

@@ -6,8 +6,10 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+)
 
-	"github.com/k11n/konstellation/pkg/utils/files"
+const (
+	editComment = "# Please edit the object below. Lines beginning with a '#' will be ignored.\n#\n"
 )
 
 func RunBufferedCommand(name string, args ...string) ([]byte, error) {
@@ -43,10 +45,14 @@ func ExecuteUserEditor(original []byte, name string) (edited []byte, err error) 
 	if original == nil {
 		original = make([]byte, 0)
 	}
-	err = ioutil.WriteFile(target, original, files.DefaultFileMode)
+	f, err := os.Create(target)
 	if err != nil {
 		return
 	}
+
+	f.WriteString(editComment)
+	f.Write(original)
+	f.Close()
 
 	// launch editor
 	var args []string
@@ -63,11 +69,4 @@ func ExecuteUserEditor(original []byte, name string) (edited []byte, err error) 
 	}
 
 	return ioutil.ReadFile(target)
-}
-
-func EscapeEnvVar(val string) string {
-	val = strings.ReplaceAll(val, `"`, `\"`)
-	val = strings.ReplaceAll(val, `''`, `\'`)
-	val = strings.ReplaceAll(val, "`", "\\`")
-	return val
 }

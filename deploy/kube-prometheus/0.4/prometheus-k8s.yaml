@@ -599,38 +599,6 @@ spec:
     prometheus: k8s
   sessionAffinity: ClientIP
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    k8s-app: kube-controller-manager
-  name: kube-controller-manager-prometheus-discovery
-  namespace: kube-system
-spec:
-  clusterIP: None
-  ports:
-  - name: http-metrics
-    port: 10252
-    targetPort: 10252
-  selector:
-    k8s-app: kube-controller-manager
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    k8s-app: kube-scheduler
-  name: kube-scheduler-prometheus-discovery
-  namespace: kube-system
-spec:
-  clusterIP: None
-  ports:
-  - name: http-metrics
-    port: 10251
-    targetPort: 10251
-  selector:
-    k8s-app: kube-scheduler
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

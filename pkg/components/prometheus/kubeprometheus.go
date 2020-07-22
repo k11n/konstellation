@@ -13,7 +13,6 @@ import (
 
 var (
 	versionMap = map[string]string{
-		"1.15": "0.3",
 		"1.16": "0.4",
 		"1.17": "0.4",
 		"1.18": "0.5",

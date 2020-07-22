@@ -80,6 +80,11 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 }
 
 func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, tlsHosts []string) (annotations map[string]string, err error) {
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return
+	}
+
 	// https://kubernetes-sigs.github.io/aws-alb-ingress-controller/guide/ingress/annotation/
 	// ingress could perform autodiscovery
 	listeners := `[{"HTTP": 80}]`
@@ -88,13 +93,16 @@ func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, tlsHosts []
 	}
 
 	annotations = map[string]string{
-		"kubernetes.io/ingress.class":               "alb",
-		"alb.ingress.kubernetes.io/ip-address-type": "dualstack",
-		"alb.ingress.kubernetes.io/listen-ports":    listeners,
-		"alb.ingress.kubernetes.io/scheme":          "internet-facing",
+		"kubernetes.io/ingress.class":            "alb",
+		"alb.ingress.kubernetes.io/listen-ports": listeners,
+		"alb.ingress.kubernetes.io/scheme":       "internet-facing",
+		//"alb.ingress.kubernetes.io/tags":         fmt.Sprintf("Name=konstellation-%s", cc.Name),
 	}
 
-	//
+	// attach dualstack LB if we have IPV6 enabled on the subnet
+	if cc.Spec.EnableIpv6 && cc.Spec.AWS.Ipv6Cidr != "" {
+		annotations["alb.ingress.kubernetes.io/ip-address-type"] = "dualstack"
+	}
 
 	// find istio status port
 	svc, err := resources.GetService(kclient, resources.IstioNamespace, resources.IngressBackendName)

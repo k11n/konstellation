@@ -34,7 +34,7 @@ deploy: manifests kustomize components
 	$(KUSTOMIZE) build config/default > deploy/operator.yaml
 
 # Installs operator onto the current cluster
-install-operator: deploy
+install-operator:
 	kubectl apply -f deploy/operator.yaml
 
 uninstall-operator:
@@ -128,15 +128,11 @@ prometheus-0.4:
 	components/prometheus/build.py 0.4
 	mv components/prometheus/0.4/dist/*.yaml deploy/kube-prometheus/0.4/
 
-prometheus-0.3:
-	components/prometheus/build.py 0.3
-	mv components/prometheus/0.3/dist/*.yaml deploy/kube-prometheus/0.3/
-
 grafana: prometheus-0.4
 	# build grafana-operator
 	kustomize build components/grafana/operator > deploy/grafana/operator.yaml
 	components/grafana/generate-resources.py components/prometheus/0.4/build/grafana-dashboardDefinitions.yaml
 	kustomize build components/grafana > deploy/grafana/dashboards.yaml
 
-components: prometheus-0.3 prometheus-0.4 grafana
+components: prometheus-0.4 grafana
 
