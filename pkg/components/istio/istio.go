@@ -104,7 +104,7 @@ func (i *IstioInstaller) InstallCLI() error {
 func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 	err := cli.RunCommandWithStd(i.cliPath(), "manifest", "apply",
 		"--skip-confirmation",
-		"--set", "components.citadel.enabled=true", // citadel is required by the sidecar injector
+		"--set", "components.citadel.enabled=true",
 		"--set", "components.sidecarInjector.enabled=true",
 		"--set", "addonComponents.kiali.enabled=false",
 		"--set", "addonComponents.prometheus.enabled=false",

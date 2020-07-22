@@ -30,6 +30,37 @@ func setupStart(c *cli.Context) error {
 	if err := checkDependencies(); err != nil {
 		return err
 	}
+
+	if err := installBundledCli(); err != nil {
+		return err
+	}
+
+	cloud, err := ChooseCloudPrompt("Choose a cloud provider to configure")
+	if err != nil {
+		return err
+	}
+	return cloud.Setup()
+}
+
+func ensureSetup(c *cli.Context) error {
+	conf := config.GetConfig()
+	if !conf.IsSetup() {
+		return fmt.Errorf("Konstellation is not yet setup. Run `kon setup` to continue.")
+	}
+	return nil
+}
+
+func checkDependencies() error {
+	for _, exe := range neededExes {
+		_, err := exec.LookPath(exe)
+		if err != nil {
+			return fmt.Errorf("Konstellation requires %s, but could find it. Please ensure it's installed and in your PATH", exe)
+		}
+	}
+	return nil
+}
+
+func installBundledCli() error {
 	// install components
 	// this only requires components that has a CLI
 	installConfirmed := false
@@ -61,29 +92,6 @@ func setupStart(c *cli.Context) error {
 			if err != nil {
 				return err
 			}
-		}
-	}
-
-	cloud, err := ChooseCloudPrompt("Choose a cloud provider to configure")
-	if err != nil {
-		return err
-	}
-	return cloud.Setup()
-}
-
-func ensureSetup(c *cli.Context) error {
-	conf := config.GetConfig()
-	if !conf.IsSetup() {
-		return fmt.Errorf("Konstellation is not yet setup. Run `kon setup` to continue.")
-	}
-	return nil
-}
-
-func checkDependencies() error {
-	for _, exe := range neededExes {
-		_, err := exec.LookPath(exe)
-		if err != nil {
-			return fmt.Errorf("Konstellation requires %s, but could find it. Please ensure it's installed and in your PATH", exe)
 		}
 	}
 	return nil

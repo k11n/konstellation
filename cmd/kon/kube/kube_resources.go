@@ -27,13 +27,13 @@ var (
 	}
 
 	KubeComponents = []components.ComponentInstaller{
-		&autoscaler.ClusterAutoScaler{},
-		&istio.IstioInstaller{},
-		&kubedash.KubeDash{},
-		&prometheus.KubePrometheus{},
-		&grafana.GrafanaOperator{},
 		// TODO: this might not be required on some installs
 		&metricsserver.MetricsServer{},
+		&kubedash.KubeDash{},
+		&autoscaler.ClusterAutoScaler{},
+		&istio.IstioInstaller{},
+		&prometheus.KubePrometheus{},
+		&grafana.GrafanaOperator{},
 		&konstellation.Konstellation{},
 	}
 )

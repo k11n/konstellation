@@ -267,6 +267,10 @@ func clusterCreate(c *cli.Context) error {
 	}
 	fmt.Println(clusterCreateHelp)
 
+	if err := installBundledCli(); err != nil {
+		return err
+	}
+
 	// update existing cluster names to ensure there's no conflict
 	if err := updateClusterLocations(); err != nil {
 		return err
