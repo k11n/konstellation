@@ -32,7 +32,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/pkg/resources"
@@ -63,7 +62,7 @@ func (r *AppReleaseReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			return reconcile.Result{}, nil
+			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
 		return res, err
@@ -84,7 +83,7 @@ func (r *AppReleaseReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	}
 	rs, err := r.newReplicaSetForAR(ar, build, cm)
 	if err != nil {
-		return reconcile.Result{RequeueAfter: 1 * time.Minute}, err
+		return ctrl.Result{RequeueAfter: 1 * time.Minute}, err
 	}
 
 	shouldUpdate := true

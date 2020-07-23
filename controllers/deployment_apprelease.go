@@ -9,9 +9,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/pkg/resources"
@@ -25,7 +25,7 @@ const (
 	releaseHoursToKeep = 48
 )
 
-func (r *DeploymentReconciler) reconcileAppReleases(ctx context.Context, at *v1alpha1.AppTarget, configMap *corev1.ConfigMap) (releases []*v1alpha1.AppRelease, res *reconcile.Result, err error) {
+func (r *DeploymentReconciler) reconcileAppReleases(ctx context.Context, at *v1alpha1.AppTarget, configMap *corev1.ConfigMap) (releases []*v1alpha1.AppRelease, res *ctrl.Result, err error) {
 	// find the named build for the app
 	build, err := resources.GetBuildByName(r.Client, at.Spec.Build)
 	if err != nil {
@@ -124,7 +124,7 @@ func (r *DeploymentReconciler) reconcileAppReleases(ctx context.Context, at *v1a
 /**
  * Determine current releases and flip release switch
  */
-func (r *DeploymentReconciler) deployReleases(ctx context.Context, at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) (res *reconcile.Result, err error) {
+func (r *DeploymentReconciler) deployReleases(ctx context.Context, at *v1alpha1.AppTarget, releases []*v1alpha1.AppRelease) (res *ctrl.Result, err error) {
 	// need a way to test this controller
 	logger := r.Log.WithValues("appTarget", at.Name)
 
@@ -152,7 +152,7 @@ func (r *DeploymentReconciler) deployReleases(ctx context.Context, at *v1alpha1.
 		// only update when it's time to, otherwise requeue
 		timeDelta := time.Now().Sub(at.Status.DeployUpdatedAt.Time)
 		if timeDelta < at.Spec.Probes.GetReadinessTimeout() {
-			res = &reconcile.Result{
+			res = &ctrl.Result{
 				RequeueAfter: at.Spec.Probes.GetReadinessTimeout() - timeDelta,
 			}
 			logger.Info("waiting for next reconcile")
@@ -253,7 +253,7 @@ func (r *DeploymentReconciler) deployReleases(ctx context.Context, at *v1alpha1.
 			hasChanges = true
 		} else {
 			// not fully ramped yet, check again
-			res = &reconcile.Result{
+			res = &ctrl.Result{
 				RequeueAfter: at.Spec.Probes.GetReadinessTimeout(),
 			}
 		}
@@ -306,7 +306,7 @@ func (r *DeploymentReconciler) deployReleases(ctx context.Context, at *v1alpha1.
 				ar.Spec.NumDesired = 0
 			} else {
 				// not completely scaled down, reconcile again
-				res = &reconcile.Result{
+				res = &ctrl.Result{
 					RequeueAfter: at.Spec.Probes.GetReadinessTimeout(),
 				}
 			}

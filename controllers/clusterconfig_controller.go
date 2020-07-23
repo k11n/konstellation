@@ -32,7 +32,6 @@ import (
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/pkg/components/prometheus"
@@ -118,7 +117,7 @@ func (r *ClusterConfigReconciler) ensureNamespaceCreated(ctx context.Context, cc
 		},
 	}
 	// ensures namespace is cleaned up after app target is
-	err = controllerutil.SetControllerReference(cc, &n, r.Scheme)
+	err = ctrl.SetControllerReference(cc, &n, r.Scheme)
 	if err != nil {
 		return err
 	}

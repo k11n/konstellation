@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/k11n/konstellation/api/v1alpha1"
@@ -72,7 +71,7 @@ func (r *IngressRequestReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 				Name:      resources.IngressName,
 			},
 		})
-		return reconcile.Result{}, nil
+		return ctrl.Result{}, nil
 	}
 
 	// create ingress, one for all hosts
@@ -131,7 +130,7 @@ func (r *IngressRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 			// just need to request once. there'll be one ingress with all of the hosts
 			for _, ingressReq := range reqList.Items {
-				requests = append(requests, reconcile.Request{
+				requests = append(requests, ctrl.Request{
 					NamespacedName: types.NamespacedName{
 						Name: ingressReq.Name,
 					},
@@ -153,7 +152,7 @@ func (r *IngressRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			if err != nil || len(reqList.Items) == 0 {
 				return requests
 			}
-			requests = append(requests, reconcile.Request{
+			requests = append(requests, ctrl.Request{
 				NamespacedName: types.NamespacedName{
 					Name: reqList.Items[0].Name,
 				},

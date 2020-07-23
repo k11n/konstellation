@@ -28,7 +28,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/k11n/konstellation/api/v1alpha1"
@@ -58,7 +57,7 @@ func (r *NodepoolReconciler) Reconcile(req ctrl.Request) (res ctrl.Result, err e
 			return res, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+		return ctrl.Result{}, err
 	}
 
 	nodes, err := resources.GetNodesForNodepool(r.Client, np.Name)
@@ -92,19 +91,19 @@ func (r *NodepoolReconciler) Reconcile(req ctrl.Request) (res ctrl.Result, err e
 		}
 	}
 
-	return reconcile.Result{}, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *NodepoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	nodeWatcher := &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(func(mapObj handler.MapObject) []reconcile.Request {
-			var reqs []reconcile.Request
+		ToRequests: handler.ToRequestsFunc(func(mapObj handler.MapObject) []ctrl.Request {
+			var reqs []ctrl.Request
 			nodeObj := mapObj.Object.(*corev1.Node)
 
 			// get nodepool from node
 			npName := resources.NodepoolNameFromNode(nodeObj)
 			if npName != "" {
-				reqs = append(reqs, reconcile.Request{
+				reqs = append(reqs, ctrl.Request{
 					NamespacedName: types.NamespacedName{
 						Name: npName,
 					},
