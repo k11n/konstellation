@@ -24,6 +24,13 @@
   padding: 0 var(--ifm-pre-padding);
 }
 
+/** Home **/
+
+html[data-theme="dark"] .alternateRow {
+  background-color: var(--ifm-background-surface-color);
+  /* background-color: #20232a; */
+}
+
 h1.heroTagline {
   color: #fff;
   font-size: 60px;
@@ -33,4 +40,21 @@ h1.heroTagline {
   font-size: 24px;
   font-weight: 700;
   border-width: 2px;
+}
+
+.homeSection {
+  padding-top: 70px;
+  padding-bottom: 70px;
+}
+
+.alternateRow {
+  background-color: #f2f6fa;
+}
+
+.homeSection .colLeft {
+  text-align: right;
+}
+
+.featureVideo {
+  width: 100%;
 }

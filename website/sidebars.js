@@ -8,11 +8,13 @@ module.exports = {
     {
       type: 'category',
       label: 'Getting Started',
+      collapsed: false,
       items: ['getting-started/installation', 'getting-started/deploy'],
     },
     {
       type: 'category',
       label: 'Working With Apps',
+      collapsed: false,
       items: [
         'apps/basics',
         'apps/configuration',
@@ -24,6 +26,7 @@ module.exports = {
     {
       type: 'category',
       label: 'Cluster Operation',
+      collapsed: false,
       items: [
         'clusters/creation',
         'clusters/users',

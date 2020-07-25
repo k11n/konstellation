@@ -20,7 +20,7 @@ module.exports = {
         src: 'img/logo_light.png',
         srcDark: 'img/logo_dark.png',
       },
-      links: [
+      items: [
         {
           to: 'docs/konstellation/introduction',
           activeBasePath: 'docs',
@@ -33,6 +33,11 @@ module.exports = {
           position: 'right',
         },
       ],
+    },
+    colorMode: {
+      defaultMode: 'dark',
+      disableSwitch: true,
+      respectPrefersColorScheme: false,
     },
     footer: {
       style: 'dark',
@@ -117,7 +122,7 @@ module.exports = {
           editUrl:
             'https://github.com/k11n/konstellation/edit/master/website/',
           remarkPlugins: [images, emoji],
-          rehypePlugins: [rehypeTruncate],
+          // rehypePlugins: [rehypeTruncate],
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),

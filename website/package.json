@@ -9,10 +9,12 @@
     "deploy": "docusaurus deploy"
   },
   "dependencies": {
-    "@docusaurus/core": "^2.0.0-alpha.58",
-    "@docusaurus/preset-classic": "^2.0.0-alpha.58",
+    "@docusaurus/core": "^2.0.0-alpha.59",
+    "@docusaurus/preset-classic": "^2.0.0-alpha.59",
     "clsx": "^1.1.1",
+    "enzyme": "^3.0.0",
     "prism-react-renderer": "^1.1.1",
+    "prop-types": "^15.5.4",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
     "react-twitter-embed": "^3.0.3",
