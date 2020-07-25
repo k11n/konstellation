@@ -102,7 +102,7 @@ const featureRows = [
     descriptions: [
       `Getting visibility into how apps are performing is often overlooked,
       but it's a critical piece of any production deployment.`,
-      `Konstellation comes with full observability out of the box, with a
+      `Konstellation comes with app observability configured out of the box, with a
       redundant Prometheus setup and pre-configured Grafana dashboards to give
       you insights.`,
       `It's fully extensible to collect app specific metrics as well.`,
@@ -115,14 +115,13 @@ const featureRows = [
     ],
   },
   {
-    title: 'Built for resilience',
+    title: 'The missing devops toolchain',
     descriptions: [
-      `Inspired by devops challenges at Medium, Konstellation incorporate the
-      complete set of tooling that's needed to operate production workloads
-      reliably.`,
+      `Inspired by devops challenges at Medium, Konstellation provides the full
+      set of tools needed to operate production workloads on top of Kubernetes.`,
       `Release management, configuration management, troubleshooting tools,
       rollbacks, cluster backup and replication.
-      All accessible via CLI via a secure proxy into the cluster.`,
+      All accessible via CLI with a secure proxy into the cluster.`,
     ],
     sectionContent: (
       <div className="homeShell">

@@ -27,7 +27,23 @@ html[data-theme="dark"] .alternateRow {
 
 h1.heroTagline {
   color: #fff;
-  font-size: 60px;
+  font-size: 55px;
+}
+
+@media screen and (max-width: 966px) {
+  h1.heroTagline {
+    font-size: 40px;
+  }
+   .heroBanner_src-pages- {
+    padding-left: 1.3rem !important;
+    padding-right: 1.3rem !important;
+  }
+}
+
+@media screen and (max-width: 700px) {
+  h1.heroTagline {
+    font-size: 30px;
+  }
 }
 
 .buttonCta {
@@ -50,10 +66,6 @@ h1.heroTagline {
   background-color: #f2f6fa;
 }
 
-.homeSection .colLeft {
-  text-align: right;
-}
-
 .featureVideo {
   width: 100%;
 }
@@ -62,7 +74,8 @@ h1.heroTagline {
   padding: 20px;
   margin: 20px;
   margin-top: 0;
+  margin-bottom: 30px;
   background-color: #2A2734;
-  height: 100%;
+  min-height: 200px;
   border-radius: var(--ifm-pre-border-radius);
 }
