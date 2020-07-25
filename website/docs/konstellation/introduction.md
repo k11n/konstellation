@@ -12,7 +12,8 @@ Konstellation is a complete software stack working on top of Kubernetes. It cons
 * [custom resource definitions](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/) (CRDs) that allows you to specify Apps as a resource
 * a set of best of breed components (Istio, Ingress controller, Prometheus, Grafana) configured to compatible with the version of Kubernetes on the cluster.
 * a [Kubernetes operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) that makes all of the components work together
-* Grafana dashboards for observability into health of apps
+* Prometheus operator configured to scrape from k8s, istio, as well as any apps
+* Grafana dashboards for observability
 * Terraform based automation that creates and manages clusters and other cloud resources.
 
 Together, it's designed for you to deploy resilient, scalable apps and services; making it simple to achieve many of the patterns described in [the twelve factor app](https://12factor.net/).
