@@ -566,10 +566,14 @@ func clusterSelect(clusterName string) error {
 		}
 	}
 
-	if err = ac.installComponents(false); err != nil {
+	if len(cc.Status.InstalledComponents) > 0 && cc.Spec.Version != version.Version {
+		// don't attempt to install, already have components from a diff version
+		fmt.Printf("%s is running Konstellation %s (latest %s), consider upgrading\n", cc.Name, cc.Spec.Version, version.Version)
+	} else if err = ac.installComponents(false); err != nil {
 		return err
 	}
-	fmt.Println("Switched active cluster to", clusterName)
+
+	fmt.Println("\nSwitched active cluster to", clusterName)
 	return nil
 }
 
@@ -906,7 +910,11 @@ func generateKubeConfig() error {
 		}
 	}
 
-	fmt.Printf("configuring kubectl: updating %s\n", target)
+	if selectedCluster != "" {
+		fmt.Printf("configuring kubectl: setting current context to %s\n", selectedCluster)
+	} else {
+		fmt.Printf("configuring kubectl: updating %s\n", target)
+	}
 	resources.UpdateKubeConfig(kconf, cmdPath, clusterConfs, selectedIdx)
 	file, err := os.Create(target)
 	if err != nil {
