@@ -9,6 +9,7 @@
   --ifm-color-primary-lighter: rgb(102, 212, 189);
   --ifm-color-primary-lightest: rgb(146, 224, 208);
   --ifm-code-font-size: 95%;
+  --ifm-color-text-secondary: #ddd;
 }
 
 .docusaurus-highlight-code-line {
@@ -27,7 +28,7 @@ html[data-theme="dark"] .alternateRow {
 
 h1.heroTagline {
   color: #fff;
-  font-size: 55px;
+  font-size: 50px;
 }
 
 @media screen and (max-width: 966px) {
@@ -55,6 +56,14 @@ h1.heroTagline {
 .featureColumnSection {
   padding-top: 100px;
   padding-bottom: 70px;
+}
+
+.featureColumnSection p {
+  color: var(--ifm-color-text-secondary);
+}
+
+.homeSection p {
+  color: var(--ifm-color-text-secondary);
 }
 
 .homeSection {
