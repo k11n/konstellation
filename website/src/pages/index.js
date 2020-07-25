@@ -6,7 +6,7 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import useBaseUrl from '@docusaurus/useBaseUrl';
 import styles from './styles.module.css';
 import Highlight, { defaultProps } from "prism-react-renderer";
-import dracula from 'prism-react-renderer/themes/dracula';
+import highlightTheme from "prism-react-renderer/themes/nightOwl";
 import Lightbox from 'react-image-lightbox';
 import 'react-image-lightbox/style.css';
 import Typical from 'react-typical'
@@ -42,7 +42,7 @@ kind: App
 metadata:
   name: app2048
 spec:
-  image: alexwhen/docker-2048
+  image: "alexwhen/docker-2048"
   ports:
     - name: http
       port: 80
@@ -82,7 +82,7 @@ const featureRows = [
       necessary resources for the service mesh.`,
     ],
     sectionContent: (
-      <Highlight {...defaultProps} code={manifestExample} language="yaml">
+      <Highlight {...defaultProps} theme={highlightTheme} code={manifestExample} language="yaml">
         {({ className, style, tokens, getLineProps, getTokenProps }) => (
           <pre className={className} style={style}>
             {tokens.map((line, i) => (
