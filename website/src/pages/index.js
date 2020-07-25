@@ -40,9 +40,9 @@ const featureCols = [
 const manifestExample = `apiVersion: k11n.dev/v1alpha1
 kind: App
 metadata:
-  name: myapp
+  name: app2048
 spec:
-  image: registry/myapp
+  image: alexwhen/docker-2048
   ports:
     - name: http
       port: 80
@@ -50,10 +50,10 @@ spec:
     - name: production
       scale:
         - min: 2
-          max: 10
+          max: 5
       ingress:
         hosts:
-          - myapp.mydomain.com
+          - 2048.mydomain.com
         port: http`;
 
 const featureRows = [
@@ -73,10 +73,12 @@ const featureRows = [
     descriptions: [
       `Konstellation uses custom resource definitions (CRDs) to define Apps as
       a first class resource.`,
-      `With a single simple manifest, you can define all there needs to deploying
-      your app. Receiving a load balancer address that you can point traffic to.`,
-      `It runs as an operator inside Kubernetes and syncs your app resource to
-      underlying ReplicaSet, Service, Autoscaler, Ingress, along with the
+      `The app manifest acts as the single source of truth to how an app should
+      be deployed.
+      If it's public facing, Konstellation will create a load balancer that you
+      can point traffic to.`,
+      `Konstellation runs as an operator inside Kubernetes that syncs your app
+      resource to underlying ReplicaSet, Service, Autoscaler, Ingress, along with the
       necessary resources for the service mesh.`,
     ],
     sectionContent: (
