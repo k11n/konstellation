@@ -9,6 +9,7 @@ import Highlight, { defaultProps } from "prism-react-renderer";
 import dracula from 'prism-react-renderer/themes/dracula';
 import Lightbox from 'react-image-lightbox';
 import 'react-image-lightbox/style.css';
+import Typical from 'react-typical'
 
 const featureCols = [
   {
@@ -97,12 +98,18 @@ const featureRows = [
   {
     title: 'Observability out of the box',
     descriptions: [
-      `Getting visibility into how apps are performing is often overlooked, but it's a critical piece of any production deployment.`,
-      `Konstellation comes with full observability out of the box, with a redundant Prometheus setup and pre-configured Grafana dashboards to give you insights.`,
+      `Getting visibility into how apps are performing is often overlooked,
+      but it's a critical piece of any production deployment.`,
+      `Konstellation comes with full observability out of the box, with a
+      redundant Prometheus setup and pre-configured Grafana dashboards to give
+      you insights.`,
       `It's fully extensible to collect app specific metrics as well.`,
     ],
     imageUrls: [
-      'img/screen/observability-grafana.png'
+      'img/screen/home-observe-1.png',
+      'img/screen/home-observe-2.png',
+      'img/screen/home-observe-3.png',
+      'img/screen/home-observe-4.png',
     ],
   },
   {
@@ -111,19 +118,59 @@ const featureRows = [
       `Inspired by devops challenges at Medium, Konstellation incorporate the
       complete set of tooling that's needed to operate production workloads
       reliably.`,
-      `Release management, troubleshooting tools, rollbacks, cluster backup
-      and replication. All accessible via CLI via a secure proxy into the cluster.`,
-    ]
+      `Release management, configuration management, troubleshooting tools,
+      rollbacks, cluster backup and replication.
+      All accessible via CLI via a secure proxy into the cluster.`,
+    ],
+    sectionContent: (
+      <div className="homeShell">
+        <Typical
+          loop={Infinity}
+          steps={[
+            'kon app new', 1000,
+            'kon app deploy', 1000,
+            'kon app list', 1000,
+            'kon app logs', 1000,
+            'kon app restart', 1000,
+            'kon app rollback', 1000,
+            'kon app shell', 1000,
+            'kon app status', 1000,
+            'kon cluster configure', 1000,
+            'kon cluster create', 1000,
+            'kon cluster export', 1000,
+            'kon cluster import', 1000,
+            'kon cluster list', 1000,
+            'kon cluster shell', 1000,
+            'kon config edit', 1000,
+            'kon config list', 1000,
+            'kon config delete', 1000,
+            'kon launch alertmanager', 1000,
+            'kon launch grafana', 1000,
+            'kon launch kubedash', 1000,
+            'kon launch prometheus', 1000,
+            'kon launch proxy', 1000,
+            'kon nodepool list', 1000,
+            'kon nodepool create', 1000,
+            'kon nodepool delete', 1000,
+          ]}
+        />
+      </div>
+    ),
   },
   {
     title: 'Kubernetes at its best',
     descriptions: [
       `Konstellation is designed as a component running on top of Kubernetes
-      and does not attempt to prevent access to k8s internals.`,
+      and does not attempt to hide k8s internals.`,
       `You have full control of the underlying cluster and its resources.
       Because Konstellation creates native resources, it's compatible with other
       Kubernetes components and tools.`,
-    ]
+    ],
+    imageUrls: [
+      'img/screen/home-kubedash.png',
+      'img/screen/home-kubepods.png',
+      'img/screen/home-kubeservices.png',
+    ],
   }
 ];
 

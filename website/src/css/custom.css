@@ -52,3 +52,12 @@ h1.heroTagline {
 .featureVideo {
   width: 100%;
 }
+
+.homeShell {
+  padding: 20px;
+  margin: 20px;
+  margin-top: 0;
+  background-color: #2A2734;
+  height: 100%;
+  border-radius: var(--ifm-pre-border-radius);
+}
