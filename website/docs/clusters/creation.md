@@ -32,7 +32,7 @@ With this configuration, all of your EKS nodes will be allocated in the private 
 
 When you create a cluster, you'll be asked to specify the min and max number of nodes to use for the cluster. Konstellation will initially allocate the minimum, and then use the included [cluster autoscaler](https://github.com/kubernetes/autoscaler/tree/master/cluster-autoscaler) to scale it up.
 
-As new apps are deployed, or when existing [apps scale up](../apps/basics#scaling), the cluster will allocate new nodes just in time.
+As new apps are deployed, or when existing [apps scale up](../apps/basics.mdx#scaling), the cluster will allocate new nodes just in time.
 
 The autoscaler will also scale down excess capacity, moving workload from under-utilized nodes before shutting them down.
 

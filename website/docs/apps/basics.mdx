@@ -5,7 +5,7 @@ title: The Basics
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-Konstellation works around the `App` as the master resource. Once you create the [apps manifest](../reference/manifest), it'll be deployed according to specification.
+Konstellation works around the `App` as the master resource. Once you create the [apps manifest](../reference/manifest.md), it'll be deployed according to specification.
 
 Behind the scenes, Konstellation operator is creating other resources on Kubernetes and keeping them in sync for you.
 
@@ -38,7 +38,7 @@ Documentation for this is coming.
 
 ## Targets
 
-Target is a concept in Konstellation that provides a namespace for apps. A target is roughly equivalent to a specific environment of an app. Targets are designed so that you can easily [achieve parity across environments](https://12factor.net/dev-prod-parity). For example, you could specify a production and a development target, with different configurations for hostnames, scale parameters, and even define [target specific app configs](configuration#target-specific-overrides).
+Target is a concept in Konstellation that provides a namespace for apps. A target is roughly equivalent to a specific environment of an app. Targets are designed so that you can easily [achieve parity across environments](https://12factor.net/dev-prod-parity). For example, you could specify a production and a development target, with different configurations for hostnames, scale parameters, and even define [target specific app configs](configuration.md#target-specific-overrides).
 
 Each cluster would define the targets that it supports with `kon cluster configure`. When deploying an app to a cluster, it will set up a deployment for each target that the cluster has declared. This configuration allows for the flexibility of using the same `app.yaml` across multiple clusters, if you prefer to have dedicated clusters for each target.
 
@@ -46,7 +46,7 @@ Most target attributes can be defined on the app itself, and when running under 
 
 Konstellation will automatically create a namespace for each target and place all of the native resources under that namespace.
 
-See [TargetConfig](../reference/manifest#targetconfig)
+See [TargetConfig](../reference/manifest.md#targetconfig)
 
 ```yaml title="App.yaml"
 apiVersion: k11n.dev/v1alpha1
@@ -109,13 +109,13 @@ Konstellation would scale up the new release incrementally, and gradually shift 
 
 Ports are [the way](https://12factor.net/port-binding) to enable your app to serve requests from other apps, and the internet at large.
 
-In Konstellation, ports are required to have a name, and those names are used to reference that port in Ingress as well as [app dependencies](services#connecting-to-services).
+In Konstellation, ports are required to have a name, and those names are used to reference that port in Ingress as well as [app dependencies](services.md#connecting-to-services).
 
 The port number can be whichever that the app wants to listen on. There will not be any collision issues with other apps that might use the same port, due to the way [Kubernetes' networking layer is designed](https://kubernetes.io/docs/concepts/cluster-administration/networking/#the-kubernetes-network-model).
 
 ## Ingress
 
-If the app needs to be surfaced to the internet, you'd want to declare an [Ingress](../reference/manifest#ingressconfig) in order to create a load balancer.
+If the app needs to be surfaced to the internet, you'd want to declare an [Ingress](../reference/manifest.md#ingressconfig) in order to create a load balancer.
 
 In the Ingress config, list all of the domains that you wish the load balancer to handle. Konstellation will manage a AWS ALB and configure it to listen for all the traffic for your domains. With Ingress, the public port it surfaces will always be 80 for HTTP and 443 for HTTPS.
 
@@ -147,8 +147,8 @@ Konstellation supports autoscaling out of the box, and will manage a [Horizontal
 
 In order to use autoscaling, you'd have to declare a few attributes in the app manifest:
 
-* [**scale**](../reference/manifest#scalespec): You need to set the `min`, `max`, and `targetCPUUtilizationPercentage`
-* [**resources**](../reference/manifest#resource-requirements): Both `requests` and `limits` need to be set
+* [**scale**](../reference/manifest.md#scalespec): You need to set the `min`, `max`, and `targetCPUUtilizationPercentage`
+* [**resources**](../reference/manifest.md#resource-requirements): Both `requests` and `limits` need to be set
 
 ## Using AWS IAM roles in apps
 
@@ -156,7 +156,7 @@ Konstellation could can take full advantage of IAM roles when running apps. By d
 
 Kubernetes supports role based access control (RBAC) with Service Accounts. It works wonderfully in handling the identity of the app automatically. However, Service Accounts are designed to control access within Kubernetes itself, and is not connected to the AWS role in any way.
 
-In order to make this work simply in a reproducible manner, Konstellation supports an extension of service accounts: [Linked Service Account](../reference/linkedserviceaccount) that links IAM policies to a Kubernetes service account.
+In order to make this work simply in a reproducible manner, Konstellation supports an extension of service accounts: [Linked Service Account](../reference/linkedserviceaccount.md) that links IAM policies to a Kubernetes service account.
 
 Once you've created a Linked Service Account, set it in the app manifest's `serviceAccount` field. A new deployment of the app will be created that assumes the permissions of the linked service account.
 

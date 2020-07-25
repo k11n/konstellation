@@ -12,7 +12,7 @@ A cluster is the hosting container for apps. It represents a Kubernetes cluster,
 
 This command walks you through the cluster creation process, there are a few decisions to make:
 
-* [Network Topology](../clusters/creation#network-topology)
+* [Network Topology](../clusters/creation.md#network-topology)
 * Machine instance type
 * Min & max size of the nodepool
 

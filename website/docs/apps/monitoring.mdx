@@ -44,7 +44,7 @@ This Prometheus install is configured to collect metrics for the cluster and Ist
 
 ### Collecting app metrics
 
-The default setup could provide basic metrics observable from outside of apps, but to measure app-specific metrics, you need to integrate one of the Prometheus [client libraries](https://prometheus.io/docs/instrumenting/clientlibs/) and expose a metric endpoint on one of the ports. You can enable Prometheus scraping by setting the [prometheus](../reference/manifest#prometheusspec) field in the manifest.
+The default setup could provide basic metrics observable from outside of apps, but to measure app-specific metrics, you need to integrate one of the Prometheus [client libraries](https://prometheus.io/docs/instrumenting/clientlibs/) and expose a metric endpoint on one of the ports. You can enable Prometheus scraping by setting the [prometheus](../reference/manifest.md#prometheusspec) field in the manifest.
 
 ```yaml title="App.yaml"
 apiVersion: k11n.dev/v1alpha1

@@ -2,7 +2,7 @@
 title: Configuration
 ---
 
-App configurations are used to define variables that an application requires. In Konstellation, they are kept separate from the main app manifest. Configs are stored as a custom resource in Konstellation and [passed to apps as environment variables]((https://12factor.net/config)).
+App configurations are used to define variables that an application requires. In Konstellation, they are kept separate from the main app manifest. Configs are stored as a custom resource in Konstellation and [passed to apps as environment variables](https://12factor.net/config)).
 
 The interface for configurations is an YAML file. You can create or edit them in an editor to be saved to Kubernetes with `kon config edit`. Any changes to a config that an app relies on will automatically create a new release. This means that releases are versioned by configs in addition to build changes. This is important since a bad config update could botch a deployment.
 

@@ -36,4 +36,4 @@ REVIEWS_GRPC_HOST=reviews.target.svc.cluster.local:3001
 ORDERS_HTTP_HOST=orders.target.svc.cluster.local:80
 ```
 
-When [running locally](/develop#runninglocally), the same environment variables are made available. Since they cannot access private Kubernetes addresses, Konstellation will automatically set up local proxies to your dependencies, then setting the same env vars to the proxy addresses.
+When [running locally](develop.md#running-locally), the same environment variables are made available. Since they cannot access private Kubernetes addresses, Konstellation will automatically set up local proxies to your dependencies, then setting the same env vars to the proxy addresses.
