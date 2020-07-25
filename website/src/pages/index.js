@@ -14,15 +14,15 @@ import Typical from 'react-typical'
 const featureCols = [
   {
     title: <>Easy to use</>,
-    imageUrl: 'img/undraw_docusaurus_mountain.svg',
+    // imageUrl: 'img/undraw_docusaurus_mountain.svg',
     description: `Konstellation gives you a Heroku-like experience on top of
       Kubernetes that you fully control. It provides a CLI that manages every
       aspect of app deployments. New apps are deployed in minutes with minimal
       configuration.`,
   },
   {
-    title: <>Build for microservices</>,
-    imageUrl: 'img/undraw_docusaurus_tree.svg',
+    title: <>Designed for microservices</>,
+    // imageUrl: 'img/undraw_docusaurus_tree.svg',
     description: `Built on years of experience with running services on
       Kubernetes. Konstellation provides an integrated stack including load
       balancing, autoscaling, service discovery, release management, and
@@ -30,7 +30,7 @@ const featureCols = [
   },
   {
     title: <>Integrated with AWS</>,
-    imageUrl: 'img/undraw_docusaurus_react.svg',
+    // imageUrl: 'img/undraw_docusaurus_react.svg',
     description: `Konstellation has been optimized to work on AWS. It manages
       EKS clusters, nodepools, VPCs, and load balancers. It integrates with
       other AWS services to provide a secure and robust apps platform.`,
@@ -278,7 +278,7 @@ function Home() {
       </header>
       <main>
         {featureCols && featureCols.length > 0 && (
-          <section className={styles.features}>
+          <section className="featureColumnSection">
             <div className="container">
               <div className="row">
                 {featureCols.map((props, idx) => (

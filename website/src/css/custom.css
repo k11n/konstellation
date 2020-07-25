@@ -36,6 +36,11 @@ h1.heroTagline {
   border-width: 2px;
 }
 
+.featureColumnSection {
+  padding-top: 100px;
+  padding-bottom: 70px;
+}
+
 .homeSection {
   padding-top: 70px;
   padding-bottom: 70px;
