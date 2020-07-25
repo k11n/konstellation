@@ -17,6 +17,7 @@
     "prop-types": "^15.5.4",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
+    "react-image-lightbox": "^5.1.1",
     "react-twitter-embed": "^3.0.3",
     "rehype-truncate": "^1.1.0",
     "remark-images": "^2.0.0"

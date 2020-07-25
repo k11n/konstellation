@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import clsx from 'clsx';
 import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
@@ -7,6 +7,8 @@ import useBaseUrl from '@docusaurus/useBaseUrl';
 import styles from './styles.module.css';
 import Highlight, { defaultProps } from "prism-react-renderer";
 import dracula from 'prism-react-renderer/themes/dracula';
+import Lightbox from 'react-image-lightbox';
+import 'react-image-lightbox/style.css';
 
 const featureCols = [
   {
@@ -61,10 +63,9 @@ const featureRows = [
       sequence of steps that can be difficult to reproduce.`,
       `Konstellation is a full-stack cluster manager focused on end to end management.
       It uses Terraform to automate creation of cloud resources.`,
-      `Get a fully configured Kubernetes cluster in 15 minutes!`,
+      `Get a fully configured Konstellation cluster in 15 minutes!`,
     ],
-    mediaUrl: 'https://konstellation-public.s3-us-west-2.amazonaws.com/cluster-demo-720p.mp4',
-    isVideo: true,
+    videoUrl: 'https://konstellation-public.s3-us-west-2.amazonaws.com/cluster-demo-720p.mp4',
   },
   {
     title: 'Apps as Kubernetes resources',
@@ -100,17 +101,31 @@ const featureRows = [
       `Konstellation comes with full observability out of the box, with a redundant Prometheus setup and pre-configured Grafana dashboards to give you insights.`,
       `It's fully extensible to collect app specific metrics as well.`,
     ],
+    imageUrls: [
+      'img/screen/observability-grafana.png'
+    ],
   },
   {
     title: 'Built for resilience',
     descriptions: [
-      `Inspired by devops challenges at Medium, Konstellation is built to scale
-      production workloads reliably and predictably.`,
-      `Konstellation incorporates advanced tools such as release management,
-      rollbacks, cluster backup and replication. The CLI gives you the full
-      suite of tools needed to operate production environments.`,
+      `Inspired by devops challenges at Medium, Konstellation incorporate the
+      complete set of tooling that's needed to operate production workloads
+      reliably.`,
+      `Release management, troubleshooting tools, rollbacks, cluster backup
+      and replication. All accessible via CLI via a secure proxy into the cluster.`,
     ]
-  }];
+  },
+  {
+    title: 'Kubernetes at its best',
+    descriptions: [
+      `Konstellation is designed as a component running on top of Kubernetes
+      and does not attempt to prevent access to k8s internals.`,
+      `You have full control of the underlying cluster and its resources.
+      Because Konstellation creates native resources, it's compatible with other
+      Kubernetes components and tools.`,
+    ]
+  }
+];
 
 
 function FeatureColumn({imageUrl, title, description}) {
@@ -128,7 +143,9 @@ function FeatureColumn({imageUrl, title, description}) {
   );
 }
 
-function FeatureRow({title, descriptions, mediaUrl, isVideo, sectionContent, rowNum}) {
+function FeatureRow({title, descriptions, videoUrl, imageUrls, sectionContent, rowNum}) {
+  const [lbOpen, setLbOpen] = useState(false);
+  const [imgIdx, setImgIdx] = useState(0);
   if (rowNum === undefined) {
     rowNum = 0
   }
@@ -142,14 +159,32 @@ function FeatureRow({title, descriptions, mediaUrl, isVideo, sectionContent, row
     </div>
   )
   if (sectionContent === undefined) {
-    if (isVideo) {
+    if (videoUrl !== undefined) {
       sectionContent = (
         <video className="featureVideo" autoPlay={true} muted={true} controls={true}>
-          <source type="video/mp4" src={mediaUrl}/>
+          <source type="video/mp4" src={videoUrl}/>
         </video>
       );
-    } else {
-      sectionContent = 'Placeholder';
+    } else if (imageUrls !== undefined && imageUrls.length > 0) {
+      sectionContent = (
+        <>
+          <img className="featureImage" src={imageUrls[imgIdx]} alt={title} onClick={() => setLbOpen(true)}/>
+          {lbOpen && (
+            <Lightbox
+              mainSrc={imageUrls[imgIdx]}
+              prevSrc={imageUrls[(imgIdx + imageUrls.length - 1) % imageUrls.length]}
+              nextSrc={imageUrls[(imgIdx + 1) % imageUrls.length]}
+              onCloseRequest={() => setLbOpen(false)}
+              onMovePrevRequest={() =>
+                setImgIdx((imgIdx + imageUrls.length - 1) % imageUrls.length)
+              }
+              onMoveNextRequest={() =>
+                setImgIdx((imgIdx + 1) % imageUrls.length)
+              }
+            />
+          )}
+        </>
+      );
     }
   }
   const imageSection = (
