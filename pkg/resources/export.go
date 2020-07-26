@@ -245,29 +245,8 @@ func (e *Exporter) cleanupMeta(meta *metav1.ObjectMeta) {
 	meta.SetSelfLink("")
 }
 
-func (i *Importer) Import() error {
-	// Import in this order: builds, configs, apps
-	// when apps are imported, it'll create builds when missing.
-	// apps will also create releases.. so it'd be ideal to avoid useless releases
-	if err := i.ImportBuilds(path.Join(i.sourcePath, "builds")); err != nil {
-		return err
-	}
-
-	if err := i.ImportConfigs(path.Join(i.sourcePath, "configs")); err != nil {
-		return err
-	}
-
-	if err := i.ImportLinkedAccounts(path.Join(i.sourcePath, "linkedaccounts")); err != nil {
-		return err
-	}
-
-	if err := i.ImportApps(path.Join(i.sourcePath, "apps")); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (i *Importer) ImportApps(appsDir string) error {
+func (i *Importer) ImportApps() error {
+	appsDir := path.Join(i.sourcePath, "apps")
 	files, err := ioutil.ReadDir(appsDir)
 	if err != nil {
 		// if dir isn't there, ignore
@@ -299,7 +278,8 @@ func (i *Importer) ImportApps(appsDir string) error {
 	return nil
 }
 
-func (i *Importer) ImportBuilds(buildsDir string) error {
+func (i *Importer) ImportBuilds() error {
+	buildsDir := path.Join(i.sourcePath, "builds")
 	files, err := ioutil.ReadDir(buildsDir)
 	if err != nil {
 		// if dir isn't there, ignore
@@ -336,7 +316,8 @@ type configImport struct {
 	confType v1alpha1.ConfigType
 }
 
-func (i *Importer) ImportConfigs(configsDir string) error {
+func (i *Importer) ImportConfigs() error {
+	configsDir := path.Join(i.sourcePath, "configs")
 	configSets := []configImport{
 		{
 			dir:      path.Join(configsDir, "app"),
@@ -396,7 +377,8 @@ func (i *Importer) ImportConfigs(configsDir string) error {
 	return nil
 }
 
-func (i *Importer) ImportLinkedAccounts(dir string) error {
+func (i *Importer) ImportLinkedAccounts() error {
+	dir := path.Join(i.sourcePath, "linkedaccounts")
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		// if dir isn't there, ignore

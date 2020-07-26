@@ -415,17 +415,32 @@ func clusterImport(c *cli.Context) error {
 	kclient := ac.kubernetesClient()
 
 	importer := resources.NewImporter(kclient, source)
-	err = importer.Import()
-	if err != nil {
+	// Import in this order: builds, configs, apps
+	// when apps are imported, it'll create builds when missing.
+	// apps will also create releases.. so it'd be ideal to avoid useless releases
+	if err := importer.ImportBuilds(); err != nil {
+		return err
+	}
+
+	if err := importer.ImportConfigs(); err != nil {
+		return err
+	}
+
+	if err := importer.ImportLinkedAccounts(); err != nil {
 		return err
 	}
 
 	// reconcile linked accounts
+	// this has to happen before apps are imported
 	cc, err := resources.GetClusterConfig(kclient)
 	if err != nil {
 		return err
 	}
 	if err = reconcileAccounts(ac, cc.Spec.Targets); err != nil {
+		return err
+	}
+
+	if err := importer.ImportApps(); err != nil {
 		return err
 	}
 
