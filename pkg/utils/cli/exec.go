@@ -63,6 +63,8 @@ func ExecuteUserEditor(original []byte, name string) (edited []byte, err error) 
 	}
 	args = append(args, target)
 	cmd := exec.Command(editor, args...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
 	err = cmd.Run()
 	if err != nil {
 		return
