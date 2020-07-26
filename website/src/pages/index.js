@@ -102,9 +102,9 @@ const featureRows = [
     descriptions: [
       `Getting visibility into how apps are performing is often overlooked,
       but it's a critical piece of any production deployment.`,
-      `Konstellation comes with app observability configured out of the box, with a
-      redundant Prometheus setup and pre-configured Grafana dashboards to give
-      you insights.`,
+      `Konstellation comes with an app observability stack configured out of the
+      box, with a redundant Prometheus setup and pre-configured Grafana
+      dashboards for every app that you deploy.`,
       `It's fully extensible to collect app specific metrics as well.`,
     ],
     imageUrls: [
@@ -130,7 +130,9 @@ const featureRows = [
           steps={[
             'kon app new', 1000,
             'kon app deploy', 1000,
+            'kon app halt', 1000,
             'kon app list', 1000,
+            'kon app local', 1000,
             'kon app logs', 1000,
             'kon app restart', 1000,
             'kon app rollback', 1000,
