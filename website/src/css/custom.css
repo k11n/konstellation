@@ -79,6 +79,10 @@ h1.heroTagline {
   width: 100%;
 }
 
+.featureImage {
+  cursor: pointer;
+}
+
 .homeShell {
   padding: 20px;
   margin: 20px;
