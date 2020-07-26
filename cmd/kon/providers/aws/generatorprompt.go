@@ -210,17 +210,18 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 		return
 	}
 	nps.DiskSizeGiB = cast.ToInt(sizeStr)
+	nps.Autoscale = true
 
-	autoscalePrompt := promptui.Prompt{
-		Label:     "Use autoscaler",
-		IsConfirm: true,
-		Default:   "y",
-	}
-	if _, err = autoscalePrompt.Run(); err == nil {
-		nps.Autoscale = true
-	} else if err != promptui.ErrAbort {
-		return
-	}
+	//autoscalePrompt := promptui.Prompt{
+	//	Label:     "Use autoscaler",
+	//	IsConfirm: true,
+	//	Default:   "y",
+	//}
+	//if _, err = autoscalePrompt.Run(); err == nil {
+	//	nps.Autoscale = true
+	//} else if err != promptui.ErrAbort {
+	//	return
+	//}
 
 	// fill in GPU details
 	if nps.RequiresGPU {
