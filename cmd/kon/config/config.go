@@ -136,7 +136,7 @@ func StateDir() string {
 	return d
 }
 
-func KubeConfigDir() (string, error) {
+func KubeConfigPath() (string, error) {
 	homedir, err := os.UserHomeDir()
 	if err != nil {
 		return "", err

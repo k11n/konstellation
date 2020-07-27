@@ -181,6 +181,17 @@ func clusterList(c *cli.Context) error {
 		}
 	}
 
+	// load kube config, if not found, generate configs
+	kubeConf, err := loadKubeConfig()
+	if err != nil {
+		if err == resources.ErrNotFound {
+			// assume new file
+			kubeConf = resources.NewKubeConfig()
+		} else {
+			return err
+		}
+	}
+
 	for _, cm := range GetClusterManagers() {
 		ksvc := cm.KubernetesProvider()
 		if ksvc == nil {
@@ -189,6 +200,21 @@ func clusterList(c *cli.Context) error {
 		clusters, err := ksvc.ListClusters(context.Background())
 		if err != nil {
 			return err
+		}
+
+		if len(clusters) > 0 {
+			clusterNames := make([]string, 0, len(clusters))
+			for _, cluster := range clusters {
+				clusterNames = append(clusterNames, cluster.Name)
+			}
+			if !resources.KubeConfigContainsClusters(kubeConf, cm.Cloud(), clusterNames) {
+				// trigger refresh of kube config
+				if err = generateKubeConfig(); err != nil {
+					return err
+				}
+				// reload, shouldn't see errors now
+				kubeConf, _ = loadKubeConfig()
+			}
 		}
 
 		infos := make([]*clusterInfo, 0, len(clusters))
@@ -881,7 +907,7 @@ func generateKubeConfig() error {
 			cc := &resources.KubeClusterConfig{
 				Cloud:       cm.Cloud(),
 				Cluster:     cluster.Name,
-				CAData:      []byte(cluster.CertificateAuthorityData),
+				CAData:      cluster.CertificateAuthorityData,
 				EndpointUrl: cluster.Endpoint,
 			}
 			clusterConfs = append(clusterConfs, cc)
@@ -893,7 +919,7 @@ func generateKubeConfig() error {
 	}
 
 	// write to kube config
-	target, err := config.KubeConfigDir()
+	target, err := config.KubeConfigPath()
 	if err != nil {
 		return err
 	}
@@ -955,6 +981,27 @@ func generateKubeConfig() error {
 		return err
 	}
 	return ioutil.WriteFile(cp, []byte(checksum), files.DefaultFileMode)
+}
+
+func loadKubeConfig() (*cliv1.Config, error) {
+	// write to kube config
+	target, err := config.KubeConfigPath()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := os.Stat(target); err == nil {
+		data, err := ioutil.ReadFile(target)
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not read existing kube config")
+		}
+		obj, _, err := kube.GetKubeDecoder().Decode(data, nil, &cliv1.Config{})
+		if err != nil {
+			return nil, errors.Wrap(err, "Could not decode kube config")
+		}
+		return obj.(*cliv1.Config), nil
+	}
+	return nil, resources.ErrNotFound
 }
 
 func isExternalKubeConfig(configPath string) bool {

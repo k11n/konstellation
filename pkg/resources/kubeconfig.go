@@ -100,49 +100,24 @@ func UpdateKubeConfig(kconf *cliv1.Config, cliPath string, clusters []*KubeClust
 	}
 }
 
-func GenerateKubeConfig(cliPath string, clusters []*KubeClusterConfig, selectedIndex int) *cliv1.Config {
-	config := &cliv1.Config{
-		Kind:       "Config",
-		APIVersion: "v1",
-	}
+func KubeConfigContainsClusters(kconf *cliv1.Config, cloud string, clusters []string) bool {
+	containsAll := true
 
-	for i, cluster := range clusters {
-		if i == selectedIndex {
-			config.CurrentContext = cluster.Name()
+	for _, cluster := range clusters {
+		containsCluster := false
+		contextName := ContextNameForCluster(cloud, cluster)
+		for _, ctx := range kconf.Contexts {
+			if ctx.Name == contextName {
+				containsCluster = true
+				break
+			}
 		}
-		namedCluster := cliv1.NamedCluster{
-			Name: cluster.Name(),
-			Cluster: cliv1.Cluster{
-				Server:                   cluster.EndpointUrl,
-				CertificateAuthorityData: cluster.CAData,
-			},
+		if !containsCluster {
+			containsAll = false
+			break
 		}
-		config.Clusters = append(config.Clusters, namedCluster)
-		authInfo := cliv1.NamedAuthInfo{
-			Name: cluster.User(),
-			AuthInfo: cliv1.AuthInfo{
-				Exec: &cliv1.ExecConfig{
-					APIVersion: "client.authentication.k8s.io/v1alpha1",
-					Command:    cliPath,
-					Args: []string{
-						"cluster",
-						"get-token",
-						"--cluster",
-						cluster.Cluster,
-					},
-				},
-			},
-		}
-		config.AuthInfos = append(config.AuthInfos, authInfo)
-		config.Contexts = append(config.Contexts, cliv1.NamedContext{
-			Name: cluster.Name(),
-			Context: cliv1.Context{
-				Cluster:  cluster.Name(),
-				AuthInfo: cluster.User(),
-			},
-		})
 	}
-	return config
+	return containsAll
 }
 
 func ContextNameForCluster(cloud, cluster string) string {
