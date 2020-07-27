@@ -51,6 +51,8 @@ h1.heroTagline {
   font-size: 24px;
   font-weight: 700;
   border-width: 2px;
+  margin-left: 0.7rem;
+  margin-right: 0.7rem;
 }
 
 .featureColumnSection {

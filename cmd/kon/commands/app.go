@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -55,8 +54,9 @@ var (
 
 var AppCommands = []*cli.Command{
 	{
-		Name:  "app",
-		Usage: "App commands",
+		Name:    "app",
+		Aliases: []string{"apps"},
+		Usage:   "App commands",
 		Before: func(c *cli.Context) error {
 			return ensureClusterSelected()
 		},
@@ -86,6 +86,13 @@ var AppCommands = []*cli.Command{
 				Usage:     "Edit an app's configuration",
 				Action:    appEdit,
 				ArgsUsage: "<app>",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:    "file",
+						Aliases: []string{"f"},
+						Usage:   "use contents of file to update, - to indicate stdin",
+					},
+				},
 			},
 			{
 				Name:      "halt",
@@ -594,6 +601,7 @@ func appEdit(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	filename := c.String("file")
 
 	ac, err := getActiveCluster()
 	if err != nil {
@@ -601,32 +609,12 @@ func appEdit(c *cli.Context) error {
 	}
 	kclient := ac.kubernetesClient()
 
-	app, err := resources.GetAppByName(kclient, appName)
-	if err != nil {
-		return err
-	}
-
-	buf := bytes.NewBuffer(nil)
-	err = kube.GetKubeEncoder().Encode(app, buf)
-	if err != nil {
-		return err
-	}
-
-	// now edit the thing
-	data, err := utilscli.ExecuteUserEditor(buf.Bytes(), fmt.Sprintf("%s.yaml", appName))
-	if err != nil {
-		return err
-	}
-
-	obj, _, err := kube.GetKubeDecoder().Decode(data, nil, app)
-	if err != nil {
-		return err
-	}
-
-	app = obj.(*v1alpha1.App)
-	op, err := resources.UpdateResource(kclient, app, nil, nil)
-	if err != nil {
-		return err
+	editor := utilscli.NewResourceEditor(kclient, &v1alpha1.App{}, "", appName)
+	var op controllerutil.OperationResult
+	if filename != "" {
+		op, err = editor.UpdateFromFile(filename)
+	} else {
+		op, err = editor.EditExisting(false)
 	}
 
 	if op == controllerutil.OperationResultNone {

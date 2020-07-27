@@ -153,7 +153,7 @@ func accountEdit(name string, allowOverride bool) error {
 		return err
 	}
 
-	fmt.Println("Account saved")
+	fmt.Println("Account updated")
 	return nil
 }
 

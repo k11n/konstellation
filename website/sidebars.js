@@ -3,6 +3,7 @@ module.exports = {
     {
       type: 'category',
       label: 'Konstellation',
+      collapsed: false,
       items: ['konstellation/introduction', 'konstellation/why', 'konstellation/principles'],
     },
     {
@@ -42,9 +43,5 @@ module.exports = {
         'reference/linkedserviceaccount',
       ],
     },
-    // {
-    //   type: 'doc',
-    //   id: 'support',
-    // },
   ],
 };

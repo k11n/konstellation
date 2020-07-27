@@ -3,6 +3,7 @@ const emoji = require('remark-emoji')
 const rehypeTruncate = require('rehype-truncate');
 
 var repoUrl = 'https://github.com/k11n/konstellation'
+var signupUrl = 'https://forms.gle/Eh9je8GmS7NRSXf69'
 
 module.exports = {
   title: 'Konstellation',
@@ -12,6 +13,9 @@ module.exports = {
   favicon: 'img/favicon.ico',
   organizationName: 'k11n', // Usually your GitHub org/user name.
   projectName: 'konstellation', // Usually your repo name.
+  customFields: {
+    signupUrl: signupUrl,
+  },
   themeConfig: {
     navbar: {
       title: 'Konstellation',
@@ -24,7 +28,7 @@ module.exports = {
         {
           to: 'docs/konstellation/introduction',
           activeBasePath: 'docs',
-          label: 'Docs',
+          label: 'Introduction',
           position: 'left',
         },
         {
@@ -99,7 +103,7 @@ module.exports = {
     },
     announcementBar: {
       id: 'private_beta',
-      content: 'Konstellation is currently in private beta, interested in early access? <a href="https://forms.gle/Eh9je8GmS7NRSXf69" target="_blank">Sign up here</a>',
+      content: `Konstellation is currently in private beta, interested in early access? <a href="${signupUrl}" target="_blank">Sign up here</a>`,
       backgroundColor: '#141e59',
       textColor: '#FFFFFF',
     },

@@ -64,7 +64,7 @@ const featureRows = [
       sequence of steps that can be difficult to reproduce.`,
       `Konstellation is a full-stack cluster manager focused on end to end management.
       It uses Terraform to automate creation of cloud resources.`,
-      `Get a fully configured Konstellation cluster in 15 minutes!`,
+      `Get a fully configured Kubernetes cluster in 15 minutes!`,
     ],
     videoUrl: 'https://konstellation-public.s3-us-west-2.amazonaws.com/cluster-demo-720p.mp4',
   },
@@ -122,6 +122,8 @@ const featureRows = [
       `Release management, configuration management, troubleshooting tools,
       rollbacks, cluster backup and replication.
       All accessible via CLI with a secure proxy into the cluster.`,
+      `Konstellation is self-contained and runs entirely inside Kubernetes and
+      dev machines. There are no hosted dependencies.`
     ],
     sectionContent: (
       <div className="homeShell">
@@ -165,7 +167,9 @@ const featureRows = [
     descriptions: [
       `Konstellation is designed as a component running on top of Kubernetes
       and does not attempt to hide k8s internals.`,
-      `You have full control of the underlying cluster and its resources.
+      `Clusters managed by Konstellation are fully compatible with other
+      Kubernetes software, you are free to customize as you see fit.`,
+      `You retain full control of the underlying cluster and its resources.
       Because Konstellation creates native resources, it's compatible with other
       Kubernetes components and tools.`,
     ],
@@ -273,8 +277,17 @@ function Home() {
                 'button button--outline button--secondary buttonCta',
                 styles.getStarted,
               )}
-              to={useBaseUrl('docs/konstellation/introduction')}>
+              to={siteConfig.customFields.signupUrl}>
               Get Started
+            </Link>
+
+            <Link
+              className={clsx(
+                'button button--outline button--secondary buttonCta',
+                styles.getStarted,
+              )}
+              to={useBaseUrl('docs/')}>
+              Documentation
             </Link>
           </div>
         </div>
