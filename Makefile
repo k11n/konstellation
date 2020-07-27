@@ -117,12 +117,13 @@ endif
 cli: rice
 	@{ \
   		set -e ;\
+  		find components/terraform -name ".terraform" -exec rm -r {} \; ;\
   		cd cmd/kon ;\
-  		find ../../components/terraform -name ".terraform" -exec rm -r {} \; ;\
   		$(RICE) embed-go --import-path github.com/k11n/konstellation/cmd/kon/utils ;\
+  		echo "Building cli" ;\
   		go build -i ;\
+  		mv kon ../../bin/kon ;\
 	}
-	mv cmd/kon/kon bin/kon
 
 prometheus-0.4:
 	components/prometheus/build.py 0.4
