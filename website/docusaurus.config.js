@@ -28,7 +28,7 @@ module.exports = {
         {
           to: 'docs/konstellation/introduction',
           activeBasePath: 'docs',
-          label: 'Introduction',
+          label: 'Docs',
           position: 'left',
         },
         {

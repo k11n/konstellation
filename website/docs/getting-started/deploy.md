@@ -42,8 +42,9 @@ First, create an app manifest with the CLI.
 
 Enter your docker image and then edit the generated template. There are a few things you'll need to change:
 
+* image - to test, enter `alexwhen/docker-2048`
 * registry - if you are not using DockerHub, enter url of your docker registry
-* ingress.hosts - one or more domains that you'd like the app to handle
+* ingress.hosts - one or more domains that you'd like the app to handle. Enter a hostname where you could control its DNS.
 
 Once complete, then load the manifest into Kubernetes with
 
@@ -67,8 +68,8 @@ Hosts: your.host.com
 Load Balancer: b0d94b2f-istiosystem-konin-a4cf-358886547.us-west-2.elb.amazonaws.com
 Scale: 1 min, 5 max
 
-RELEASE                       BUILD              DATE                    PODS    STATUS    TRAFFIC
-yourapp-20200423-1531-7800    yourrepo/image     2020-05-16 23:01:23     1/1     released  100%
+RELEASE                       BUILD                  DATE                    PODS    STATUS    TRAFFIC
+yourapp-20200423-1531-7800    alexwhen/docker-2048   2020-05-16 23:01:23     1/1     released  100%
 ```
 
 ### Routing your domain
@@ -78,10 +79,6 @@ What remains is linking your domain to the load balancer. You'll need to create 
 ### Setting up SSL (Optional)
 
 If you have a SSL certificate for the configured domain, Konstellation can [set up the load balancer to handle SSL termination](../apps/basics.mdx#setting-up-ssl).
-
-### Configuring your app
-
-For most non-trivial apps, you'd likely want to pass in configuration. Konstellation lets you manage both app and shared configs. See [Configuration](../apps/configuration.md) for details.
 
 ## Cleaning it all up
 

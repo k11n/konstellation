@@ -14,7 +14,7 @@ type KubernetesProvider interface {
 	GetCluster(context.Context, string) (*types.Cluster, error)
 	GetAuthToken(ctx context.Context, cluster string, status types.ClusterStatus) (*types.AuthToken, error)
 	IsNodepoolReady(ctx context.Context, clusterName string, nodepoolName string) (bool, error)
-	CreateNodepool(ctx context.Context, clusterName string, np *v1alpha1.Nodepool) error
+	CreateNodepool(ctx context.Context, cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) error
 }
 
 type CertificateProvider interface {

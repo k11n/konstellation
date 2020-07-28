@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 
+	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/pkg/cloud/types"
 )
 
@@ -87,10 +88,13 @@ func (s *EC2Service) toVpcType(vpc *ec2.Vpc) *types.VPC {
 	for _, tag := range vpc.Tags {
 		switch *tag.Key {
 		case TagVPCTopology:
-			tVpc.Topology = *tag.Value
+			tVpc.Topology = v1alpha1.NetworkTopology(*tag.Value)
 		case TagKonstellation:
 			tVpc.SupportsKonstellation = *tag.Value == TagValue1
 		}
+	}
+	if len(vpc.Ipv6CidrBlockAssociationSet) > 0 {
+		tVpc.IPv6 = true
 	}
 	return tVpc
 }

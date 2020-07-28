@@ -42,6 +42,7 @@ func UpdateResourceWithMerge(kclient client.Client, object, owner metav1.Object,
 
 // Create or update the resource
 // only handles updates to Annotations, Labels, and Spec
+// TODO: this is very core and need tests
 func updateResource(kclient client.Client, object, owner metav1.Object, scheme *runtime.Scheme, merge bool) (controllerutil.OperationResult, error) {
 	existingVal := reflect.New(reflect.TypeOf(object).Elem())
 	existingObj := existingVal.Interface().(metav1.Object)
@@ -99,6 +100,13 @@ func updateResource(kclient client.Client, object, owner metav1.Object, scheme *
 	if !apiequality.Semantic.DeepEqual(existingSpec.Addr().Interface(), copiedSpec.Addr().Interface()) {
 		//log.Info("changes detected", "old", copiedSpec.Addr().Interface(), "new", existingSpec.Addr().Interface())
 		changed = true
+	}
+
+	// copy over status if available
+	existingStatus := existingVal.Elem().FieldByName("Status")
+	targetStatus := reflect.ValueOf(object).Elem().FieldByName("Status")
+	if !targetStatus.IsZero() {
+		existingStatus.Set(targetStatus)
 	}
 
 	res := controllerutil.OperationResultNone

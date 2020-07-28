@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cast"
 
+	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/cmd/kon/config"
 	"github.com/k11n/konstellation/cmd/kon/terraform"
 	"github.com/k11n/konstellation/cmd/kon/utils"
@@ -107,7 +108,7 @@ func NewVPCTFAction(values terraform.Values, zones []string, opts ...terraform.O
 	targetDir := path.Join(config.TerraformDir(), "aws", "vpc")
 	tfFiles := make([]string, 0, len(vpcFiles))
 	tfFiles = append(tfFiles, vpcFiles...)
-	if values[TFTopology].(string) == "public_private" {
+	if values[TFTopology].(v1alpha1.NetworkTopology) == v1alpha1.NetworkTopologyPublicPrivate {
 		tfFiles = append(tfFiles, "aws/vpc/vpc_private_subnet.tf")
 	}
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, tfFiles...)

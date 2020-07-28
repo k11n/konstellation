@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/spf13/cast"
 	"github.com/urfave/cli/v2"
 
 	"github.com/k11n/konstellation/cmd/kon/providers"
@@ -46,7 +47,7 @@ func vpcList(c *cli.Context) error {
 		fmt.Printf("\n%s (%s)\n", cm.Cloud(), cm.Region())
 
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"VPC", "CIDR Block", "Konstellation", "Topology"})
+		table.SetHeader([]string{"VPC", "CIDR Block", "Konstellation", "Topology", "IPv6"})
 		utils.FormatTable(table)
 
 		vpcs, err := cm.VPCProvider().ListVPCs(context.Background())
@@ -63,7 +64,8 @@ func vpcList(c *cli.Context) error {
 				vpc.ID,
 				vpc.CIDRBlock,
 				supportsKonstellation,
-				vpc.Topology,
+				string(vpc.Topology),
+				cast.ToString(vpc.IPv6),
 			})
 		}
 
@@ -98,7 +100,9 @@ func vpcDestroy(c *cli.Context) error {
 	}
 
 	// ask for confirmation
-	err = utils.ExplicitConfirmationPrompt(fmt.Sprintf("Do you want to delete VPC %s in %s/%s", vpc.ID, manager.Cloud(), manager.Region()))
+	err = utils.ExplicitConfirmationPrompt(
+		fmt.Sprintf("Do you want to delete VPC %s in %s/%s", vpc.ID, manager.Cloud(), manager.Region()),
+		vpc.ID)
 	if err != nil {
 		return err
 	}

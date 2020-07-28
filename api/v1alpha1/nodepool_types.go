@@ -22,34 +22,34 @@ import (
 
 // NodepoolSpec defines the desired state of Nodepool
 type NodepoolSpec struct {
-	Autoscale   bool         `json:"autoscale" desc:"Uses autoscale"`
-	MinSize     int64        `json:"minSize" desc:"Min number of nodes"`
-	MaxSize     int64        `json:"maxSize" desc:"Max number of nodes"`
-	MachineType string       `json:"machineType" desc:"Machine type"`
-	DiskSizeGiB int          `json:"diskSizeGiB" desc:"Disk size (GiB)"`
-	RequiresGPU bool         `json:"requiresGPU" desc:"Needs GPU"`
-	AWS         *NodePoolAWS `json:"aws,omitempty"`
-}
-
-type NodePoolAWS struct {
-	RoleARN             string `json:"roleArn" desc:"Node role"`
-	AMIType             string `json:"amiType" desc:"AMI Type"`
-	SSHKeypair          string `json:"sshKeypair" desc:"SSH keypair"`
-	ConnectFromAnywhere bool   `json:"connectFromAnywhere" desc:"Allow connection from internet"`
-
-	// set only after cluster is created
-	SecurityGroupId string   `json:"securityGroupId,omitempty"`
-	SubnetIds       []string `json:"subnetIds,omitempty"`
-
-	// set only after nodepool is created
-	// +kubebuilder:validation:Optional
-	ASGID string `json:"asgId,omitempty"`
+	Autoscale   bool             `json:"autoscale" desc:"Uses autoscale"`
+	MinSize     int64            `json:"minSize" desc:"Min number of nodes"`
+	MaxSize     int64            `json:"maxSize" desc:"Max number of nodes"`
+	MachineType string           `json:"machineType" desc:"Machine type"`
+	DiskSizeGiB int              `json:"diskSizeGiB" desc:"Disk size (GiB)"`
+	RequiresGPU bool             `json:"requiresGPU" desc:"Needs GPU"`
+	AWS         *AWSNodepoolSpec `json:"aws,omitempty"`
 }
 
 // NodepoolStatus defines the observed state of Nodepool
 type NodepoolStatus struct {
-	Nodes    []string `json:"nodes"`
-	NumReady int      `json:"numReady"`
+	// +kubebuilder:validation:Optional
+	// +nullable
+	Nodes    []string           `json:"nodes"`
+	NumReady int                `json:"numReady"`
+	AWS      *AWSNodepoolStatus `json:"aws,omitempty"`
+}
+
+type AWSNodepoolSpec struct {
+	AMIType             string `json:"amiType" desc:"AMI Type"`
+	SSHKeypair          string `json:"sshKeypair" desc:"SSH keypair"`
+	ConnectFromAnywhere bool   `json:"connectFromAnywhere" desc:"Allow connection from internet"`
+}
+
+type AWSNodepoolStatus struct {
+	// set only after nodepool is created
+	// +kubebuilder:validation:Optional
+	ASGID string `json:"asgId,omitempty"`
 }
 
 // +kubebuilder:object:root=true

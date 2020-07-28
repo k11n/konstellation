@@ -129,7 +129,7 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	// TODO: Validate input
 	var inventory []string
 
-	if awsConf.Vpc == "" {
+	if awsConf.VpcId == "" {
 		// create new VPC
 		inventory = append(inventory,
 			fmt.Sprintf("VPC with CIDR (%s)", awsConf.VpcCidr),
@@ -163,7 +163,10 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 		return err
 	}
 
-	if awsConf.Vpc == "" {
+	awsStatus := &v1alpha1.AWSClusterStatus{}
+	cc.Status.AWS = awsStatus
+
+	if awsConf.VpcId == "" {
 		// run terraform for VPC
 		values := a.tfValues()
 		values[TFVPCCidr] = awsConf.VpcCidr
@@ -187,13 +190,15 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 		if err != nil {
 			return err
 		}
-		awsConf.Vpc = tfOut.VpcId
+		awsStatus.VpcId = tfOut.VpcId
 
 		// ignore errors
 		tfVpc.RemoveDir()
+	} else {
+		awsStatus.VpcId = awsConf.VpcId
 	}
 
-	err := a.updateVPCInfo(awsConf)
+	err := a.updateStatus(awsStatus)
 	if err != nil {
 		return err
 	}
@@ -202,8 +207,8 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	values := a.tfValues()
 	values[TFCluster] = cc.Name
 	values[TFKubeVersion] = cc.Spec.KubeVersion
-	values[TFSecurityGroupIds] = awsConf.SecurityGroups
-	values[TFVPCId] = awsConf.Vpc
+	values[TFSecurityGroupIds] = awsStatus.SecurityGroups
+	values[TFVPCId] = awsStatus.VpcId
 	values[TFAdminGroups] = awsConf.AdminGroups
 	clusterTf, err := NewEKSClusterTFAction(values, terraform.OptionDisplayOutput)
 	if err != nil {
@@ -227,9 +232,9 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 		return err
 	}
 
-	awsConf.AlbRoleArn = clusterTfOut.AlbIngressRoleArn
-	awsConf.NodeRoleArn = clusterTfOut.NodeRoleArn
-	awsConf.AdminRoleArn = clusterTfOut.AdminRoleArn
+	awsStatus.AlbRoleArn = clusterTfOut.AlbIngressRoleArn
+	awsStatus.NodeRoleArn = clusterTfOut.NodeRoleArn
+	awsStatus.AdminRoleArn = clusterTfOut.AdminRoleArn
 
 	// tag subnets
 	sess, err := a.awsSession()
@@ -238,10 +243,10 @@ func (a *AWSManager) CreateCluster(cc *v1alpha1.ClusterConfig) error {
 	}
 	eksSvc := kaws.NewEKSService(sess)
 	subnetIds := make([]string, 0)
-	for _, sub := range awsConf.PublicSubnets {
+	for _, sub := range awsStatus.PublicSubnets {
 		subnetIds = append(subnetIds, sub.SubnetId)
 	}
-	for _, sub := range awsConf.PrivateSubnets {
+	for _, sub := range awsStatus.PrivateSubnets {
 		subnetIds = append(subnetIds, sub.SubnetId)
 	}
 
@@ -267,18 +272,13 @@ func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nod
 		return err
 	}
 
-	// set nodepool config from VPC
-	if err = populateClusterInfo(cc, np); err != nil {
-		return err
-	}
-
 	// check aws nodepool status. if it doesn't exist, then create it
 	kubeProvider := a.KubernetesProvider()
 	ready, err := kubeProvider.IsNodepoolReady(context.Background(), cc.Name, np.Name)
 
 	if err != nil {
 		// create it
-		err = kubeProvider.CreateNodepool(context.TODO(), cc.Name, np)
+		err = kubeProvider.CreateNodepool(context.TODO(), cc, np)
 		if err != nil {
 			fmt.Printf("Failed to create the nodepool, this might be an issue with AWS quotas. Refer to %s on current usage and request an increase.\n",
 				a.quotaConsoleUrl())
@@ -299,6 +299,8 @@ func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nod
 		}
 	}
 
+	np.Status.AWS = &v1alpha1.AWSNodepoolStatus{}
+
 	// now grab the autoscaling group for this
 	asSvc := autoscaling.New(sess)
 	err = asSvc.DescribeAutoScalingGroupsPagesWithContext(context.Background(), &autoscaling.DescribeAutoScalingGroupsInput{},
@@ -315,7 +317,7 @@ func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nod
 				}
 				if cluster == cc.Name && nodeGroup == np.Name {
 					// found the cluster, update nodegroup
-					np.Spec.AWS.ASGID = *asg.AutoScalingGroupName
+					np.Status.AWS.ASGID = *asg.AutoScalingGroupName
 					return false
 				}
 			}
@@ -327,7 +329,7 @@ func (a *AWSManager) CreateNodepool(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nod
 }
 
 func (a *AWSManager) ActivateCluster(cc *v1alpha1.ClusterConfig) error {
-	if err := a.addAdminRole(cc.Name, cc.Spec.AWS.AdminRoleArn); err != nil {
+	if err := a.addAdminRole(cc.Name, cc.Status.AWS.AdminRoleArn); err != nil {
 		return err
 	}
 
@@ -359,12 +361,38 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 	// find config and untag resources
 	if kclient, err := a.kubernetesClient(cluster); err == nil {
 		if cc, err := resources.GetClusterConfig(kclient); err == nil {
-			subnetIds := make([]string, 0)
-			for _, sub := range cc.Spec.AWS.PublicSubnets {
-				subnetIds = append(subnetIds, sub.SubnetId)
-			}
-			for _, sub := range cc.Spec.AWS.PrivateSubnets {
-				subnetIds = append(subnetIds, sub.SubnetId)
+			var subnetIds []string
+			if len(cc.Status.AWS.PublicSubnets) > 0 {
+				for _, sub := range cc.Status.AWS.PublicSubnets {
+					subnetIds = append(subnetIds, sub.SubnetId)
+				}
+				for _, sub := range cc.Status.AWS.PrivateSubnets {
+					subnetIds = append(subnetIds, sub.SubnetId)
+				}
+			} else {
+				// older version, list subnets in the VPC and gather this way
+				res, err := eksSvc.EKS.DescribeCluster(&eks.DescribeClusterInput{Name: &cc.Name})
+				if err != nil {
+					return err
+				}
+				ec2Svc := ec2.New(sess)
+				subnetInput := &ec2.DescribeSubnetsInput{
+					Filters: []*ec2.Filter{
+						{
+							Name:   aws.String("vpc-id"),
+							Values: []*string{res.Cluster.ResourcesVpcConfig.VpcId},
+						},
+					},
+				}
+				err = ec2Svc.DescribeSubnetsPages(subnetInput, func(subnetRes *ec2.DescribeSubnetsOutput, b bool) bool {
+					for _, subnet := range subnetRes.Subnets {
+						subnetIds = append(subnetIds, *subnet.SubnetId)
+					}
+					return true
+				})
+				if err != nil {
+					return err
+				}
 			}
 			err = eksSvc.UnTagSubnetsForCluster(context.Background(), cc.Name, subnetIds)
 			if err != nil {
@@ -689,18 +717,18 @@ func (a *AWSManager) awsSession() (*session.Session, error) {
 	return sessionForRegion(a.region)
 }
 
-func (a *AWSManager) updateVPCInfo(awsConf *v1alpha1.AWSClusterSpec) error {
+func (a *AWSManager) updateStatus(awsStatus *v1alpha1.AWSClusterStatus) error {
 	ec2Svc := ec2.New(session.Must(a.awsSession()))
 	vpcFilter := []*ec2.Filter{
 		{
 			Name:   aws.String("vpc-id"),
-			Values: []*string{&awsConf.Vpc},
+			Values: []*string{&awsStatus.VpcId},
 		},
 	}
 
 	// get subnet info
-	awsConf.PublicSubnets = nil
-	awsConf.PrivateSubnets = nil
+	awsStatus.PublicSubnets = nil
+	awsStatus.PrivateSubnets = nil
 	err := ec2Svc.DescribeSubnetsPages(&ec2.DescribeSubnetsInput{
 		Filters: vpcFilter,
 	}, func(output *ec2.DescribeSubnetsOutput, last bool) bool {
@@ -721,10 +749,10 @@ func (a *AWSManager) updateVPCInfo(awsConf *v1alpha1.AWSClusterSpec) error {
 					// this is our subnet
 					if *tag.Value == kaws.TagValuePublic {
 						awsSubnet.IsPublic = true
-						awsConf.PublicSubnets = append(awsConf.PublicSubnets, awsSubnet)
+						awsStatus.PublicSubnets = append(awsStatus.PublicSubnets, awsSubnet)
 					} else if *tag.Value == kaws.TagValuePrivate {
 						awsSubnet.IsPublic = false
-						awsConf.PrivateSubnets = append(awsConf.PrivateSubnets, awsSubnet)
+						awsStatus.PrivateSubnets = append(awsStatus.PrivateSubnets, awsSubnet)
 					}
 					break
 				}
@@ -737,13 +765,13 @@ func (a *AWSManager) updateVPCInfo(awsConf *v1alpha1.AWSClusterSpec) error {
 	}
 
 	// get security groups info, pick default for VPC
-	awsConf.SecurityGroups = nil
+	awsStatus.SecurityGroups = nil
 	err = ec2Svc.DescribeSecurityGroupsPages(&ec2.DescribeSecurityGroupsInput{
 		Filters: vpcFilter,
 	}, func(output *ec2.DescribeSecurityGroupsOutput, last bool) bool {
 		for _, sg := range output.SecurityGroups {
 			if *sg.GroupName == "default" {
-				awsConf.SecurityGroups = append(awsConf.SecurityGroups, *sg.GroupId)
+				awsStatus.SecurityGroups = append(awsStatus.SecurityGroups, *sg.GroupId)
 			}
 		}
 		return true
@@ -883,27 +911,4 @@ func sessionForRegion(region string) (*session.Session, error) {
 		Region:      aws.String(region),
 		Credentials: credentials.NewStaticCredentials(creds.AccessKeyID, creds.SecretAccessKey, ""),
 	})
-}
-
-func populateClusterInfo(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) error {
-	nps := &np.Spec
-	awsConf := cc.Spec.AWS
-	if len(awsConf.SecurityGroups) == 0 {
-		return fmt.Errorf("Could not find security groups")
-	}
-	nps.AWS.SecurityGroupId = awsConf.SecurityGroups[0]
-	var subnetSrc []*v1alpha1.AWSSubnet
-	if awsConf.Topology == v1alpha1.AWSTopologyPublicPrivate {
-		subnetSrc = awsConf.PrivateSubnets
-	} else {
-		subnetSrc = awsConf.PublicSubnets
-	}
-
-	nps.AWS.SubnetIds = make([]string, 0)
-	for _, subnet := range subnetSrc {
-		nps.AWS.SubnetIds = append(nps.AWS.SubnetIds, subnet.SubnetId)
-	}
-
-	nps.AWS.RoleARN = awsConf.NodeRoleArn
-	return nil
 }

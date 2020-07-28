@@ -2292,14 +2292,61 @@ spec:
                     type: string
                   nullable: true
                   type: array
-                adminRoleArn:
-                  type: string
-                albRoleArn:
-                  type: string
                 availabilityZone:
                   items:
                     type: string
                   type: array
+                topology:
+                  type: string
+                vpcCidr:
+                  description: input values
+                  type: string
+                vpcId:
+                  type: string
+              required:
+              - availabilityZone
+              - topology
+              - vpcCidr
+              - vpcId
+              type: object
+            cloud:
+              type: string
+            componentConfig:
+              additionalProperties:
+                additionalProperties:
+                  type: string
+                type: object
+              nullable: true
+              type: object
+            enableIpv6:
+              type: boolean
+            kubeVersion:
+              type: string
+            region:
+              type: string
+            targets:
+              items:
+                type: string
+              nullable: true
+              type: array
+            version:
+              type: string
+          required:
+          - cloud
+          - enableIpv6
+          - kubeVersion
+          - region
+          - version
+          type: object
+        status:
+          description: ClusterConfigStatus defines the observed state of ClusterConfig
+          properties:
+            aws:
+              properties:
+                adminRoleArn:
+                  type: string
+                albRoleArn:
+                  type: string
                 ipv6Cidr:
                   description: set after cluster is created
                   type: string
@@ -2350,57 +2397,17 @@ spec:
                   items:
                     type: string
                   type: array
-                topology:
-                  type: string
-                vpc:
-                  description: optional, only if it's using an existing VPC
-                  type: string
-                vpcCidr:
-                  description: input values
+                vpcId:
+                  description: current vpc id
                   type: string
               required:
               - adminRoleArn
               - albRoleArn
-              - availabilityZone
               - nodeRoleArn
               - publicSubnets
               - securityGroups
-              - topology
-              - vpc
-              - vpcCidr
+              - vpcId
               type: object
-            cloud:
-              type: string
-            componentConfig:
-              additionalProperties:
-                additionalProperties:
-                  type: string
-                type: object
-              nullable: true
-              type: object
-            enableIpv6:
-              type: boolean
-            kubeVersion:
-              type: string
-            region:
-              type: string
-            targets:
-              items:
-                type: string
-              nullable: true
-              type: array
-            version:
-              type: string
-          required:
-          - cloud
-          - enableIpv6
-          - kubeVersion
-          - region
-          - version
-          type: object
-        status:
-          description: ClusterConfigStatus defines the observed state of ClusterConfig
-          properties:
             components:
               items:
                 properties:
@@ -2412,9 +2419,8 @@ spec:
                 - name
                 - version
                 type: object
+              nullable: true
               type: array
-          required:
-          - components
           type: object
       type: object
   version: v1alpha1
@@ -2616,26 +2622,13 @@ spec:
               properties:
                 amiType:
                   type: string
-                asgId:
-                  description: set only after nodepool is created
-                  type: string
                 connectFromAnywhere:
                   type: boolean
-                roleArn:
-                  type: string
-                securityGroupId:
-                  description: set only after cluster is created
-                  type: string
                 sshKeypair:
                   type: string
-                subnetIds:
-                  items:
-                    type: string
-                  type: array
               required:
               - amiType
               - connectFromAnywhere
-              - roleArn
               - sshKeypair
               type: object
             diskSizeGiB:
@@ -2661,14 +2654,20 @@ spec:
         status:
           description: NodepoolStatus defines the observed state of Nodepool
           properties:
+            aws:
+              properties:
+                asgId:
+                  description: set only after nodepool is created
+                  type: string
+              type: object
             nodes:
               items:
                 type: string
+              nullable: true
               type: array
             numReady:
               type: integer
           required:
-          - nodes
           - numReady
           type: object
       type: object

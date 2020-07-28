@@ -47,7 +47,10 @@ type ClusterConfigSpec struct {
 
 // ClusterConfigStatus defines the observed state of ClusterConfig
 type ClusterConfigStatus struct {
-	InstalledComponents []ComponentSpec `json:"components"`
+	// +kubebuilder:validation:Optional
+	// +nullable
+	InstalledComponents []ComponentSpec   `json:"components"`
+	AWS                 *AWSClusterStatus `json:"aws,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -74,14 +77,18 @@ type ClusterConfigList struct {
 
 type AWSClusterSpec struct {
 	// input values
-	VpcCidr           string      `json:"vpcCidr"`
-	AvailabilityZones []string    `json:"availabilityZone"`
-	Topology          AWSTopology `json:"topology"`
+	VpcCidr           string          `json:"vpcCidr"`
+	VpcId             string          `json:"vpcId"`
+	AvailabilityZones []string        `json:"availabilityZone"`
+	Topology          NetworkTopology `json:"topology"`
 	// +kubebuilder:validation:Optional
 	// +nullable
 	AdminGroups []string `json:"adminGroups,omitempty"`
-	// optional, only if it's using an existing VPC
-	Vpc string `json:"vpc"`
+}
+
+type AWSClusterStatus struct {
+	// current vpc id
+	VpcId string `json:"vpcId"`
 
 	// set after cluster is created
 	Ipv6Cidr       string       `json:"ipv6Cidr,omitempty"`
@@ -103,11 +110,11 @@ type AWSSubnet struct {
 	AvailabilityZone string `json:"availabilityZone"`
 }
 
-type AWSTopology string
+type NetworkTopology string
 
 const (
-	AWSTopologyPublic        AWSTopology = "public"
-	AWSTopologyPublicPrivate AWSTopology = "public_private"
+	NetworkTopologyPublic        NetworkTopology = "public"
+	NetworkTopologyPublicPrivate NetworkTopology = "public_private"
 )
 
 func (c *ClusterConfig) GetComponentConfig(name string) ComponentConfig {

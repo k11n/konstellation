@@ -101,7 +101,7 @@ const featureRows = [
     title: 'Observability out of the box',
     descriptions: [
       `Getting visibility into how apps are performing is often overlooked,
-      but it's a critical piece of any production deployment.`,
+      but it's a crucial piece of any production deployment.`,
       `Konstellation comes with an app observability stack configured out of the
       box, with a redundant Prometheus setup and pre-configured Grafana
       dashboards for every app that you deploy.`,

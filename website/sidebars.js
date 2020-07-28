@@ -33,6 +33,7 @@ module.exports = {
         'clusters/users',
         'clusters/networking',
         'clusters/upgrading',
+        'clusters/migration',
       ],
     },
     {

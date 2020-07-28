@@ -390,13 +390,23 @@ func clusterCreate(c *cli.Context) error {
 		return err
 	}
 
+	kclient := ac.kubernetesClient()
 	if err = ac.loadResourcesIntoKube(); err != nil {
 		return err
 	}
-	if _, err = resources.UpdateResource(ac.kubernetesClient(), cc, nil, nil); err != nil {
+	// make copies since update resource could wipe away status
+	if _, err = resources.UpdateResource(kclient, cc, nil, nil); err != nil {
 		return err
 	}
-	if _, err = resources.UpdateResource(ac.kubernetesClient(), nodepool, nil, nil); err != nil {
+	if _, err = resources.UpdateResource(kclient, nodepool, nil, nil); err != nil {
+		return err
+	}
+
+	// update status as well
+	if err = kclient.Status().Update(context.Background(), cc); err != nil {
+		return err
+	}
+	if err = kclient.Status().Update(context.Background(), nodepool); err != nil {
 		return err
 	}
 
@@ -755,11 +765,12 @@ func printClusterSection(section providers.ClusterManager, clusters []*clusterIn
 	fmt.Printf("\n%s (%s)\n", section.Cloud(), section.Region())
 
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Cluster", "Version", "Status", "Konstellation", "Targets", "Nodes", "CPU", "Memory"})
+	table.SetHeader([]string{"Cluster", "Version", "Status", "Konstellation", "Targets", "CIDR", "Nodes", "CPU", "Memory"})
 	for _, ci := range clusters {
 		c := ci.Cluster
 		targets := make([]string, 0)
 		konVersion := ""
+		cidr := ""
 		if ci.Config != nil {
 			if len(ci.Config.Status.InstalledComponents) == 0 || len(ci.Config.Spec.Targets) == 0 {
 				c.Status = types.StatusUnconfigured
@@ -768,6 +779,9 @@ func printClusterSection(section providers.ClusterManager, clusters []*clusterIn
 			konVersion = ci.Config.Spec.Version
 			if konVersion != version.Version {
 				konVersion = fmt.Sprintf("%s (current %s)", konVersion, version.Version)
+			}
+			if ci.Config.Spec.AWS != nil {
+				cidr = ci.Config.Spec.AWS.VpcCidr
 			}
 		} else {
 			if c.Status == types.StatusActive {
@@ -811,6 +825,7 @@ func printClusterSection(section providers.ClusterManager, clusters []*clusterIn
 			c.Status.String(),
 			konVersion,
 			strings.Join(targets, ","),
+			cidr,
 			nodeStr,
 			cpuStr,
 			memoryStr,

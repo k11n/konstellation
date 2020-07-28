@@ -81,17 +81,20 @@ func (g *PromptConfigGenerator) CreateClusterConfig() (cc *v1alpha1.ClusterConfi
 	}
 
 	// VPC
-	as.Vpc, as.VpcCidr, err = promptChooseVPC(g.session)
+	vpc, err := promptChooseVPC(g.session)
 	if err != nil {
 		return
 	}
 
+	as.VpcId = vpc.ID
+	as.VpcCidr = vpc.CIDRBlock
 	ec2Svc := ec2.New(g.session)
-	if as.Vpc == "" {
-		cc.Spec.EnableIpv6, err = promptIPv6()
-		if err != nil {
-			return
-		}
+	if vpc.ID == "" {
+		cc.Spec.EnableIpv6 = true
+		//cc.Spec.EnableIpv6, err = promptIPv6()
+		//if err != nil {
+		//	return
+		//}
 		// creating a new VPC
 		as.AvailabilityZones, err = promptAZs(ec2Svc)
 		if err != nil {
@@ -99,38 +102,30 @@ func (g *PromptConfigGenerator) CreateClusterConfig() (cc *v1alpha1.ClusterConfi
 		}
 		as.Topology, err = promptTopology()
 	} else {
+		cc.Spec.EnableIpv6 = vpc.IPv6
+		as.Topology = vpc.Topology
 		// derive topology & availability zone info from subnets
-		var subnetRes *ec2.DescribeSubnetsOutput
-		subnetRes, err = ec2Svc.DescribeSubnets(&ec2.DescribeSubnetsInput{
+		subnetInput := &ec2.DescribeSubnetsInput{
 			Filters: []*ec2.Filter{
 				{
 					Name:   aws.String("vpc-id"),
-					Values: []*string{aws.String(as.Vpc)},
+					Values: []*string{aws.String(as.VpcId)},
 				},
 			},
+		}
+		err = ec2Svc.DescribeSubnetsPages(subnetInput, func(subnetRes *ec2.DescribeSubnetsOutput, b bool) bool {
+			for _, subnet := range subnetRes.Subnets {
+				if !funk.Contains(as.AvailabilityZones, *subnet.AvailabilityZone) {
+					as.AvailabilityZones = append(as.AvailabilityZones, *subnet.AvailabilityZone)
+				}
+			}
+			return true
 		})
 		if err != nil {
 			return
 		}
 
-		hasPrivateSubnets := false
-		for _, subnet := range subnetRes.Subnets {
-			for _, tag := range subnet.Tags {
-				if *tag.Key == kaws.TagSubnetScope && *tag.Value == kaws.TagValuePrivate {
-					hasPrivateSubnets = true
-					break
-				}
-			}
-			if !funk.Contains(as.AvailabilityZones, *subnet.AvailabilityZone) {
-				as.AvailabilityZones = append(as.AvailabilityZones, *subnet.AvailabilityZone)
-			}
-		}
-
 		sort.Strings(as.AvailabilityZones)
-		as.Topology = v1alpha1.AWSTopologyPublic
-		if hasPrivateSubnets {
-			as.Topology = v1alpha1.AWSTopologyPublicPrivate
-		}
 	}
 
 	// admin group
@@ -144,7 +139,7 @@ func (g *PromptConfigGenerator) CreateClusterConfig() (cc *v1alpha1.ClusterConfi
 
 func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig) (np *v1alpha1.Nodepool, err error) {
 	nps := v1alpha1.NodepoolSpec{
-		AWS: &v1alpha1.NodePoolAWS{},
+		AWS: &v1alpha1.AWSNodepoolSpec{},
 	}
 
 	// See if remote access is needed
@@ -237,9 +232,6 @@ func (g *PromptConfigGenerator) CreateNodepoolConfig(cc *v1alpha1.ClusterConfig)
 		},
 		Spec: nps,
 	}
-
-	// ignore errors, since it might not be available at the time of config generation
-	populateClusterInfo(cc, np)
 	return
 }
 
@@ -282,7 +274,7 @@ func (g *PromptConfigGenerator) promptAdminGroups() (groups []string, err error)
 	return []string{*createOut.Group.GroupName}, nil
 }
 
-func promptChooseVPC(sess *session.Session) (vpcId string, cidrBlock string, err error) {
+func promptChooseVPC(sess *session.Session) (vpc *types.VPC, err error) {
 	vpcProvider := kaws.NewEC2Service(sess)
 	vpcs, err := vpcProvider.ListVPCs(context.TODO())
 	if err != nil {
@@ -291,10 +283,10 @@ func promptChooseVPC(sess *session.Session) (vpcId string, cidrBlock string, err
 
 	konVpcs := make([]*types.VPC, 0, len(vpcs))
 	vpcItems := make([]string, 0, len(vpcs))
-	for _, vpc := range vpcs {
-		if vpc.SupportsKonstellation {
-			konVpcs = append(konVpcs, vpc)
-			vpcItems = append(vpcItems, fmt.Sprintf("%s - %s", vpc.ID, vpc.CIDRBlock))
+	for _, v := range vpcs {
+		if v.SupportsKonstellation {
+			konVpcs = append(konVpcs, v)
+			vpcItems = append(vpcItems, fmt.Sprintf("%s - %s", v.ID, v.CIDRBlock))
 		}
 	}
 	vpcSelect := promptui.SelectWithAdd{
@@ -329,8 +321,11 @@ func promptChooseVPC(sess *session.Session) (vpcId string, cidrBlock string, err
 		return
 	}
 	if idx != -1 {
-		cidrBlock = konVpcs[idx].CIDRBlock
-		vpcId = konVpcs[idx].ID
+		vpc = konVpcs[idx]
+	} else {
+		vpc = &types.VPC{
+			CIDRBlock: cidrBlock,
+		}
 	}
 	return
 }
@@ -384,7 +379,7 @@ func promptIPv6() (bool, error) {
 	return true, nil
 }
 
-func promptTopology() (topology v1alpha1.AWSTopology, err error) {
+func promptTopology() (topology v1alpha1.NetworkTopology, err error) {
 	fmt.Println(topologyMessage)
 	prompt := utils.NewPromptSelect(
 		"What type of network topology?",
@@ -394,9 +389,9 @@ func promptTopology() (topology v1alpha1.AWSTopology, err error) {
 		},
 	)
 
-	topologies := []v1alpha1.AWSTopology{
-		v1alpha1.AWSTopologyPublic,
-		v1alpha1.AWSTopologyPublicPrivate,
+	topologies := []v1alpha1.NetworkTopology{
+		v1alpha1.NetworkTopologyPublic,
+		v1alpha1.NetworkTopologyPublicPrivate,
 	}
 	idx, _, err := prompt.Run()
 	if err != nil {
@@ -405,7 +400,7 @@ func promptTopology() (topology v1alpha1.AWSTopology, err error) {
 	return topologies[idx], nil
 }
 
-func (g *PromptConfigGenerator) promptSshAccess(nps *v1alpha1.NodepoolSpec, topology v1alpha1.AWSTopology) error {
+func (g *PromptConfigGenerator) promptSshAccess(nps *v1alpha1.NodepoolSpec, topology v1alpha1.NetworkTopology) error {
 	ec2Svc := kaws.NewEC2Service(g.session)
 	// keypairs for access
 	kpRes, err := ec2Svc.EC2.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{})
@@ -438,7 +433,7 @@ func (g *PromptConfigGenerator) promptSshAccess(nps *v1alpha1.NodepoolSpec, topo
 	}
 
 	// configure node connection
-	if topology == v1alpha1.AWSTopologyPublic {
+	if topology == v1alpha1.NetworkTopologyPublic {
 		// remote access is only possible when VPC is public-only
 		connectionPrompt := utils.NewPromptSelect(
 			"Allow remote access to nodes from the internet?",

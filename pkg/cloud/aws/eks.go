@@ -263,9 +263,12 @@ func (s *EKSService) DeleteNodeGroupNetworkingResources(ctx context.Context, nod
 	return nil
 }
 
-func (s *EKSService) CreateNodepool(ctx context.Context, clusterName string, np *v1alpha1.Nodepool) error {
-	createInput := nodepoolSpecToCreateInput(clusterName, np)
-	_, err := s.EKS.CreateNodegroupWithContext(ctx, createInput)
+func (s *EKSService) CreateNodepool(ctx context.Context, cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) error {
+	createInput, err := nodepoolSpecToCreateInput(cc, np)
+	if err != nil {
+		return err
+	}
+	_, err = s.EKS.CreateNodegroupWithContext(ctx, createInput)
 	return err
 }
 
@@ -322,42 +325,59 @@ func (s *EKSService) UnTagSubnetsForCluster(ctx context.Context, clusterName str
 	return err
 }
 
-func nodepoolSpecToCreateInput(cluster string, np *v1alpha1.Nodepool) *eks.CreateNodegroupInput {
+func nodepoolSpecToCreateInput(cc *v1alpha1.ClusterConfig, np *v1alpha1.Nodepool) (cni *eks.CreateNodegroupInput, err error) {
+	awsStatus := cc.Status.AWS
+	if awsStatus == nil {
+		err = fmt.Errorf("Nodepool creation requires ClusterConfig.AWS, which is nil")
+		return
+	}
 	nps := np.Spec
-	cni := eks.CreateNodegroupInput{}
-	cni.SetClusterName(cluster)
+	cni = &eks.CreateNodegroupInput{}
+	cni.SetClusterName(cc.Name)
 	cni.SetAmiType(nps.AWS.AMIType)
 	cni.SetDiskSize(int64(nps.DiskSizeGiB))
 	cni.SetInstanceTypes([]*string{&nps.MachineType})
-	cni.SetNodeRole(nps.AWS.RoleARN)
+	cni.SetNodeRole(awsStatus.NodeRoleArn)
 	cni.SetNodegroupName(np.ObjectMeta.Name)
 	cni.SetScalingConfig(&eks.NodegroupScalingConfig{
 		MinSize:     &nps.MinSize,
 		MaxSize:     &nps.MaxSize,
 		DesiredSize: &nps.MinSize,
 	})
-	for _, subnetId := range nps.AWS.SubnetIds {
-		cni.Subnets = append(cni.Subnets, aws.String(subnetId))
+	var subnetSrc []*v1alpha1.AWSSubnet
+	if cc.Spec.AWS.Topology == v1alpha1.NetworkTopologyPublicPrivate {
+		subnetSrc = awsStatus.PrivateSubnets
+	} else {
+		subnetSrc = awsStatus.PublicSubnets
+	}
+
+	for _, subnet := range subnetSrc {
+		cni.Subnets = append(cni.Subnets, &subnet.SubnetId)
 	}
 
 	if nps.AWS.SSHKeypair != "" {
 		rac := eks.RemoteAccessConfig{
 			Ec2SshKey: &nps.AWS.SSHKeypair,
 		}
-		if !nps.AWS.ConnectFromAnywhere && nps.AWS.SecurityGroupId != "" {
-			rac.SetSourceSecurityGroups([]*string{&nps.AWS.SecurityGroupId})
+
+		if !nps.AWS.ConnectFromAnywhere {
+			groups := make([]*string, 0, len(awsStatus.SecurityGroups))
+			for _, g := range awsStatus.SecurityGroups {
+				groups = append(groups, &g)
+			}
+			rac.SetSourceSecurityGroups(groups)
 		}
 		cni.SetRemoteAccess(&rac)
 	}
 
 	tags := make(map[string]*string)
 	if nps.Autoscale {
-		tags[AutoscalerClusterNameTag(cluster)] = aws.String(TagValueOwned)
+		tags[AutoscalerClusterNameTag(cc.Name)] = aws.String(TagValueOwned)
 		tags[TagAutoscalerEnabled] = aws.String(TagValueTrue)
 	}
 	cni.SetTags(tags)
 
-	return &cni
+	return
 }
 
 func clusterFromEksCluster(ec *eks.Cluster) *types.Cluster {

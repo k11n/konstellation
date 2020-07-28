@@ -58,26 +58,13 @@ spec:
               properties:
                 amiType:
                   type: string
-                asgId:
-                  description: set only after nodepool is created
-                  type: string
                 connectFromAnywhere:
                   type: boolean
-                roleArn:
-                  type: string
-                securityGroupId:
-                  description: set only after cluster is created
-                  type: string
                 sshKeypair:
                   type: string
-                subnetIds:
-                  items:
-                    type: string
-                  type: array
               required:
               - amiType
               - connectFromAnywhere
-              - roleArn
               - sshKeypair
               type: object
             diskSizeGiB:
@@ -103,14 +90,20 @@ spec:
         status:
           description: NodepoolStatus defines the observed state of Nodepool
           properties:
+            aws:
+              properties:
+                asgId:
+                  description: set only after nodepool is created
+                  type: string
+              type: object
             nodes:
               items:
                 type: string
+              nullable: true
               type: array
             numReady:
               type: integer
           required:
-          - nodes
           - numReady
           type: object
       type: object

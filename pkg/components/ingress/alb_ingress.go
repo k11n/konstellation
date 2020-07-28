@@ -65,7 +65,7 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 		return err
 	}
 
-	svcAccount.Annotations[albRoleAnnotation] = cc.Spec.AWS.AlbRoleArn
+	svcAccount.Annotations[albRoleAnnotation] = cc.Status.AWS.AlbRoleArn
 	err = kclient.Update(context.TODO(), svcAccount)
 	if err != nil {
 		return err
@@ -100,7 +100,7 @@ func (i *AWSALBIngress) GetIngressAnnotations(kclient client.Client, tlsHosts []
 	}
 
 	// attach dualstack LB if we have IPV6 enabled on the subnet
-	if cc.Spec.EnableIpv6 && cc.Spec.AWS.Ipv6Cidr != "" {
+	if cc.Spec.EnableIpv6 && cc.Status.AWS.Ipv6Cidr != "" {
 		annotations["alb.ingress.kubernetes.io/ip-address-type"] = "dualstack"
 	}
 
