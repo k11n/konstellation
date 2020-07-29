@@ -31,22 +31,6 @@ h1.heroTagline {
   font-size: 50px;
 }
 
-@media screen and (max-width: 966px) {
-  h1.heroTagline {
-    font-size: 40px;
-  }
-   .heroBanner_src-pages- {
-    padding-left: 1.3rem !important;
-    padding-right: 1.3rem !important;
-  }
-}
-
-@media screen and (max-width: 700px) {
-  h1.heroTagline {
-    font-size: 30px;
-  }
-}
-
 .buttonCta {
   font-size: 24px;
   font-weight: 700;
@@ -93,4 +77,24 @@ h1.heroTagline {
   background-color: #2A2734;
   min-height: 200px;
   border-radius: var(--ifm-pre-border-radius);
+}
+
+@media screen and (max-width: 966px) {
+  h1.heroTagline {
+    font-size: 40px;
+  }
+   .heroBanner_src-pages- {
+    padding-left: 1.3rem !important;
+    padding-right: 1.3rem !important;
+  }
+}
+
+@media screen and (max-width: 700px) {
+  h1.heroTagline {
+    font-size: 30px;
+  }
+
+  .buttonCta {
+    font-size: 18px;
+  }
 }
