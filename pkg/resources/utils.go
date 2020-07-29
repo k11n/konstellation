@@ -105,7 +105,7 @@ func updateResource(kclient client.Client, object, owner metav1.Object, scheme *
 	// copy over status if available
 	existingStatus := existingVal.Elem().FieldByName("Status")
 	targetStatus := reflect.ValueOf(object).Elem().FieldByName("Status")
-	if !targetStatus.IsZero() {
+	if targetStatus.IsValid() {
 		existingStatus.Set(targetStatus)
 	}
 
