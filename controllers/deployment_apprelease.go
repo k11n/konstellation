@@ -335,6 +335,15 @@ func (r *DeploymentReconciler) deployReleases(ctx context.Context, at *v1alpha1.
 		at.Status.DeployUpdatedAt = metav1.Now()
 	}
 
+	// configure status
+	if at.Spec.DeployMode == v1alpha1.DeployHalt {
+		at.Status.Phase = v1alpha1.AppTargetPhaseHalted
+	} else if activeRelease != targetRelease || targetRelease.Status.NumAvailable < targetRelease.Spec.NumDesired {
+		at.Status.Phase = v1alpha1.AppTargetPhaseDeploying
+	} else {
+		at.Status.Phase = v1alpha1.AppTargetPhaseRunning
+	}
+
 	// only update app target status when it's not in the middle of a deployment
 	if !activeRelease.CreationTimestamp.IsZero() && activeRelease == targetRelease {
 		at.Status.NumDesired = activeRelease.Status.NumDesired

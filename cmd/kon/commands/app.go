@@ -262,7 +262,7 @@ func appList(c *cli.Context) error {
 		fmt.Println("Target: ", target)
 
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"App", "Image", "Last Deployed", "Pods", "Ports", "Deploy Mode", "Host"})
+		table.SetHeader([]string{"App", "Image", "Last Deployed", "Pods", "Ports", "Status", "Host"})
 		resources.ForEach(kclient, &v1alpha1.AppTargetList{}, func(item interface{}) error {
 			at := item.(v1alpha1.AppTarget)
 			build, err := resources.GetBuildByName(kclient, at.Spec.Build)
@@ -290,7 +290,7 @@ func appList(c *cli.Context) error {
 				at.Status.DeployUpdatedAt.Format(cliDateFormat),
 				fmt.Sprintf("%d (max %d)", at.Status.NumAvailable, at.Spec.Scale.Max),
 				strings.Join(portsStr, ", "),
-				string(at.Spec.DeployMode),
+				string(at.Status.Phase),
 				hosts,
 			})
 			return nil
