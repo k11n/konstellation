@@ -17,6 +17,11 @@ module.exports = {
     signupUrl: signupUrl,
   },
   themeConfig: {
+    algolia: {
+      apiKey: 'e5335e3bf7e1b015bde7a9d2fb280bb4',
+      indexName: 'konstellation',
+      searchParameters: {}, // Optional (if provided by Algolia)
+    },
     navbar: {
       title: 'Konstellation',
       logo: {
