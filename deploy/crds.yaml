@@ -113,6 +113,11 @@ spec:
                 type: object
               nullable: true
               type: array
+            imagePullSecrets:
+              items:
+                type: string
+              nullable: true
+              type: array
             numDesired:
               description: num desired default state, autoscaling could change desired in status
               format: int32
@@ -495,6 +500,11 @@ spec:
               type: array
             image:
               type: string
+            imagePullSecrets:
+              items:
+                type: string
+              nullable: true
+              type: array
             imageTag:
               type: string
             ports:
@@ -1463,6 +1473,11 @@ spec:
               - latest
               - halt
               type: string
+            imagePullSecrets:
+              items:
+                type: string
+              nullable: true
+              type: array
             ingress:
               nullable: true
               properties:

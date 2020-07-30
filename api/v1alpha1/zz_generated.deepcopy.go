@@ -188,6 +188,11 @@ func (in *AppCommonSpec) DeepCopyInto(out *AppCommonSpec) {
 		*out = make([]AppReference, len(*in))
 		copy(*out, *in)
 	}
+	if in.ImagePullSecrets != nil {
+		in, out := &in.ImagePullSecrets, &out.ImagePullSecrets
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	in.Resources.DeepCopyInto(&out.Resources)
 	in.Probes.DeepCopyInto(&out.Probes)
 }

@@ -89,6 +89,10 @@ type AppCommonSpec struct {
 	ServiceAccount string `json:"serviceAccount,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// +nullable
+	ImagePullSecrets []string `json:"imagePullSecrets,omitempty"`
+
+	// +kubebuilder:validation:Optional
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 

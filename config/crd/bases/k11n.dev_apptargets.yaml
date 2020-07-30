@@ -93,6 +93,11 @@ spec:
               - latest
               - halt
               type: string
+            imagePullSecrets:
+              items:
+                type: string
+              nullable: true
+              type: array
             ingress:
               nullable: true
               properties:

@@ -67,6 +67,11 @@ spec:
               type: array
             image:
               type: string
+            imagePullSecrets:
+              items:
+                type: string
+              nullable: true
+              type: array
             imageTag:
               type: string
             ports:

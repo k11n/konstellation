@@ -258,6 +258,12 @@ func (r *AppReleaseReconciler) newReplicaSetForAR(ar *v1alpha1.AppRelease, build
 	if ar.Spec.ServiceAccount != "" {
 		podSpec.ServiceAccountName = ar.Spec.ServiceAccount
 	}
+	if ar.Spec.ImagePullSecrets != nil {
+		podSpec.ImagePullSecrets = nil
+		for _, s := range ar.Spec.ImagePullSecrets {
+			podSpec.ImagePullSecrets = append(podSpec.ImagePullSecrets, corev1.LocalObjectReference{Name: s})
+		}
+	}
 
 	// release name would use build creation timestamp
 	rs := &appsv1.ReplicaSet{

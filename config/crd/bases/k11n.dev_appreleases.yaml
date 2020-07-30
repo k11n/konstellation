@@ -66,6 +66,11 @@ spec:
                 type: object
               nullable: true
               type: array
+            imagePullSecrets:
+              items:
+                type: string
+              nullable: true
+              type: array
             numDesired:
               description: num desired default state, autoscaling could change desired
                 in status

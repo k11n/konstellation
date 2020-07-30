@@ -14,11 +14,19 @@ spec:
   # Set command to override the default CMD in your docker image
   # command:
   #   - cmd
+
+  # Arguments to the command
+  # args:
   #   - arg
+
+  # Secrets to enable pulling the docker image. The secrets must be created
+  # inside each target's namespace
+  # imagePullSecrets:
+  #   - secretName
 
   # Port configuration,
   # Change port below to match the port that your app runs on
-  # This could be any port, and is not related to the ultimate port your website will run on
+  # To expose this port on the ingress, reference its name in the ingress section below
   ports:
     - name: http
       port: {{.Port}}
@@ -47,6 +55,8 @@ spec:
   # Scaling configuration
   # scale:
   #   targetCPUUtilizationPercentage: 60
+  #   min: 1
+  #   max: 3
 
   # Probes
   # * liveness: restarts this pod if probe does not return 200
@@ -56,28 +66,31 @@ spec:
   # - timeoutSeconds: amount of time to allow the probes to wait
   # - periodSeconds: frequency of probe pings
   # probes:
-  #     initialDelaySeconds: 15
-  #     timeoutSeconds: 3
-  #     periodSeconds: 10
-  #     liveness:
-  #       httpGet:
-  #         path: /running
-  #         port: http
-  #       failureThreshold: 3
-  #     readiness:
-  #       httpGet:
-  #         path: /ready
-  #         port: http
-  #       failureThreshold: 6
+  #   initialDelaySeconds: 15
+  #   timeoutSeconds: 3
+  #   periodSeconds: 10
+  #   liveness:
+  #     httpGet:
+  #       path: /running
+  #       port: http
+  #     failureThreshold: 3
+  #   readiness:
+  #     httpGet:
+  #       path: /ready
+  #       port: http
+  #     failureThreshold: 6
 
   # One or more targets to deploy your app to
   # Uncomment ingress to create a load balancer and/or handle SSL termination for your host
-  # Konstellation will automatically create the load balancer for you on your cloud provider
+  # Konstellation will create the load balancer for you on your cloud provider
   # You'd just have to point your domain's DNS entries to the load balancer address.
-  # Each target may also override any env, resources, or probes defined in the app
+  # Each target may also override scale, resources, or probes defined in the app
   targets:
     - name: {{.Target}}
-      scale: {min: 1, max: 5}
+      # target specific scale overrides app scale
+      scale:
+        min: 1
+        max: 5
       # ingress:
       #   hosts:
       #     - www.yourhost.com
