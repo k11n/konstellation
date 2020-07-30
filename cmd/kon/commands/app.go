@@ -262,17 +262,12 @@ func appList(c *cli.Context) error {
 		fmt.Println("Target: ", target)
 
 		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"App", "Image", "Last Deployed", "Pods", "Ports", "Status", "Host"})
+		table.SetHeader([]string{"App", "Image", "Last Deployed", "Pods", "Status", "Host"})
 		resources.ForEach(kclient, &v1alpha1.AppTargetList{}, func(item interface{}) error {
 			at := item.(v1alpha1.AppTarget)
 			build, err := resources.GetBuildByName(kclient, at.Spec.Build)
 			if err != nil {
 				return err
-			}
-
-			var portsStr []string
-			for _, port := range at.Spec.Ports {
-				portsStr = append(portsStr, fmt.Sprintf("%s-%d", port.Name, port.Port))
 			}
 
 			var hosts string
@@ -289,7 +284,6 @@ func appList(c *cli.Context) error {
 				build.ShortName(),
 				at.Status.DeployUpdatedAt.Format(cliDateFormat),
 				fmt.Sprintf("%d (max %d)", at.Status.NumAvailable, at.Spec.Scale.Max),
-				strings.Join(portsStr, ", "),
 				string(at.Status.Phase),
 				hosts,
 			})
@@ -334,13 +328,23 @@ func appStatus(c *cli.Context) error {
 			continue
 		}
 
-		fmt.Printf("\nTarget: %s\n", target.Name)
+		atTable := tablewriter.NewWriter(os.Stdout)
+		atTable.SetHeaderLine(false)
+		atTable.SetBorder(false)
+		atTable.SetColumnSeparator("")
+		atTable.Append([]string{"Target:", target.Name})
 
 		at, err := resources.GetAppTargetWithLabels(kclient, app.Name, target.Name)
 		if err == resources.ErrNotFound {
 			fmt.Println("could not find an instance for target ", target.Name)
 			continue
 		}
+
+		var portsStr []string
+		for _, port := range at.Spec.Ports {
+			portsStr = append(portsStr, fmt.Sprintf("%s-%d", port.Name, port.Port))
+		}
+		atTable.Append([]string{"Ports:", strings.Join(portsStr, ", ")})
 
 		// find all targets of this app
 		releases, err := resources.GetAppReleases(kclient, app.Name, target.Name)
@@ -357,16 +361,15 @@ func appStatus(c *cli.Context) error {
 				return err
 			}
 		}
-
 		if ir != nil {
-			fmt.Printf("Hosts: %s\n", strings.Join(ir.Spec.Hosts, ", "))
-			fmt.Printf("Load Balancer: %s\n", ir.Status.Address)
+			atTable.Append([]string{"Hosts:", strings.Join(ir.Spec.Hosts, ", ")})
+			atTable.Append([]string{"Load balancer:", ir.Status.Address})
 		}
-		fmt.Printf("Scale: %d min, %d max\n", at.Spec.Scale.Min, at.Spec.Scale.Max)
-		if at.Spec.DeployMode != v1alpha1.DeployLatest {
-			fmt.Println("Deploys halted")
-		}
+		atTable.Append([]string{"Scale:", fmt.Sprintf("%d min, %d max", at.Spec.Scale.Min, at.Spec.Scale.Max)})
+		atTable.Append([]string{"Deploy mode:", string(at.Spec.DeployMode)})
+		atTable.Render()
 		fmt.Println()
+
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{
 			"Release", "Build", "Date", "Pods", "Status", "Traffic",
