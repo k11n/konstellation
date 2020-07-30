@@ -362,7 +362,7 @@ func (a *AWSManager) DeleteCluster(cluster string) error {
 	if kclient, err := a.kubernetesClient(cluster); err == nil {
 		if cc, err := resources.GetClusterConfig(kclient); err == nil {
 			var subnetIds []string
-			if len(cc.Status.AWS.PublicSubnets) > 0 {
+			if cc.Status.AWS != nil && len(cc.Status.AWS.PublicSubnets) > 0 {
 				for _, sub := range cc.Status.AWS.PublicSubnets {
 					subnetIds = append(subnetIds, sub.SubnetId)
 				}
