@@ -31,7 +31,19 @@ Once your images are pushed to ECR, set the `registry` field to your ECR URL. Th
   </TabItem>
   <TabItem value="imagepullsecret">
 
-Documentation for this is coming.
+Follow Kubernetes docs to [create a secret](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
+for your registry. This should be done for each target that the app needs to run in.
+
+For example, if the app has `production` as a target, the Secret needs to be created in the `production` namespace.
+
+Then set the `imagePullSecrets` field in the app manifest:
+
+```yaml
+...
+spec:
+  imagePullSecrets:
+    - secretName
+```
 
   </TabItem>
 </Tabs>
