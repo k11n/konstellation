@@ -61,10 +61,10 @@ The following is a guide to migrating from an existing Konstellation cluster to 
  and test to ensure that the route to your app is working
 
  ```
- %  host=<your host> \
- target=<load balancer address> \
- ip=$(dig +short x.example | head -n1) \
- curl -sv --resolve $host:443:$ip https://$host
+ % host=<your host>
+target=<load balancer address>
+ip=$(dig +short ${target} | head -n1)
+curl -sv --resolve "${host}:443:${ip}" "https://${host}"
  ```
 
 1. Change the routing policy on the existing DNS entry to be `Weighted` in order to move traffic over to the new cluster gradually. If you are using IPv6, do the same for the AAAA entry.
