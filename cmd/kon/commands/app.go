@@ -445,34 +445,24 @@ func appDeploy(c *cli.Context) error {
 	}
 	kclient := ac.kubernetesClient()
 
-	targets, err := resources.GetAppTargets(kclient, appName)
+	app, err := resources.GetAppByName(kclient, appName)
+	if err != nil {
+		return err
+	}
+	// edit app to use this build
+	app.Spec.ImageTag = tag
+
+	op, err := resources.UpdateResource(kclient, app, nil, nil)
 	if err != nil {
 		return err
 	}
 
-	if len(targets) == 0 {
-		return fmt.Errorf("No targets found")
+	if op == controllerutil.OperationResultNone {
+		fmt.Printf("App %s is already running build %s:%s\n", appName, app.Spec.Image, app.Spec.ImageTag)
+	} else {
+		fmt.Printf("App %s has been set to deploy %s:%s.\n", appName, app.Spec.Image, app.Spec.ImageTag)
 	}
 
-	appTarget := funk.Head(targets).(v1alpha1.AppTarget)
-	build, err := resources.GetBuildByName(kclient, appTarget.Spec.Build)
-	if err != nil && !errors.IsNotFound(err) {
-		return err
-	} else if err == nil && build.Spec.Tag == tag {
-		return fmt.Errorf("Build %s already exists", build.ShortName())
-	}
-
-	// create new build
-	build = v1alpha1.NewBuild(appTarget.Labels[resources.BuildRegistryLabel], appTarget.Labels[resources.BuildImageLabel], tag)
-	build.Labels = resources.LabelsForBuild(build)
-	build.Labels[resources.BuildTypeLabel] = resources.BuildTypeLatest
-
-	_, err = resources.UpdateResource(kclient, build, nil, nil)
-
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Build %s has been successfully created.\n", build.ShortName())
 	return nil
 }
 

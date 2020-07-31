@@ -45,10 +45,14 @@ func (r *DeploymentReconciler) reconcileAppReleases(ctx context.Context, at *v1a
 		return
 	}
 
+	// sort releases to ensure latest one is last
+	resources.SortAppReleasesByLatest(releases)
+
 	// do we already have a release for this appTargetHash and configmap combination?
 	// if not we'd want to create a new release
 	var existingRelease *v1alpha1.AppRelease
-	for _, ar := range releases {
+	var releaseIdx int
+	for idx, ar := range releases {
 		if ar.Labels[v1alpha1.AppTargetHash] != at.GetHash() {
 			// not the current release
 			continue
@@ -56,8 +60,18 @@ func (r *DeploymentReconciler) reconcileAppReleases(ctx context.Context, at *v1a
 
 		if configMap == nil || configMap.Name == ar.Spec.Config {
 			existingRelease = ar
+			releaseIdx = idx
 			break
 		}
+	}
+
+	if releaseIdx != 0 {
+		r.Log.Info("forcing an older build", "appRelease", existingRelease.Name)
+		// if this is not the last release indicated, we'd want to recreate it
+		if err = r.Client.Delete(ctx, existingRelease); err != nil {
+			return
+		}
+		existingRelease = nil
 	}
 
 	// create releases for new builds

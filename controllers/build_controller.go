@@ -98,26 +98,6 @@ func (r *BuildReconciler) Reconcile(req ctrl.Request) (res ctrl.Result, err erro
 		}
 		resources.LogUpdates(r.Log, op, "Removed latest label from build", "build", b.Name, "newBuild", build.Name)
 	}
-
-	// trigger appTarget reconcile
-	err = resources.ForEach(r.Client, &v1alpha1.AppList{}, func(item interface{}) error {
-		app := item.(v1alpha1.App)
-
-		if app.Spec.Registry != build.Spec.Registry {
-			return nil
-		}
-
-		app.Spec.ImageTag = build.Spec.Tag
-		op, err := resources.UpdateResource(r.Client, &app, nil, nil)
-		if err != nil {
-			return err
-		}
-		resources.LogUpdates(r.Log, op, "Updating app imageTag", "app", app.Name, "image", build.Spec.Image,
-			"tag", build.Spec.Tag)
-		return nil
-	}, client.MatchingFields{
-		"spec.image": build.Spec.Image,
-	})
 	return
 }
 

@@ -180,13 +180,6 @@ func (r *AppReconciler) reconcileBuild(ctx context.Context, app *v1alpha1.App) (
 		}
 	}
 
-	// is the build the latest? if not we should fetch the latest
-	// app controller should not deploy older builds. that's the job of build controller
-	if existing.Labels != nil && existing.Labels[resources.BuildTypeLabel] != resources.BuildTypeLatest {
-		// find latest build
-		return resources.GetLatestBuild(r.Client, app.Spec.Registry, app.Spec.Image)
-	}
-
 	return existing, nil
 }
 
