@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"regexp"
 	"strings"
 )
 
@@ -70,5 +71,21 @@ func ExecuteUserEditor(original []byte, name string) (edited []byte, err error) 
 		return
 	}
 
-	return ioutil.ReadFile(target)
+	content, err := ioutil.ReadFile(target)
+	if err != nil {
+		return
+	}
+
+	edited = stripComments(content)
+	return
+}
+
+var commentPattern = regexp.MustCompile("#.*?\n")
+
+func stripComments(original []byte) []byte {
+	return commentPattern.ReplaceAll(original, nil)
+}
+
+func stripCommentsString(original string) string {
+	return string(stripComments([]byte(original)))
 }
