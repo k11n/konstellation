@@ -1,0 +1,19 @@
+apiVersion: k11n.dev/v1alpha1
+kind: App
+metadata:
+  name: test-crash-loop
+spec:
+  image: test-app
+  imageTag: "0"
+
+  resources:
+    requests:
+      memory: '50Mi'
+      cpu: '100m'
+    limits:
+      memory: '200Mi'
+      cpu: '200m'
+
+  targets:
+    - name: production
+      scale: {min: 1, max: 3}

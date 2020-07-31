@@ -1,0 +1,19 @@
+apiVersion: k11n.dev/v1alpha1
+kind: App
+metadata:
+  name: test-resources
+spec:
+  image: test-app
+  imageTag: "0"
+
+  resources:
+    requests:
+      memory: '100Gi'
+      cpu: '1000m'
+    limits:
+      memory: '200Gi'
+      cpu: '2000m'
+
+  targets:
+    - name: production
+      scale: {min: 1, max: 3}
