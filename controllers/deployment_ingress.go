@@ -42,6 +42,12 @@ func (r *DeploymentReconciler) reconcileIngressRequest(ctx context.Context, at *
 	op, err := resources.UpdateResource(r.Client, ir, at, r.Scheme)
 	resources.LogUpdates(r.Log, op, "Updated IngressRequest", "appTarget", at.Name, "hosts", ir.Spec.Hosts)
 
+	// reload item if status has changed
+	ir, err = resources.GetIngressRequestForAppTarget(r.Client, at.Spec.App, at.Spec.Target)
+	if err != nil {
+		return err
+	}
+
 	at.Status.Hostname = ir.Status.Address
 	return err
 }

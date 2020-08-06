@@ -86,6 +86,12 @@ func (r *IngressRequestReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 	resources.LogUpdates(log, op, "Updated Ingress")
 
+	// load ingress since it has an updated status
+	err = r.Client.Get(ctx, client.ObjectKey{Namespace: ingress.Namespace, Name: ingress.Name}, ingress)
+	if err != nil {
+		return res, err
+	}
+
 	var address string
 	for _, lb := range ingress.Status.LoadBalancer.Ingress {
 		if lb.Hostname != "" {

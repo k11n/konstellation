@@ -581,11 +581,73 @@ func appLoad(c *cli.Context) error {
 	}
 	app := obj.(*v1alpha1.App)
 
-	if _, err := resources.UpdateResource(ac.kubernetesClient(), app, nil, nil); err != nil {
+	kclient := ac.kubernetesClient()
+	if _, err := resources.UpdateResource(kclient, app, nil, nil); err != nil {
 		return err
 	}
 
-	fmt.Printf("Successfully loaded app %s\n", app.Name)
+	fmt.Println("Successfully loaded app", app.Name)
+
+	fmt.Print("Waiting for app to deploy...")
+	err = utils.WaitUntilComplete(utils.MediumTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
+		fmt.Print(".")
+		// ensure app is created and available
+		appTargets, err := resources.GetAppTargets(kclient, app.Name)
+		if err != nil {
+			return false, err
+		}
+		if len(appTargets) == 0 {
+			return false, nil
+		}
+
+		at := appTargets[0]
+		if at.Status.NumAvailable == 0 {
+			return false, nil
+		}
+		return true, nil
+	})
+	fmt.Println("")
+	if err != nil {
+		return err
+	}
+
+	// if app requires ingress, then wait for that too
+	appTargets, err := resources.GetAppTargets(kclient, app.Name)
+	if err != nil {
+		return err
+	}
+
+	var atWithHost *v1alpha1.AppTarget
+	for i := range appTargets {
+		at := &appTargets[i]
+		if len(at.Spec.Ingress.Hosts) != 0 {
+			atWithHost = at
+			break
+		}
+	}
+
+	fmt.Print("Waiting for load balancer...")
+	var hostname string
+	err = utils.WaitUntilComplete(utils.MediumTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
+		fmt.Print(".")
+		at, err := resources.GetAppTarget(kclient, atWithHost.Name)
+		if err != nil {
+			return false, err
+		}
+
+		if at.Status.Hostname == "" {
+			return false, nil
+		}
+
+		hostname = at.Status.Hostname
+		return true, nil
+	})
+	fmt.Println("")
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Load balancer created for target %s! Hostname: %s\n", atWithHost.Spec.Target, hostname)
 	return nil
 }
 
