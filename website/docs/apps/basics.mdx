@@ -156,6 +156,17 @@ To use SSL with Konstellation, first ensure your certificate is uploaded into [A
 
 After the sync, the app will be available via HTTPS as well. Note: ACM is region aware, your cluster and certificates must reside in the same region as the cluster for them to be usable.
 
+### Testing SSL
+
+Before DNS of the hosts are pointed to the Konstellation load balancer, it can be tricky to test HTTPS traffic with curl. This is because the certificate used does not match the host of the load balancer. To get around this, use curl's `resolve` flag:
+
+```
+% host=<your host>
+target=<load balancer address>
+ip=$(dig +short ${target} | head -n1)
+curl -sv --resolve "${host}:443:${ip}" "https://${host}"
+```
+
 ## Scaling
 
 Konstellation supports autoscaling out of the box, and will manage a [Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on configuration. Depending on the specified resource usage, your app will scale up and down in the number of pods to meet demand.
