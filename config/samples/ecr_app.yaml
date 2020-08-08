@@ -1,0 +1,42 @@
+apiVersion: k11n.dev/v1alpha1
+kind: App
+metadata:
+  name: {{.AppName}}
+spec:
+  # Replace with your ECR registry
+  registry: 807158446417.dkr.ecr.us-west-2.amazonaws.com
+  # Replace with your image
+  image: yourimage
+  # Tag can be any string, if using integer versions, surround with quotes
+  imageTag: "1"
+
+  # Port configuration,
+  # Change port below to match the port that your app runs on
+  # To expose this port on the ingress, reference its name in the ingress section below
+  ports:
+    - name: http
+      port: 80
+
+  # Define resources that your app requires
+  # with CPU, 1000m equals to a single core
+  resources:
+    requests:
+      memory: '50Mi'
+      cpu: '100m'
+    limits:
+      memory: '200Mi'
+      cpu: '200m'
+
+  # Scaling configuration
+  scale:
+    targetCPUUtilizationPercentage: 60
+    min: 1
+    max: 3
+
+  targets:
+    - name: production
+      ingress:
+        # Replace host with an actual host
+        hosts:
+          - www.yourhost.com
+        port: http
