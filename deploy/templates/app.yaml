@@ -4,9 +4,7 @@ metadata:
   name: {{.AppName}}
 spec:
   # Docker registry, leave blank if using Docker Hub as your docker registry
-  # If using Amazon ECR in the same account as the Kubernetes cluster, it should have access to repos in Amazon ECR
-  # If using other docker registries, ensure Kubernetes has access to them:
-  # https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  # For other registries, fill in. Docs: https://konstellation.dev/docs/apps/basics#container-registry
   # registry: registry_url
   image: {{.DockerImage}}
   imageTag: "{{.DockerTag}}"
@@ -32,14 +30,17 @@ spec:
       port: {{.Port}}
 
   # Any shared configs your app requires, the app config will be automatically loaded into the env
+  # Docs: https://konstellation.dev/docs/apps/configuration#shared-config
   # configs: ['name']
 
   # Other apps that you depend on, their hostnames will be made available via env vars
+  # Docs: https://konstellation.dev/docs/apps/services#connecting-to-services
   # dependencies:
   #   - name: other_app
   #     port: http
 
-  # Service account to use, use a LinkedServiceAccount
+  # Service account to use, or a LinkedServiceAccount
+  # Docs: https://konstellation.dev/docs/reference/linkedserviceaccount
   # serviceAccount: account-name
 
   # Define resources that your app requires
@@ -61,18 +62,12 @@ spec:
   # Probes
   # * liveness: restarts this pod if probe does not return 200
   # * readiness: does not send your pod traffic unless this succeeds
-  # parameters
-  # - initialDelaySeconds: amount of time to wait before probes should start
-  # - timeoutSeconds: amount of time to allow the probes to wait
-  # - periodSeconds: frequency of probe pings
   # probes:
-  #   initialDelaySeconds: 15
-  #   timeoutSeconds: 3
-  #   periodSeconds: 10
   #   liveness:
   #     httpGet:
   #       path: /running
   #       port: http
+  #     periodSeconds: 5
   #     failureThreshold: 3
   #   readiness:
   #     httpGet:
@@ -81,16 +76,16 @@ spec:
   #     failureThreshold: 6
 
   # One or more targets to deploy your app to
-  # Uncomment ingress to create a load balancer and/or handle SSL termination for your host
-  # Konstellation will create the load balancer for you on your cloud provider
-  # You'd just have to point your domain's DNS entries to the load balancer address.
   # Each target may also override scale, resources, or probes defined in the app
+  # Docs: https://konstellation.dev/docs/apps/basics#targets
   targets:
     - name: {{.Target}}
       # target specific scale overrides app scale
       scale:
         min: 1
         max: 5
+      # Uncomment ingress to create a load balancer and/or handle SSL termination for the listed hosts
+      # Docs: https://konstellation.dev/docs/apps/basics#ingress
       # ingress:
       #   hosts:
       #     - www.yourhost.com
