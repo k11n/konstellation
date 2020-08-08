@@ -46,13 +46,19 @@ Enter your docker image and then edit the generated template. There are a few th
 * registry - if you are not using DockerHub, enter url of your docker registry
 * ingress.hosts - one or more domains that you'd like the app to handle. Enter a hostname where you could control its DNS.
 
-Once complete, then load the manifest into Kubernetes with
+You could also use an [example app manifest](https://github.com/k11n/konstellation/blob/master/config/samples/2048.yaml).
+
+Once your manifest is ready, load it into Konstellation with
 
 ```
 % kon app load <yourapp>.yaml
+Successfully loaded app app2048
+Waiting for app to deploy........
+Waiting for load balancer..............
+Load balancer created for target production! Hostname: 8846d38a-istiosystem-konin-a4cf-650024568.us-west-2.elb.amazonaws.com
 ```
 
-That's it! With that, Konstellation will create all of the resources necessary to run the app on Kubernetes, including a native load balancer.
+That's it! With that, Konstellation has created all of the resources necessary to run the app on Kubernetes, including a native load balancer.
 
 The app manifest is persisted in Kubernetes, and can be edited at any time with `kon app edit <app>`
 

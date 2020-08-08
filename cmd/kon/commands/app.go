@@ -608,7 +608,7 @@ func appLoad(c *cli.Context) error {
 	})
 	fmt.Println("")
 	if err != nil {
-		return err
+		return fmt.Errorf("app did not become available after timeout, check app status")
 	}
 
 	// if app requires ingress, then wait for that too
@@ -644,7 +644,7 @@ func appLoad(c *cli.Context) error {
 	})
 	fmt.Println("")
 	if err != nil {
-		return err
+		return fmt.Errorf("load balancer could not be created after timeout")
 	}
 
 	fmt.Printf("Load balancer created for target %s! Hostname: %s\n", atWithHost.Spec.Target, hostname)

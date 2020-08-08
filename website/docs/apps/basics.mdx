@@ -31,12 +31,15 @@ Once your images are pushed to ECR, set the `registry` field to your ECR URL. Th
   </TabItem>
   <TabItem value="imagepullsecret">
 
-Follow Kubernetes docs to [create a secret](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/)
-for your registry. This should be done for each target that the app needs to run in.
+For other private registries, Kubernetes needs to know how to authenticate with them.
 
-For example, if the app has `production` as a target, the Secret needs to be created in the `production` namespace.
+In order to configure this, you'd need to create a `Secret` inside Kubernetes and then point to the secret in the `imagePullSecrets` field in the app manifest.
 
-Then set the `imagePullSecrets` field in the app manifest:
+Kubernetes docs has a guide to [create a secret](https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/) for your registry.
+
+Since Konstellation creates a namespace for each target that your cluster supports, and Secrets are local to the namespace, you'll need a Secret inside the namespace for each target (which is named the same as the target). For example, if the app has `production` as a target, the Secret needs to be created in the `production` namespace.
+
+Once the Secret is created, set the `imagePullSecrets` field in the app manifest:
 
 ```yaml
 ...
