@@ -134,13 +134,16 @@ func certSync(c *cli.Context) error {
 	}
 	wp.StopWait()
 
-	for _, t := range wp.GetTasks() {
+	for i, t := range wp.GetTasks() {
+		cert := certs[i]
 		if t.Err != nil {
-			return t.Err
+			return fmt.Errorf("error syncing certificate %s (%s)", cert.Domain, cert.ID)
 		}
+
 		updated := t.Result.(bool)
 		if updated {
 			count += 1
+			fmt.Println("synced certificate:", cert.Domain)
 		}
 	}
 
