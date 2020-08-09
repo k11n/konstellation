@@ -99,7 +99,7 @@ func certList(c *cli.Context) error {
 			cs.Status,
 		})
 	}
-	utils.FormatTable(table)
+	utils.FormatStandardTable(table)
 	table.Render()
 
 	return nil

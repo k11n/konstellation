@@ -48,7 +48,7 @@ func vpcList(c *cli.Context) error {
 
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{"VPC", "CIDR Block", "Konstellation", "Topology", "IPv6"})
-		utils.FormatTable(table)
+		utils.FormatStandardTable(table)
 
 		vpcs, err := cm.VPCProvider().ListVPCs(context.Background())
 		if err != nil {

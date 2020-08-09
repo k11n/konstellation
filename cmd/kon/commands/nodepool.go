@@ -84,7 +84,7 @@ func nodepoolList(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	utils.FormatTable(table)
+	utils.FormatStandardTable(table)
 	table.Render()
 
 	return nil

@@ -833,7 +833,7 @@ func printClusterSection(section providers.ClusterManager, clusters []*clusterIn
 			memoryStr,
 		})
 	}
-	utils.FormatTable(table)
+	utils.FormatStandardTable(table)
 	table.Render()
 }
 

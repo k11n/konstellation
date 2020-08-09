@@ -215,7 +215,7 @@ func accountList(c *cli.Context) error {
 		return nil
 	})
 
-	utils.FormatTable(table)
+	utils.FormatStandardTable(table)
 	table.Render()
 
 	if err != nil {

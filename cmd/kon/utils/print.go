@@ -13,10 +13,16 @@ var (
 	lineSeparator = strings.Repeat("-", 80)
 )
 
-func FormatTable(table *tablewriter.Table) {
+func FormatStandardTable(table *tablewriter.Table) {
 	table.SetHeaderAlignment(tablewriter.ALIGN_LEFT)
 	table.SetCenterSeparator("-")
 	table.SetColumnSeparator(" ")
+}
+
+func FormatPlainTable(table *tablewriter.Table) {
+	table.SetHeaderLine(false)
+	table.SetBorder(false)
+	table.SetColumnSeparator("")
 }
 
 func PrintImportant(message string, header string) {

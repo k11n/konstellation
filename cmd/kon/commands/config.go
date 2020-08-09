@@ -133,7 +133,7 @@ func configList(c *cli.Context) error {
 		return err
 	}
 
-	utils.FormatTable(table)
+	utils.FormatStandardTable(table)
 	table.Render()
 
 	return nil

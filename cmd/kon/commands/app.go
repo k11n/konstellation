@@ -296,7 +296,7 @@ func appList(c *cli.Context) error {
 			return err
 		}
 
-		utils.FormatTable(table)
+		utils.FormatStandardTable(table)
 		table.Render()
 
 		fmt.Println()
@@ -327,15 +327,19 @@ func appStatus(c *cli.Context) error {
 	// what information is useful here?
 	// group by target
 	// Build, date deployed, status, numAvailable/Desired, traffic
+	isStuck := false
+	firstTarget := ""
 	for _, target := range app.Spec.Targets {
 		if requiredTarget != "" && target.Name != requiredTarget {
 			continue
 		}
 
+		if firstTarget == "" {
+			firstTarget = target.Name
+		}
+
 		atTable := tablewriter.NewWriter(os.Stdout)
-		atTable.SetHeaderLine(false)
-		atTable.SetBorder(false)
-		atTable.SetColumnSeparator("")
+		utils.FormatPlainTable(atTable)
 		atTable.Append([]string{"Target:", target.Name})
 
 		at, err := resources.GetAppTargetWithLabels(kclient, app.Name, target.Name)
@@ -397,10 +401,30 @@ func appStatus(c *cli.Context) error {
 			}
 
 			table.Append(vals)
+
+			if release.Status.State == v1alpha1.ReleaseStateReleasing && release.Status.NumAvailable == 0 &&
+				release.Spec.NumDesired > 0 {
+				changedDuration := time.Now().Sub(release.Status.StateChangedAt.Time)
+				if changedDuration > 5*time.Minute {
+					isStuck = true
+				}
+			}
 		}
-		utils.FormatTable(table)
+		utils.FormatStandardTable(table)
 		table.Render()
 		fmt.Println()
+	}
+
+	if isStuck {
+		fmt.Println("The app has been stuck in releasing for more than 5 minutes. It may be misconfigured.")
+		fmt.Println("Some tools to troubleshoot:")
+		table := tablewriter.NewWriter(os.Stdout)
+		table.SetAutoWrapText(false)
+		utils.FormatPlainTable(table)
+		table.Append([]string{fmt.Sprintf("kon app logs -f %s", appName), "tails logs for the current release"})
+		table.Append([]string{fmt.Sprintf("kubectl get events -n %s", firstTarget), "prints k8s event logs"})
+		table.Append([]string{"kon launch kubedash", "launches Kubernetes Dashboard"})
+		table.Render()
 	}
 	return nil
 }
@@ -938,7 +962,7 @@ func appPods(c *cli.Context) error {
 		//fmt.Println(p)
 	}
 
-	utils.FormatTable(table)
+	utils.FormatStandardTable(table)
 	table.Render()
 
 	return nil

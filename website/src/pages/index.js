@@ -21,7 +21,7 @@ const featureCols = [
       configuration.`,
   },
   {
-    title: <>Designed for microservices</>,
+    title: 'Designed for microservices',
     // imageUrl: 'img/undraw_docusaurus_tree.svg',
     description: `Built on years of experience with running services on
       Kubernetes. Konstellation provides an integrated stack including load
@@ -29,7 +29,7 @@ const featureCols = [
       observability.`,
   },
   {
-    title: <>Integrated with AWS</>,
+    title: 'Integrated with AWS',
     // imageUrl: 'img/undraw_docusaurus_react.svg',
     description: `Konstellation has been optimized to work on AWS. It manages
       EKS clusters, nodepools, VPCs, and load balancers. It integrates with
@@ -63,7 +63,7 @@ const featureRows = [
       `Creating Kubernetes clusters can be complex, typically involving a complex
       sequence of steps that can be difficult to reproduce.`,
       `Konstellation is a full-stack cluster manager focused on end to end management.
-      It uses Terraform to automate creation of cloud resources.`,
+      It uses Terraform to automate creation (and teardown) of cloud resources.`,
       `Get a fully configured Kubernetes cluster in 15 minutes!`,
     ],
     videoUrl: 'https://konstellation-public.s3-us-west-2.amazonaws.com/cluster-demo-720p.mp4',
