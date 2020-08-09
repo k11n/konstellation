@@ -1108,7 +1108,7 @@ func chooseReleaseHelper(kclient client.Client, c *cli.Context) (pc *podContext,
 			return nil, err
 		}
 		if ar == nil {
-			return nil, fmt.Errorf("Could not find an active release")
+			return nil, fmt.Errorf("could not find an active release")
 		}
 		release = ar.Name
 	}
@@ -1132,7 +1132,7 @@ func choosePodHelper(kclient client.Client, c *cli.Context) (pc *podContext, err
 	}
 
 	if pod == "" {
-		pod, err = selectAppPod(kclient, pc.app, pc.target, pc.release)
+		pod, err = selectAppPod(kclient, pc.target, pc.release)
 		if err != nil {
 			return nil, err
 		}
@@ -1149,7 +1149,7 @@ func selectAppTarget(kclient client.Client, appName string) (target string, err 
 	}
 
 	if len(targets) == 0 {
-		err = fmt.Errorf("The app doesn't have any targets deployed on this cluster")
+		err = fmt.Errorf("the app doesn't have any targets deployed on this cluster")
 		return
 	}
 	if len(targets) == 1 {
@@ -1172,11 +1172,11 @@ func selectAppTarget(kclient client.Client, appName string) (target string, err 
 	return
 }
 
-func selectAppPod(kclient client.Client, app, target, release string) (pod string, err error) {
+func selectAppPod(kclient client.Client, target, release string) (pod string, err error) {
 	pods, err := resources.GetPodsForAppRelease(kclient, target, release)
 
 	if len(pods) == 0 {
-		err = fmt.Errorf("No pods found")
+		err = fmt.Errorf("no pods found")
 		return
 	}
 

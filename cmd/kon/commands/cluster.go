@@ -37,12 +37,12 @@ import (
 )
 
 var (
-	clusterCloudFlag = &cli.StringFlag{
-		Name:  "cloud",
-		Usage: "the cloud that the cluster resides",
-		Value: "aws",
-		// Required: true,
-	}
+	//clusterCloudFlag = &cli.StringFlag{
+	//	Name:  "cloud",
+	//	Usage: "the cloud that the cluster resides",
+	//	Value: "aws",
+	//	// Required: true,
+	//}
 	clusterNameFlag = &cli.StringFlag{
 		Name:     "cluster",
 		Usage:    "cluster name",
@@ -385,7 +385,9 @@ func clusterCreate(c *cli.Context) error {
 	}
 
 	// generate config to use with Kube
-	updateClusterLocations()
+	if err = updateClusterLocations(); err != nil {
+		return err
+	}
 	if err = generateKubeConfig(); err != nil {
 		return err
 	}
@@ -506,7 +508,7 @@ func clusterDestroy(c *cli.Context) error {
 		Label: fmt.Sprintf("Sure you want to proceed? (type in %s to proceed)", clusterName),
 		Validate: func(v string) error {
 			if v != clusterName {
-				return fmt.Errorf("Confirmation didn't match %s", clusterName)
+				return fmt.Errorf("confirmation didn't match %s", clusterName)
 			}
 			return nil
 		},
@@ -756,7 +758,7 @@ func clusterReinstall(c *cli.Context) error {
 func ensureClusterSelected() error {
 	conf := config.GetConfig()
 	if conf.SelectedCluster == "" {
-		return fmt.Errorf("Cluster not selected yet. Select one with 'kon cluster select ...'")
+		return fmt.Errorf("cluster not selected yet. Select one with 'kon cluster select ...'")
 	}
 	return nil
 }
@@ -907,7 +909,7 @@ func generateKubeConfig() error {
 		selectedCloud = cm.Cloud()
 	}
 
-	clusterConfs := []*resources.KubeClusterConfig{}
+	var clusterConfs []*resources.KubeClusterConfig
 	selectedIdx := -1
 	for _, cm := range GetClusterManagers() {
 		ksvc := cm.KubernetesProvider()

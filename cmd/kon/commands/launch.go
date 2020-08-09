@@ -97,7 +97,10 @@ func launchKubeDash(c *cli.Context) error {
 	fmt.Printf("Launching Kubernetes Dashboard: %s\n", url)
 
 	time.Sleep(2 * time.Second)
-	browser.OpenURL(url)
+	err = browser.OpenURL(url)
+	if err != nil {
+		return err
+	}
 
 	proxy.WaitUntilCanceled()
 	return nil
@@ -192,7 +195,9 @@ func startProxyAndWait(proxy *koncli.KubeProxy, name string) error {
 
 	// launch web browser after delay
 	time.Sleep(2 * time.Second)
-	browser.OpenURL(proxy.URL())
+	if err = browser.OpenURL(proxy.URL()); err != nil {
+		return err
+	}
 
 	proxy.WaitUntilCanceled()
 	return nil

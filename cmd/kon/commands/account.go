@@ -120,7 +120,7 @@ func accountEdit(name string, allowOverride bool) error {
 		}
 	} else if !allowOverride {
 		// in create mode, return already exists error
-		return fmt.Errorf("An account named %s already exists", name)
+		return fmt.Errorf("an account named %s already exists", name)
 	} else {
 		buf := bytes.NewBuffer(nil)
 		err = kube.GetKubeEncoder().Encode(lsa, buf)

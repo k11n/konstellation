@@ -110,7 +110,7 @@ func configList(c *cli.Context) error {
 		"Name (shared config)",
 		"Target",
 	})
-	resources.ForEach(kclient, &v1alpha1.AppConfigList{}, func(item interface{}) error {
+	err = resources.ForEach(kclient, &v1alpha1.AppConfigList{}, func(item interface{}) error {
 		ac := item.(v1alpha1.AppConfig)
 		app := ""
 		name := ""
@@ -129,6 +129,9 @@ func configList(c *cli.Context) error {
 		})
 		return nil
 	}, labels)
+	if err != nil {
+		return err
+	}
 
 	utils.FormatTable(table)
 	table.Render()
@@ -139,7 +142,7 @@ func configList(c *cli.Context) error {
 func configShow(c *cli.Context) error {
 	if c.NArg() == 0 {
 		cli.ShowSubcommandHelp(c)
-		return fmt.Errorf("Required argument <release> was not passed in")
+		return fmt.Errorf("required argument <release> was not passed in")
 	}
 	release := c.Args().Get(0)
 
@@ -156,7 +159,7 @@ func configShow(c *cli.Context) error {
 	}
 
 	if ar.Spec.Config == "" {
-		return fmt.Errorf("Release %s does not have a config", release)
+		return fmt.Errorf("release %s does not have a config", release)
 	}
 
 	cm, err := resources.GetConfigMap(kclient, ar.Spec.Target, ar.Spec.Config)
@@ -249,7 +252,7 @@ func configDelete(c *cli.Context) error {
 	kclient := ac.kubernetesClient()
 	appConfig, err := resources.GetConfigForType(kclient, confType, name, target)
 	if err == resources.ErrNotFound {
-		return fmt.Errorf("Config does not exist")
+		return fmt.Errorf("config does not exist")
 	} else if err != nil {
 		return err
 	}
@@ -270,11 +273,11 @@ func getAppOrShared(c *cli.Context) (t v1alpha1.ConfigType, n string, err error)
 
 	if app == "" && name == "" {
 		cli.ShowSubcommandHelp(c)
-		err = fmt.Errorf("Either --app or --name is required")
+		err = fmt.Errorf("either --app or --name is required")
 		return
 	}
 	if app != "" && name != "" {
-		err = fmt.Errorf("Both --app and --name cannot be used at the same time")
+		err = fmt.Errorf("both --app and --name cannot be used at the same time")
 		return
 	}
 

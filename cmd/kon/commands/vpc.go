@@ -91,12 +91,16 @@ func vpcDestroy(c *cli.Context) error {
 		}
 	}
 
+	if manager == nil {
+		return fmt.Errorf("unsupported VPC")
+	}
+
 	if vpc == nil {
-		return fmt.Errorf("Could not find VPC %s", vpcId)
+		return fmt.Errorf("could not find VPC %s", vpcId)
 	}
 
 	if !vpc.SupportsKonstellation {
-		return fmt.Errorf("Cannot destroy VPC, not created by Konstellation")
+		return fmt.Errorf("cannot destroy VPC, not created by Konstellation")
 	}
 
 	// ask for confirmation
