@@ -191,17 +191,15 @@ func (r *DeploymentReconciler) deployReleases(ctx context.Context, at *v1alpha1.
 		// see if there's a new target release (try to deploy latest if possible)
 		// TODO: check if autorelease is enabled for this target..
 		newTarget := firstDeployableRelease
-		if newTarget != nil {
-			if targetRelease != newTarget {
-				var previousTarget string
-				if targetRelease != nil {
-					previousTarget = targetRelease.Name
-				}
-				hasChanges = true
-				logger.Info("Setting new target release", "target", newTarget.Name, "previousTarget", previousTarget)
+		if targetRelease != newTarget {
+			var previousTarget string
+			if targetRelease != nil {
+				previousTarget = targetRelease.Name
 			}
-			targetRelease = newTarget
+			hasChanges = true
+			logger.Info("Setting new target release", "target", newTarget.Name, "previousTarget", previousTarget)
 		}
+		targetRelease = newTarget
 	}
 
 	// TODO: don't deploy additional builds when outside of schedule

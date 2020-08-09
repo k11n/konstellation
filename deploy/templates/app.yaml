@@ -1,12 +1,16 @@
 apiVersion: k11n.dev/v1alpha1
 kind: App
 metadata:
-  name: {{.AppName}}
+  name: {{ .AppName }}
 spec:
   # Docker registry, leave blank if using Docker Hub as your docker registry
   # For other registries, fill in. Docs: https://konstellation.dev/docs/apps/basics#container-registry
+  {{- if .Registry }}
+  registry: {{ .Registry }}
+  {{- else }}
   # registry: registry_url
-  image: {{.DockerImage}}
+  {{- end }}
+  image: {{ .DockerImage }}
   imageTag: "{{.DockerTag}}"
 
   # Set command to override the default CMD in your docker image

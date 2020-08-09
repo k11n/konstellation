@@ -32,6 +32,7 @@ func GetIngressRequests(kclient client.Client) (requestList *v1alpha1.IngressReq
 	}
 	return
 }
+
 func GetIngressRequestForAppTarget(kclient client.Client, app, target string) (ir *v1alpha1.IngressRequest, err error) {
 	reqList := &v1alpha1.IngressRequestList{}
 	err = kclient.List(context.TODO(), reqList, client.MatchingLabels{

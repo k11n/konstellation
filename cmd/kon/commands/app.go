@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -263,7 +264,7 @@ func appList(c *cli.Context) error {
 
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{"App", "Image", "Last Deployed", "Pods", "Status", "Host"})
-		resources.ForEach(kclient, &v1alpha1.AppTargetList{}, func(item interface{}) error {
+		err = resources.ForEach(kclient, &v1alpha1.AppTargetList{}, func(item interface{}) error {
 			at := item.(v1alpha1.AppTarget)
 			build, err := resources.GetBuildByName(kclient, at.Spec.Build)
 			if err != nil {
@@ -291,6 +292,9 @@ func appList(c *cli.Context) error {
 		}, client.MatchingLabels{
 			resources.TargetLabel: target,
 		})
+		if err != nil {
+			return err
+		}
 
 		utils.FormatTable(table)
 		table.Render()
@@ -338,6 +342,8 @@ func appStatus(c *cli.Context) error {
 		if err == resources.ErrNotFound {
 			fmt.Println("could not find an instance for target ", target.Name)
 			continue
+		} else if err != nil {
+			return err
 		}
 
 		var portsStr []string
@@ -514,6 +520,7 @@ func appHalt(c *cli.Context) error {
 
 type appInfo struct {
 	AppName     string
+	Registry    string
 	DockerImage string
 	DockerTag   string
 	Target      string
@@ -1222,15 +1229,7 @@ func promptAppInfo() (ai *appInfo, err error) {
 		return
 	}
 
-	// see if tag is provided
-	parts := strings.Split(val, ":")
-	if len(parts) == 2 {
-		ai.DockerImage = parts[0]
-		ai.DockerTag = parts[1]
-	} else {
-		ai.DockerImage = val
-		ai.DockerTag = "latest"
-	}
+	parseImageInfo(val, ai)
 
 	prompt = promptui.Prompt{
 		Label:    "Port (that your app runs on)",
@@ -1257,4 +1256,26 @@ func promptAppInfo() (ai *appInfo, err error) {
 		ai.Target = cc.Spec.Targets[0]
 	}
 	return
+}
+
+var (
+	imageWithUrlPattern = regexp.MustCompile(`^.+\..+/.+`)
+)
+
+func parseImageInfo(val string, ai *appInfo) {
+	// see if tag is provided
+	parts := strings.Split(val, ":")
+	if len(parts) == 2 {
+		ai.DockerImage = parts[0]
+		ai.DockerTag = parts[1]
+	} else {
+		ai.DockerImage = val
+	}
+
+	// see if url is included
+	if imageWithUrlPattern.MatchString(ai.DockerImage) {
+		slashIdx := strings.Index(ai.DockerImage, "/")
+		ai.Registry = ai.DockerImage[:slashIdx]
+		ai.DockerImage = ai.DockerImage[slashIdx+1:]
+	}
 }
