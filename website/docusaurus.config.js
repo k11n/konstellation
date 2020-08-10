@@ -106,17 +106,11 @@ module.exports = {
       // Copyright © ${new Date().getFullYear()} Konstellation, LLC.
       copyright: `Apache 2.0 Licensed.`,
     },
-    announcementBar: {
-      id: 'private_beta',
-      content: `Konstellation is currently in private beta, interested in early access? <a href="${signupUrl}" target="_blank">Sign up here</a>`,
-      backgroundColor: '#141e59',
-      textColor: '#FFFFFF',
-    },
-    // algolia: {
-    //   apiKey: 'api-key',
-    //   indexName: 'index-name',
-    //   appId: 'app-id', // Optional, if you run the DocSearch crawler on your own
-    //   algoliaOptions: {}, // Optional, if provided by Algolia
+    // announcementBar: {
+    //   id: 'private_beta',
+    //   content: `Konstellation is currently in private beta, interested in early access? <a href="${signupUrl}" target="_blank">Sign up here</a>`,
+    //   backgroundColor: '#141e59',
+    //   textColor: '#FFFFFF',
     // },
   },
   presets: [

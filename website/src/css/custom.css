@@ -29,6 +29,7 @@ html[data-theme="dark"] .alternateRow {
 h1.heroTagline {
   color: #fff;
   font-size: 50px;
+  margin-bottom: 1.5rem;
 }
 
 .buttonCta {

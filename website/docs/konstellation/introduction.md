@@ -30,10 +30,6 @@ The ambition of Konstellation is to provide an abstraction over Kubernetes imple
 
 Konstellation itself is designed to be as cloud agnostic as possible, making it simple to plug in additional cloud providers in the future. If you are interested in making this happen, please consider contributing.
 
-## Private beta
-
-Konstellation is currently in private beta. If you are interested in trying it during the beta, [sign up here](https://forms.gle/Eh9je8GmS7NRSXf69).
-
 ## Third-party software and licensing
 
 Konstellation is Apache 2.0 licensed. It makes of use of other Apache 2.0 licensed software. When a cluster is created with Konstellation, the following components will be installed onto your cluster:
@@ -47,3 +43,7 @@ Konstellation is Apache 2.0 licensed. It makes of use of other Apache 2.0 licens
 * [Kubernetes Metrics Server](https://github.com/kubernetes-sigs/metrics-server)
 * [Prometheus Operator](https://github.com/coreos/prometheus-operator)
 * [Prometheus](https://prometheus.io/)
+
+## Support Slack
+
+[Join Slack](https://join.slack.com/t/kon-users/shared_invite/zt-fm64885u-QSlL0VQUJdZ_rcQBaZ81ug) if you  are interested in using Konstellation and have questions or feedback.

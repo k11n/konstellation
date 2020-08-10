@@ -102,10 +102,10 @@ const featureRows = [
     descriptions: [
       `Getting visibility into how apps are performing is often overlooked,
       but it's a crucial piece of any production deployment.`,
-      `Konstellation comes with an app observability stack configured out of the
+      `Konstellation comes with an app observability stack out of the
       box, with a redundant Prometheus setup and pre-configured Grafana
       dashboards for every app that you deploy.`,
-      `It's fully extensible to collect app specific metrics as well.`,
+      `It's fully extensible to collect app specific metrics and host custom dashboards.`,
     ],
     imageUrls: [
       'img/screen/home-observe-1.png',
@@ -277,17 +277,8 @@ function Home() {
                 'button button--outline button--secondary buttonCta',
                 styles.getStarted,
               )}
-              to={siteConfig.customFields.signupUrl}>
-              Get Started
-            </Link>
-
-            <Link
-              className={clsx(
-                'button button--outline button--secondary buttonCta',
-                styles.getStarted,
-              )}
               to={useBaseUrl('docs/')}>
-              Documentation
+              Get Started
             </Link>
           </div>
         </div>
