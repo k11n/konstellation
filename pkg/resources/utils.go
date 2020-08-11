@@ -153,6 +153,10 @@ func ForEach(kclient client.Client, listObj runtime.Object, eachFunc func(item i
 		}
 
 		listVal := reflect.ValueOf(listObj).Elem()
+		if listVal.IsZero() {
+			return fmt.Errorf("List object is missing")
+		}
+
 		itemsField := listVal.FieldByName("Items")
 		if itemsField.IsZero() {
 			return fmt.Errorf("List object doesn't not contain Items field")

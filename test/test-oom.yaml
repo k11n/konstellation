@@ -4,7 +4,8 @@ metadata:
   name: test-oom
 spec:
   image: test-app
-  imageTag: "0"
+  imageTag: '0'
+  registry: '807158446417.dkr.ecr.us-west-2.amazonaws.com'
 
   resources:
     requests:

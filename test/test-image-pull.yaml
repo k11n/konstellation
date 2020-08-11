@@ -3,8 +3,9 @@ kind: App
 metadata:
   name: test-image-pull
 spec:
-  image: test-app
-  imageTag: "missing"
+  image: test-missing
+  imageTag: '100'
+  registry: '807158446417.dkr.ecr.us-west-2.amazonaws.com'
 
   resources:
     requests:

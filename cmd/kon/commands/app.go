@@ -384,6 +384,7 @@ func appStatus(c *cli.Context) error {
 			if err != nil {
 				return err
 			}
+
 			vals := []string{
 				release.Name,
 				build.ShortName(),
@@ -393,8 +394,6 @@ func appStatus(c *cli.Context) error {
 				fmt.Sprintf("%d%%", release.Spec.TrafficPercentage),
 			}
 
-			table.Append(vals)
-
 			if release.Status.State == v1alpha1.ReleaseStateReleasing && release.Status.NumAvailable == 0 &&
 				release.Spec.NumDesired > 0 {
 				changedDuration := time.Now().Sub(release.Status.StateChangedAt.Time)
@@ -402,6 +401,19 @@ func appStatus(c *cli.Context) error {
 					isStuck = true
 				}
 			}
+
+			if release.Status.State == v1alpha1.ReleaseStateFailed || (release.Status.State == v1alpha1.ReleaseStateReleasing &&
+				release.Status.NumAvailable == 0 && release.Spec.NumDesired > 0) {
+
+				reason, err := resources.GetFailureReason(kclient, release.Namespace, release.Name)
+				if err != nil {
+					fmt.Println("error getting reason", err)
+				} else if reason != "" {
+					vals[4] += ": " + reason
+				}
+			}
+
+			table.Append(vals)
 		}
 		utils.FormatStandardTable(table)
 		table.Render()
