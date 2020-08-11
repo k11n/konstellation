@@ -6,7 +6,7 @@ Konstellation is a full stack application platform for Kubernetes. It provides a
 
 Companies often build proprietary tools to manage deployments on k8s, or deal with the raw resource YAMLs that can be complex and error-prone.
 
-Konstellation is designed to lower the barrier of entry that comes with Kubernetes. Initially it support k8s clusters on AWS (other cloud providers are on the roadmap).
+Konstellation is designed to lower the barrier of entry that comes with Kubernetes. Initially it supports k8s clusters on AWS (other cloud providers are on the roadmap).
 
 ## Features
 
