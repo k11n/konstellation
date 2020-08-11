@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	ErrNotFound = fmt.Errorf("The resource is not found")
+	ErrNotFound = fmt.Errorf("the resource is not found")
 	Break       = fmt.Errorf("")
 	log         = logf.Log.WithName("resources")
 )
@@ -50,7 +50,7 @@ func updateResource(kclient client.Client, object, owner metav1.Object, scheme *
 	existingObj.SetName(object.GetName())
 	existingRuntimeObj, ok := existingObj.(runtime.Object)
 	if !ok {
-		return controllerutil.OperationResultNone, fmt.Errorf("Not a runtime Object")
+		return controllerutil.OperationResultNone, fmt.Errorf("not a runtime Object")
 	}
 
 	key, err := client.ObjectKeyFromObject(existingRuntimeObj)
@@ -154,12 +154,12 @@ func ForEach(kclient client.Client, listObj runtime.Object, eachFunc func(item i
 
 		listVal := reflect.ValueOf(listObj).Elem()
 		if listVal.IsZero() {
-			return fmt.Errorf("List object is missing")
+			return fmt.Errorf("list object is missing")
 		}
 
 		itemsField := listVal.FieldByName("Items")
 		if itemsField.IsZero() {
-			return fmt.Errorf("List object doesn't not contain Items field")
+			return fmt.Errorf("list object doesn't not contain Items field")
 		}
 
 		for i := 0; i < itemsField.Len(); i += 1 {
