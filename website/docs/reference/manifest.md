@@ -41,6 +41,8 @@ Specification for an Ingress. An Ingress always listens on port 80/443 externall
 |:------------- |:--------------- |:-------- |:------------------------------ |
 | hosts         | List[string]    | yes      | A list of hostnames that the target should run on
 | port          | string          | no       | Target port that traffic should be routed to. Defaults to the first defined port.
+| requireHttps  | bool            | no       | When set, it'll redirect HTTP traffic to HTTPS
+| annotations   | Map{string: string} | no   | Custom annotation for the Ingress resource
 
 ## PortSpec
 
@@ -168,6 +170,8 @@ Defines for the behavior for the target. The target name must match one of the s
 
 ## Examples
 
-[Minimal example](https://github.com/k11n/konstellation/blob/master/examples/simple/2048.yaml)
+[Minimal example](https://github.com/k11n/konstellation/blob/master/config/samples/2048.yaml)
 
-[Full example]()
+[Using ECR](https://github.com/k11n/konstellation/blob/master/config/samples/ecr_app.yaml)
+
+[Requires HTTPS](https://github.com/k11n/konstellation/blob/master/config/samples/ingress_ssl.yaml)

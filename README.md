@@ -6,7 +6,7 @@ Konstellation is a full stack application platform for Kubernetes. It provides a
 
 Companies often build proprietary tools to manage deployments on k8s, or deal with the raw resource YAMLs that can be complex and error-prone.
 
-Konstellation is designed to lower the barrier of entry that comes with Kubernetes. Initially it's tightly integrated to support k8s clusters on AWS, with support for other cloud providers on the roadmap.
+Konstellation is designed to lower the barrier of entry that comes with Kubernetes. Initially it support k8s clusters on AWS (other cloud providers are on the roadmap).
 
 ## Features
 
@@ -17,6 +17,7 @@ Konstellation is designed to lower the barrier of entry that comes with Kubernet
 * Release management & rollbacks
 * Prometheus set up to scrape key app metrics
 * Pre-configured Grafana dashboards for apps
+* Reproducibility, easily migrate or duplicate your entire setup
 
 For more see: [konstellation.dev](https://konstellation.dev)
 
@@ -35,7 +36,7 @@ For more see: [konstellation.dev](https://konstellation.dev)
 
 Konstellation requires kubectl and terraform to be installed
 
-### Mac
+### Mac / Homebrew
 
 ```
 % brew tap k11n/konstellation

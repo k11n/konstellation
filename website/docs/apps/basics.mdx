@@ -167,6 +167,18 @@ ip=$(dig +short ${target} | head -n1)
 curl -sv --resolve "${host}:443:${ip}" "https://${host}"
 ```
 
+### Requiring SSL
+
+When HTTPS is confirmed to work, you could also disable insecure connections to your app. This can be done by setting a flag on the [IngressConfig](../reference/manifest.md#ingressconfig). When set, Konstellation will issue a 301 redirect for all plain HTTP traffic to its HTTPS equivalent.
+
+```yaml title="app.yaml"
+...
+  target:
+    production:
+      ingress:
+        requireHttps: true
+```
+
 ## Scaling
 
 Konstellation supports autoscaling out of the box, and will manage a [Horizontal Pod Autoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on configuration. Depending on the specified resource usage, your app will scale up and down in the number of pods to meet demand.
