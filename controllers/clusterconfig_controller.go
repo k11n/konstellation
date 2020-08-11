@@ -141,7 +141,7 @@ func (r *ClusterConfigReconciler) reconcilePrometheus(cc *v1alpha1.ClusterConfig
 	}
 
 	if storageClass == nil {
-		return fmt.Errorf("No default storageClass defined")
+		return fmt.Errorf("no default storageClass defined")
 	}
 
 	// find prometheus component and get config

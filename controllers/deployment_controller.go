@@ -149,7 +149,7 @@ func (r *DeploymentReconciler) Reconcile(req ctrl.Request) (res ctrl.Result, err
 func (r *DeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	configWatcher := &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: handler.ToRequestsFunc(func(configMapObject handler.MapObject) []ctrl.Request {
-			requests := []ctrl.Request{}
+			var requests []ctrl.Request
 			// check which apps
 			appConfig := configMapObject.Object.(*v1alpha1.AppConfig)
 

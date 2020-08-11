@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	v1alpha1 "github.com/k11n/konstellation/api/v1alpha1"
+	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/pkg/resources"
 )
 

@@ -15,13 +15,13 @@ import (
 )
 
 func (r *DeploymentReconciler) reconcileIngress(ctx context.Context, at *v1alpha1.AppTarget) error {
-	ingress, err := r.ingressForAppTarget(at)
+	in, err := r.ingressForAppTarget(at)
 	if err != nil {
 		return err
 	}
 	existing := &netv1beta1.Ingress{}
 	// find IR
-	key, err := client.ObjectKeyFromObject(ingress)
+	key, err := client.ObjectKeyFromObject(in)
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (r *DeploymentReconciler) reconcileIngress(ctx context.Context, at *v1alpha
 	}
 
 	// create or update
-	op, err := resources.UpdateResource(r.Client, ingress, at, r.Scheme)
+	op, err := resources.UpdateResource(r.Client, in, at, r.Scheme)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (r *DeploymentReconciler) ingressForAppTarget(at *v1alpha1.AppTarget) (*net
 	}
 	ingressComponent := ingress.NewIngressForCluster(cc.Spec.Cloud, cc.Name)
 
-	ingress := netv1beta1.Ingress{
+	in := netv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: resources.IstioNamespace,
 			Name:      at.Name,
@@ -110,9 +110,9 @@ func (r *DeploymentReconciler) ingressForAppTarget(at *v1alpha1.AppTarget) (*net
 		},
 	}
 
-	if err = ingressComponent.ConfigureIngress(r.Client, &ingress, at.Spec.Ingress); err != nil {
+	if err = ingressComponent.ConfigureIngress(r.Client, &in, at.Spec.Ingress); err != nil {
 		return nil, err
 	}
 
-	return &ingress, nil
+	return &in, nil
 }
