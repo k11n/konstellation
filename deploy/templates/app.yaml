@@ -94,5 +94,10 @@ spec:
       #   hosts:
       #     - www.yourhost.com
       #   port: http
+          # uncomment to force HTTPS, a 301 redirect will be issued for all HTTP traffic
+      #   requireHttps: true
+          # additional annotations for the Ingress resource
+      #   annotations:
+      #     key: value
       # resources:
       # probes:
