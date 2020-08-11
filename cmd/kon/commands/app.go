@@ -355,28 +355,16 @@ func appStatus(c *cli.Context) error {
 			portsStr = append(portsStr, fmt.Sprintf("%s-%d", port.Name, port.Port))
 		}
 		atTable.Append([]string{"Ports:", strings.Join(portsStr, ", ")})
-
-		// find all targets of this app
-		releases, err := resources.GetAppReleases(kclient, app.Name, target.Name)
-		if err != nil {
-			return err
-		}
-
-		// find ingress requests
-		ir, err := resources.GetIngressRequestForAppTarget(kclient, app.Name, target.Name)
-		if err != nil {
-			if err == resources.ErrNotFound {
-				// just skip
-			} else {
-				return err
-			}
-		}
-		if ir != nil {
-			atTable.Append([]string{"Hosts:", strings.Join(ir.Spec.Hosts, ", ")})
-			atTable.Append([]string{"Load balancer:", ir.Status.Address})
-		}
 		atTable.Append([]string{"Scale:", fmt.Sprintf("%d min, %d max", at.Spec.Scale.Min, at.Spec.Scale.Max)})
-		atTable.Append([]string{"Deploy mode:", string(at.Spec.DeployMode)})
+
+		if at.Spec.Ingress != nil {
+			atTable.Append([]string{"Hosts:", strings.Join(at.Spec.Ingress.Hosts, ", ")})
+			atTable.Append([]string{"Load balancer:", at.Status.Hostname})
+		}
+
+		if at.Spec.DeployMode == v1alpha1.DeployHalt {
+			atTable.Append([]string{"Deploy mode:", string(at.Spec.DeployMode)})
+		}
 		atTable.Render()
 		fmt.Println()
 
@@ -385,6 +373,11 @@ func appStatus(c *cli.Context) error {
 			"Release", "Build", "Date", "Pods", "Status", "Traffic",
 		})
 
+		// find all releases of this app
+		releases, err := resources.GetAppReleases(kclient, app.Name, target.Name)
+		if err != nil {
+			return err
+		}
 		for _, release := range releases {
 			// loading build
 			build, err := resources.GetBuildByName(kclient, release.Spec.Build)

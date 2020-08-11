@@ -17,9 +17,8 @@ import (
 )
 
 var (
-	meshGateway    = "mesh"
-	ingressGateway = fmt.Sprintf("%s/%s", resources.IstioNamespace, resources.GatewayName)
-	allGateways    = []string{meshGateway, ingressGateway}
+	ingressGateway = fmt.Sprintf("%s/%s", resources.IstioNamespace, resources.IngressGatewayName)
+	allGateways    = []string{resources.MeshGatewayName, ingressGateway}
 )
 
 func (r *DeploymentReconciler) reconcileService(ctx context.Context, at *v1alpha1.AppTarget) (svc *corev1.Service, err error) {
@@ -236,7 +235,7 @@ func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases
 		route := &istionetworking.HTTPRoute{
 			Match: []*istionetworking.HTTPMatchRequest{
 				{
-					Gateways: []string{meshGateway},
+					Gateways: []string{resources.MeshGatewayName},
 					Uri: &istionetworking.StringMatch{
 						MatchType: &istionetworking.StringMatch_Prefix{
 							Prefix: "/",

@@ -187,7 +187,15 @@ type TargetConfig struct {
 
 type IngressConfig struct {
 	Hosts []string `json:"hosts"`
-	Port  string   `json:"port"`
+	Port  string   `json:"port,omitempty"`
+
+	// when enabled, redirect http traffic to https
+	RequireHTTPS bool `json:"requireHttps,omitempty"`
+
+	// custom annotations for the Ingress
+	// +optional
+	// +kubebuilder:validation:Optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 type AppReference struct {

@@ -25,15 +25,15 @@ For more see: [konstellation.dev](https://konstellation.dev)
 ## Project Status
 
 - [x] Alpha
-- [x] Limited beta - initial users, possible schema changes
-- [ ] Public beta - supports some production workloads
+- [x] Limited beta - initial users, end to end stability
+- [ ] Public beta - CRD schema frozen, supports production workloads
 - [ ] General availability
 
 ## Installation
 
 [Full Installation Docs](https://konstellation.dev/docs/)
 
-Konstellation requires kubectl and terraform
+Konstellation requires kubectl and terraform to be installed
 
 ### Mac
 

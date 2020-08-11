@@ -814,15 +814,22 @@ spec:
                   ingress:
                     description: if ingress is needed
                     properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: custom annotations for the Ingress
+                        type: object
                       hosts:
                         items:
                           type: string
                         type: array
                       port:
                         type: string
+                      requireHttps:
+                        description: when enabled, redirect http traffic to https
+                        type: boolean
                     required:
                     - hosts
-                    - port
                     type: object
                   name:
                     type: string

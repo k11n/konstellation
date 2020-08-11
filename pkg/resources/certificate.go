@@ -36,23 +36,23 @@ func GetCertificateForDomain(kclient client.Client, domain string) (cert *v1alph
 	return
 }
 
-func GetCertificateThatMatchDomain(kclient client.Client, domain string) (cert *v1alpha1.CertificateRef, err error) {
-	// TODO: this should be more efficient
-	certList := v1alpha1.CertificateRefList{}
-	err = kclient.List(context.TODO(), &certList, client.MatchingLabels{
-		DomainLabel: TopLevelDomain(domain),
-	})
-	if err != nil {
+func GetCertificatesForHosts(kclient client.Client, hosts []string) (certs map[string]*v1alpha1.CertificateRef, err error) {
+	certs = make(map[string]*v1alpha1.CertificateRef)
+	if len(hosts) == 0 {
 		return
 	}
-
-	for _, item := range certList.Items {
-		if CertificateCovers(item.Spec.Domain, domain) {
-			cert = &item
-			return
+	err = ForEach(kclient, &v1alpha1.CertificateRefList{}, func(item interface{}) error {
+		cert := item.(v1alpha1.CertificateRef)
+		for _, host := range hosts {
+			if !CertificateCovers(cert.Spec.Domain, host) {
+				continue
+			}
+			if certs[host] == nil || cert.Spec.ExpiresAt.After(certs[host].Spec.ExpiresAt.Time) {
+				certs[host] = &cert
+			}
 		}
-	}
-	err = ErrNotFound
+		return nil
+	})
 	return
 }
 

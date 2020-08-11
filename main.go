@@ -109,14 +109,6 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Build")
 		os.Exit(1)
 	}
-	if err = (&controllers.IngressRequestReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("IngressRequest"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "IngressRequest")
-		os.Exit(1)
-	}
 	if err = (&controllers.NodepoolReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Nodepool"),

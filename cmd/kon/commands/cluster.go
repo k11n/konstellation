@@ -20,6 +20,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/urfave/cli/v2"
 	corev1 "k8s.io/api/core/v1"
+	netv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	cliv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	metrics "k8s.io/metrics/pkg/apis/metrics/v1beta1"
@@ -487,6 +488,7 @@ func clusterImport(c *cli.Context) error {
 }
 
 func clusterDestroy(c *cli.Context) error {
+
 	clusterName := c.String("cluster")
 	// update clusters
 	if err := updateClusterLocations(); err != nil {
@@ -532,20 +534,23 @@ func clusterDestroy(c *cli.Context) error {
 	// remove all apps and then ingress
 	// cluster might already be destroyed by then, so ignore these errors
 	if kclient, err := kube.KubernetesClientWithContext(resources.ContextNameForCluster(cm.Cloud(), clusterName)); err == nil {
+		ctx := context.Background()
 		apps, err := resources.ListApps(kclient)
 		if err != nil {
 			return err
 		}
 
 		for _, app := range apps {
-			kclient.Delete(context.TODO(), &app)
+			kclient.Delete(ctx, &app)
 		}
 
-		// delete all ingresses
-		ingress, err := resources.GetKonIngress(kclient)
-		if err == nil {
-			kclient.Delete(context.TODO(), ingress)
-		}
+		// delete all Ingresses
+		// TODO: older versions didn't associate ingress with
+		resources.ForEach(kclient, &netv1beta1.IngressList{}, func(obj interface{}) error {
+			ingress := obj.(netv1beta1.Ingress)
+			kclient.Delete(ctx, &ingress)
+			return nil
+		})
 
 		// delete all linked accounts
 		resources.ForEach(kclient, &v1alpha1.LinkedServiceAccountList{}, func(obj interface{}) error {

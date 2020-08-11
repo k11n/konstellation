@@ -9,7 +9,6 @@ resources:
 - bases/k11n.dev_appreleases.yaml
 - bases/k11n.dev_builds.yaml
 - bases/k11n.dev_certificaterefs.yaml
-- bases/k11n.dev_ingressrequests.yaml
 - bases/k11n.dev_linkedserviceaccounts.yaml
 - bases/k11n.dev_nodepools.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
@@ -24,7 +23,6 @@ patchesStrategicMerge:
 #- patches/webhook_in_appreleases.yaml
 #- patches/webhook_in_builds.yaml
 #- patches/webhook_in_certificaterefs.yaml
-#- patches/webhook_in_ingressrequests.yaml
 #- patches/webhook_in_linkedserviceaccounts.yaml
 #- patches/webhook_in_nodepools.yaml
 # +kubebuilder:scaffold:crdkustomizewebhookpatch
@@ -38,7 +36,6 @@ patchesStrategicMerge:
 #- patches/cainjection_in_appreleases.yaml
 #- patches/cainjection_in_builds.yaml
 #- patches/cainjection_in_certificaterefs.yaml
-#- patches/cainjection_in_ingressrequests.yaml
 #- patches/cainjection_in_linkedserviceaccounts.yaml
 #- patches/cainjection_in_nodepools.yaml
 # +kubebuilder:scaffold:crdkustomizecainjectionpatch
