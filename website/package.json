@@ -9,8 +9,8 @@
     "deploy": "docusaurus deploy"
   },
   "dependencies": {
-    "@docusaurus/core": "^2.0.0-alpha.59",
-    "@docusaurus/preset-classic": "^2.0.0-alpha.59",
+    "@docusaurus/core": "^2.0.0-alpha.61",
+    "@docusaurus/preset-classic": "^2.0.0-alpha.61",
     "clsx": "^1.1.1",
     "enzyme": "^3.0.0",
     "prism-react-renderer": "^1.1.1",
