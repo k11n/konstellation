@@ -656,7 +656,7 @@ func appLoad(c *cli.Context) error {
 	var atWithHost *v1alpha1.AppTarget
 	for i := range appTargets {
 		at := &appTargets[i]
-		if len(at.Spec.Ingress.Hosts) != 0 {
+		if at.Spec.Ingress != nil && len(at.Spec.Ingress.Hosts) != 0 {
 			atWithHost = at
 			break
 		}

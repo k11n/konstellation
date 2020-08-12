@@ -24,9 +24,6 @@ resources:
   kind: CertificateRef
   version: v1alpha1
 - group: k11n
-  kind: IngressRequest
-  version: v1alpha1
-- group: k11n
   kind: LinkedServiceAccount
   version: v1alpha1
 - group: k11n

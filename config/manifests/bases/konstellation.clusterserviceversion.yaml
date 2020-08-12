@@ -40,10 +40,6 @@ spec:
       kind: CertificateRef
       name: certificaterefs.k11n.dev
       version: v1alpha1
-    - description: IngressRequest is the Schema for the ingressrequests API
-      kind: IngressRequest
-      name: ingressrequests.k11n.dev
-      version: v1alpha1
     - description: LinkedServiceAccount is the Schema for the linkedserviceaccounts
         API
       kind: LinkedServiceAccount
