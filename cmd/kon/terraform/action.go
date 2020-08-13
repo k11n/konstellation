@@ -7,8 +7,11 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -243,6 +246,19 @@ func (a *Action) runAction(args ...string) error {
 	if connectStdOut {
 		cmd.Stdout = os.Stdout
 	}
+
+	// intercept CTL+C and kill underlying processes
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigchan
+		if cmd.Process == nil {
+			return
+		}
+		time.Sleep(10 * time.Second)
+		cmd.Process.Kill()
+		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}()
 
 	return cmd.Run()
 }

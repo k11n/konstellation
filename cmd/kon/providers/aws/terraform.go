@@ -108,7 +108,7 @@ func NewVPCTFAction(values terraform.Values, zones []string, opts ...terraform.O
 	targetDir := path.Join(config.TerraformDir(), "aws", "vpc")
 	tfFiles := make([]string, 0, len(vpcFiles))
 	tfFiles = append(tfFiles, vpcFiles...)
-	if values[TFTopology].(v1alpha1.NetworkTopology) == v1alpha1.NetworkTopologyPublicPrivate {
+	if values[TFTopology] == string(v1alpha1.NetworkTopologyPublicPrivate) {
 		tfFiles = append(tfFiles, "aws/vpc/vpc_private_subnet.tf")
 	}
 	err = utils.ExtractBoxFiles(utils.TFResourceBox(), targetDir, tfFiles...)

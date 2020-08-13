@@ -868,8 +868,10 @@ func appLocal(c *cli.Context) error {
 		if cmd.Process == nil {
 			return
 		}
+		// signals propagate through and there's no need to send explicit signals
+		//cmd.Process.Signal(syscall.SIGTERM)
+		time.Sleep(3.0 * time.Second)
 		cmd.Process.Kill()
-		time.Sleep(3.0)
 		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 	}()
 
