@@ -137,4 +137,3 @@ grafana: prometheus-0.4
 	kustomize build components/grafana > deploy/grafana/dashboards.yaml
 
 components: prometheus-0.4 grafana
-

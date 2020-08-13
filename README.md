@@ -26,8 +26,8 @@ For more see: [konstellation.dev](https://konstellation.dev)
 ## Project Status
 
 - [x] Alpha
-- [x] Limited beta - initial users, end to end stability
-- [ ] Public beta - CRD schema frozen, supports production workloads
+- [x] Limited beta - initial deployments, end to end stability
+- [ ] Public beta - CRD schema frozen, production workloads
 - [ ] General availability
 
 ## Installation
