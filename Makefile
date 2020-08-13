@@ -118,6 +118,7 @@ cli: rice
 	@{ \
   		set -e ;\
   		find components/terraform -name ".terraform" -exec rm -r {} \; ;\
+  		mkdir -p bin ;\
   		cd cmd/kon ;\
   		$(RICE) embed-go --import-path github.com/k11n/konstellation/cmd/kon/utils ;\
   		echo "Building cli" ;\
