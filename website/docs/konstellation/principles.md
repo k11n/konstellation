@@ -14,7 +14,7 @@ In order to simplify complex systems, we create abstractions as software enginee
 
 Konstellation achieves this with its operator and Custom Resource Definitions. While it drastically simplifies what's involved in creating and managing apps, it does so by managing underlying native Kubernetes resources.
 
-You can access and inspect the Kube resources created by Konstellation, and they will continue to function in absense of the Konstellation operator.
+You can access and inspect the Kube resources created by Konstellation, and they will continue to function in absence of the Konstellation operator.
 
 ## Reproducibility and undo
 
