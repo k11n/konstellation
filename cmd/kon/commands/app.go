@@ -328,6 +328,7 @@ func appStatus(c *cli.Context) error {
 	// group by target
 	// Build, date deployed, status, numAvailable/Desired, traffic
 	isStuck := false
+	hasTerminationError := false
 	firstTarget := ""
 	for _, target := range app.Spec.Targets {
 		if requiredTarget != "" && target.Name != requiredTarget {
@@ -378,7 +379,9 @@ func appStatus(c *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		for _, release := range releases {
+
+		var errorMessage string
+		for i, release := range releases {
 			// loading build
 			build, err := resources.GetBuildByName(kclient, release.Spec.Build)
 			if err != nil {
@@ -402,14 +405,16 @@ func appStatus(c *cli.Context) error {
 				}
 			}
 
-			if release.Status.State == v1alpha1.ReleaseStateFailed || (release.Status.State == v1alpha1.ReleaseStateReleasing &&
-				release.Status.NumAvailable == 0 && release.Spec.NumDesired > 0) {
-
-				reason, err := resources.GetFailureReason(kclient, release.Namespace, release.Name)
-				if err != nil {
-					fmt.Println("error getting reason", err)
-				} else if reason != "" {
-					vals[4] += ": " + reason
+			if len(release.Status.PodErrors) > 0 {
+				podError := release.Status.PodErrors[0]
+				if podError.Reason != "" {
+					vals[4] += ": " + podError.Reason
+					if i == 0 {
+						if podError.Reason == "Error" {
+							hasTerminationError = true
+						}
+						errorMessage = podError.Message
+					}
 				}
 			}
 
@@ -418,10 +423,20 @@ func appStatus(c *cli.Context) error {
 		utils.FormatStandardTable(table)
 		table.Render()
 		fmt.Println()
+
+		if errorMessage != "" {
+			fmt.Println("Error:", errorMessage)
+			fmt.Println()
+		}
 	}
 
 	if isStuck {
 		fmt.Println("The app has been stuck in releasing for more than 5 minutes. It may be misconfigured.")
+	} else if hasTerminationError {
+		fmt.Println("The app has terminated with an unexpected error.")
+	}
+
+	if isStuck || hasTerminationError {
 		fmt.Println("Some tools to troubleshoot:")
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetAutoWrapText(false)
@@ -431,6 +446,7 @@ func appStatus(c *cli.Context) error {
 		table.Append([]string{"kon launch kubedash", "launches Kubernetes Dashboard"})
 		table.Render()
 	}
+
 	return nil
 }
 

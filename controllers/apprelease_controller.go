@@ -164,13 +164,11 @@ func (r *AppReleaseReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		numSuccessful := 0
 		var createdAt *time.Time
 		for _, pod := range podList.Items {
+			if podError := getPodError(pod); podError != nil {
+				status.PodErrors = append(status.PodErrors, *podError)
+			}
+
 			switch pod.Status.Phase {
-			case corev1.PodPending, corev1.PodFailed:
-				status.PodErrors = append(status.PodErrors, v1alpha1.PodStatus{
-					Pod:     pod.Name,
-					Reason:  pod.Status.Reason,
-					Message: pod.Status.Message,
-				})
 			case corev1.PodRunning, corev1.PodSucceeded:
 				numSuccessful += 1
 			}
@@ -194,6 +192,46 @@ func (r *AppReleaseReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	}
 
 	return res, err
+}
+
+func getPodError(pod corev1.Pod) *v1alpha1.PodStatus {
+	for _, condition := range pod.Status.Conditions {
+		if condition.Reason == "Unschedulable" {
+			return &v1alpha1.PodStatus{
+				Pod:     pod.Name,
+				Reason:  condition.Reason,
+				Message: condition.Message,
+			}
+		}
+	}
+
+	var podError *v1alpha1.PodStatus
+	for _, status := range pod.Status.ContainerStatuses {
+		terminated := status.LastTerminationState.Terminated
+		if terminated != nil {
+			podError = &v1alpha1.PodStatus{
+				Pod:     pod.Name,
+				Reason:  terminated.Reason,
+				Message: terminated.Message,
+			}
+			// There might be a better message somewhere else
+			if terminated.Reason != "Error" {
+				return podError
+			}
+		}
+	}
+
+	for _, status := range pod.Status.ContainerStatuses {
+		if status.State.Waiting != nil {
+			return &v1alpha1.PodStatus{
+				Pod:     pod.Name,
+				Reason:  status.State.Waiting.Reason,
+				Message: status.State.Waiting.Message,
+			}
+		}
+	}
+
+	return podError
 }
 
 func (r *AppReleaseReconciler) SetupWithManager(mgr ctrl.Manager) error {

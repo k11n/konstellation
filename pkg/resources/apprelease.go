@@ -158,40 +158,6 @@ func GetPodsForAppRelease(kclient client.Client, namespace string, release strin
 	return
 }
 
-func GetFailureReason(kclient client.Client, namespace, release string) (string, error) {
-	pods, err := GetPodsForAppRelease(kclient, namespace, release)
-	if err != nil {
-		return "", err
-	}
-
-	reason := ""
-	for _, pod := range pods {
-		for _, condition := range pod.Status.Conditions {
-			if condition.Reason == "Unschedulable" {
-				return condition.Message, nil
-			}
-		}
-
-		for _, status := range pod.Status.ContainerStatuses {
-			if status.LastTerminationState.Terminated != nil {
-				reason = status.LastTerminationState.Terminated.Reason
-				if status.LastTerminationState.Terminated.Reason != "Error" {
-					// There might be a better message somewhere else
-					return reason, nil
-				}
-			}
-		}
-
-		for _, status := range pod.Status.ContainerStatuses {
-			if status.State.Waiting != nil {
-				return status.State.Waiting.Reason, nil
-			}
-		}
-	}
-
-	return reason, nil
-}
-
 func GetFirstDeployableRelease(releases []*v1alpha1.AppRelease) *v1alpha1.AppRelease {
 	for _, ar := range releases {
 		if ar.Spec.Role == v1alpha1.ReleaseRoleBad {
