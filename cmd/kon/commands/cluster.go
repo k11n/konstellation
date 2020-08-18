@@ -143,6 +143,11 @@ var ClusterCommands = []*cli.Command{
 				},
 			},
 			{
+				Name:   "status",
+				Usage:  "Information about the cluster",
+				Action: clusterStatus,
+			},
+			{
 				Name:   "reinstall",
 				Usage:  "reinstalls Konstellation components",
 				Action: clusterReinstall,
@@ -488,7 +493,6 @@ func clusterImport(c *cli.Context) error {
 }
 
 func clusterDestroy(c *cli.Context) error {
-
 	clusterName := c.String("cluster")
 	// update clusters
 	if err := updateClusterLocations(); err != nil {
@@ -562,6 +566,17 @@ func clusterDestroy(c *cli.Context) error {
 	}
 
 	return cm.DeleteCluster(clusterName)
+}
+
+func clusterReset() error {
+	conf := config.GetConfig()
+	conf.SelectedCluster = ""
+	err := conf.Persist()
+	if err != nil {
+		return err
+	}
+	fmt.Println("Active cluster has been reset.")
+	return nil
 }
 
 func clusterSelect(clusterName string) error {
@@ -677,14 +692,37 @@ func clusterShell(c *cli.Context) error {
 	return cmd.Run()
 }
 
-func clusterReset() error {
-	conf := config.GetConfig()
-	conf.SelectedCluster = ""
-	err := conf.Persist()
+func clusterStatus(c *cli.Context) error {
+	ac, err := getActiveCluster()
 	if err != nil {
 		return err
 	}
-	fmt.Println("Active cluster has been reset.")
+
+	kclient := ac.kubernetesClient()
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return err
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	utils.FormatPlainTable(table)
+	table.Append([]string{"Name:", cc.Name})
+	table.Append([]string{"Version:", cc.Spec.Version})
+	table.Append([]string{"KubeVersion:", strings.TrimSpace(cc.Spec.KubeVersion)})
+	table.Append([]string{"Cloud:", cc.Spec.Cloud})
+	table.Append([]string{"Region:", cc.Spec.Region})
+	table.Render()
+	fmt.Println()
+
+	componentTable := tablewriter.NewWriter(os.Stdout)
+	utils.FormatPlainTable(componentTable)
+	for _, component := range cc.Status.InstalledComponents {
+		componentTable.Append([]string{component.Name, strings.TrimSpace(component.Version)})
+	}
+	fmt.Println("Installed components:")
+	componentTable.Render()
+	fmt.Println()
+
 	return nil
 }
 
