@@ -76,7 +76,8 @@ func (a *AWSManager) CheckCreatePermissions() error {
 		PolicySourceArn: user.User.Arn,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "Failed to check AWS permissions")
+		fmt.Println("warning: could not check AWS create permissions", err)
+		return nil
 	}
 	return checkPermissions(resp.EvaluationResults)
 }
@@ -103,7 +104,9 @@ func (a *AWSManager) CheckDestroyPermissions() error {
 		PolicySourceArn: user.User.Arn,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "Failed to check AWS permissions")
+		//return errors.Wrapf(err, "Failed to check AWS permissions")
+		fmt.Println("warning: could not check AWS destroy permissions", err)
+		return nil
 	}
 	return checkPermissions(resp.EvaluationResults)
 }

@@ -154,11 +154,14 @@ func (a *AWSProvider) Setup() error {
 		PolicySourceArn: user.User.Arn,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "Failed to check AWS permissions")
-	}
-	for _, res := range resp.EvaluationResults {
-		if *res.EvalDecision != iam.PolicyEvaluationDecisionTypeAllowed {
-			return fmt.Errorf("missing %s permission", *res.EvalActionName)
+		//return errors.Wrapf(err, "Failed to check AWS permissions")
+		fmt.Println("warning: could not check AWS permissions", err)
+		return nil
+	} else {
+		for _, res := range resp.EvaluationResults {
+			if *res.EvalDecision != iam.PolicyEvaluationDecisionTypeAllowed {
+				return fmt.Errorf("missing %s permission", *res.EvalActionName)
+			}
 		}
 	}
 
