@@ -23,10 +23,15 @@ import (
 // IngressRequestSpec defines the desired state of IngressRequest
 type IngressRequestSpec struct {
 	Hosts []string `json:"hosts"`
+
+	// +optional
 	Paths []string `json:"paths,omitempty"`
 
-	RequireHTTPS bool              `json:"requireHttps"`
-	Annotations  map[string]string `json:"annotations"`
+	// +optional
+	RequireHTTPS bool `json:"requireHttps,omitempty"`
+
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // IngressRequestStatus defines the observed state of IngressRequest

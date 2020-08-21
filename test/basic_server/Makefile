@@ -8,3 +8,6 @@ docker:
 run:
 	go build .
 	./basic_server
+
+run-docker:
+	docker run -p 8080:8080 -t "$(REGISTRY)/basic-server:$(VERSION)"

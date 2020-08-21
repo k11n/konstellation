@@ -6,6 +6,9 @@ spec:
   registry: '807158446417.dkr.ecr.us-west-2.amazonaws.com'
   image: basic-server
   imageTag: '1'
+  ports:
+    - name: http
+      port: 8080
 
   targets:
     - name: production

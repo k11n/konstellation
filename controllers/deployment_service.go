@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/api/v1alpha1"
@@ -96,7 +97,7 @@ func (r *DeploymentReconciler) reconcileDestinationRule(ctx context.Context, at 
 
 func (r *DeploymentReconciler) reconcileVirtualService(ctx context.Context, at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) error {
 	serviceNeeded := service != nil
-	vs := newVirtualService(at, service, releases)
+	vs := r.newVirtualService(at, service, releases)
 
 	// find existing VS obj
 	existing := &istio.VirtualService{}
@@ -141,9 +142,10 @@ func newServiceForAppTarget(at *v1alpha1.AppTarget) *corev1.Service {
 	var ports []corev1.ServicePort
 	for _, p := range at.Spec.Ports {
 		ports = append(ports, corev1.ServicePort{
-			Name:     p.Name,
-			Protocol: p.Protocol,
-			Port:     p.Port,
+			Name:       p.Name,
+			Protocol:   p.Protocol,
+			Port:       p.Port,
+			TargetPort: intstr.FromInt(int(p.Port)),
 		})
 	}
 
@@ -199,7 +201,7 @@ func newDestinationRule(at *v1alpha1.AppTarget, service *corev1.Service, release
 	return dr
 }
 
-func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) *istio.VirtualService {
+func (r *DeploymentReconciler) newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases []*v1alpha1.AppRelease) *istio.VirtualService {
 	// service could be nil, when a virtual service isn't needed
 	namespace := at.TargetNamespace()
 	ls := labelsForAppTarget(at)
@@ -236,12 +238,7 @@ func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases
 			Match: []*istionetworking.HTTPMatchRequest{
 				{
 					Gateways: []string{resources.MeshGatewayName},
-					Uri: &istionetworking.StringMatch{
-						MatchType: &istionetworking.StringMatch_Prefix{
-							Prefix: "/",
-						},
-					},
-					Port: uint32(port),
+					Port:     uint32(port),
 				},
 			},
 		}
@@ -274,7 +271,7 @@ func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases
 
 		// handle only desired paths
 		var matches []*istionetworking.HTTPMatchRequest
-		defaultRoute := len(matches) == 0
+		defaultRoute := len(at.Spec.Ingress.Paths) == 0
 		for _, path := range at.Spec.Ingress.Paths {
 			// skip root, because it should be a default path that istio handles differently
 			if path == "/" {

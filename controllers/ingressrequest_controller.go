@@ -83,7 +83,7 @@ func (r *IngressRequestReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	}
 	resources.LogUpdates(log, op, "Updated Ingress")
 
-	// load ingress since it has an updated status
+	// reload ingress to grab updated status
 	err = r.Client.Get(ctx, client.ObjectKey{Namespace: in.Namespace, Name: in.Name}, in)
 	if err != nil {
 		return res, err
@@ -194,6 +194,9 @@ func (r *IngressRequestReconciler) ingressForRequests(target string, requests []
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: resources.IstioNamespace,
 			Name:      target,
+			Labels: map[string]string{
+				resources.Konstellation: "1",
+			},
 		},
 		Spec: netv1beta1.IngressSpec{
 			Rules: []netv1beta1.IngressRule{

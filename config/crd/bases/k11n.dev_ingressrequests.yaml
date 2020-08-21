@@ -51,9 +51,7 @@ spec:
             requireHttps:
               type: boolean
           required:
-          - annotations
           - hosts
-          - requireHttps
           type: object
         status:
           description: IngressRequestStatus defines the observed state of IngressRequest
