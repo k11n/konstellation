@@ -271,19 +271,38 @@ func newVirtualService(at *v1alpha1.AppTarget, service *corev1.Service, releases
 				break
 			}
 		}
-		if targetPort != 0 {
-			route := &istionetworking.HTTPRoute{
-				Match: []*istionetworking.HTTPMatchRequest{
-					{
-						Gateways: []string{ingressGateway},
-						Uri: &istionetworking.StringMatch{
-							MatchType: &istionetworking.StringMatch_Prefix{
-								Prefix: "/",
-							},
-						},
-						Port: 80,
+
+		// handle only desired paths
+		var matches []*istionetworking.HTTPMatchRequest
+		defaultRoute := len(matches) == 0
+		for _, path := range at.Spec.Ingress.Paths {
+			// skip root, because it should be a default path that istio handles differently
+			if path == "/" {
+				defaultRoute = true
+				continue
+			}
+			matches = append(matches, &istionetworking.HTTPMatchRequest{
+				Gateways: []string{ingressGateway},
+				Uri: &istionetworking.StringMatch{
+					MatchType: &istionetworking.StringMatch_Prefix{
+						Prefix: path,
 					},
 				},
+				Port: 80,
+			})
+		}
+
+		// by default match all requests
+		if defaultRoute {
+			matches = append(matches, &istionetworking.HTTPMatchRequest{
+				Gateways: []string{ingressGateway},
+				Port:     80,
+			})
+		}
+
+		if targetPort != 0 {
+			route := &istionetworking.HTTPRoute{
+				Match: matches,
 			}
 			// should always have a port in order for VS to be defined
 			for _, ar := range releases {

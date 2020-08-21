@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	istioVersion = "1.6.5"
+	istioVersion = "1.6.8"
 )
 
 func init() {
@@ -120,7 +120,7 @@ func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 	gateway := &istio.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: resources.IstioNamespace,
-			Name:      "ingressgateway",
+			Name:      resources.GatewayName,
 		},
 		Spec: istionetworking.Gateway{
 			Selector: map[string]string{

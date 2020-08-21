@@ -681,7 +681,7 @@ func (a *AWSManager) getAlbRole(cluster string) (*iam.Role, error) {
 			}
 		}
 	}
-	return nil, fmt.Errorf("Could not find ALB role for cluster")
+	return nil, fmt.Errorf("could not find ALB role for cluster")
 }
 
 func (a *AWSManager) Region() string {
@@ -698,16 +698,16 @@ func (a *AWSManager) String() string {
 
 func (a *AWSManager) KubernetesProvider() cloud.KubernetesProvider {
 	if a.kubeSvc == nil {
-		session := session.Must(a.awsSession())
-		a.kubeSvc = kaws.NewEKSService(session)
+		sess := session.Must(a.awsSession())
+		a.kubeSvc = kaws.NewEKSService(sess)
 	}
 	return a.kubeSvc
 }
 
 func (a *AWSManager) CertificateProvider() cloud.CertificateProvider {
 	if a.acmSvc == nil {
-		session := session.Must(a.awsSession())
-		a.acmSvc = kaws.NewACMService(session)
+		sess := session.Must(a.awsSession())
+		a.acmSvc = kaws.NewACMService(sess)
 	}
 	return a.acmSvc
 }
@@ -834,7 +834,7 @@ func (a *AWSManager) addCAThumbprintToProvider(cluster string) error {
 	}
 
 	if providerArn == "" {
-		return fmt.Errorf("Could not find OIDC provider")
+		return fmt.Errorf("could not find OIDC provider")
 	}
 
 	if !thumbprintExists {

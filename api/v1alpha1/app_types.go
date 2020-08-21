@@ -187,6 +187,7 @@ type TargetConfig struct {
 
 type IngressConfig struct {
 	Hosts []string `json:"hosts"`
+	Paths []string `json:"paths,omitempty"`
 	Port  string   `json:"port,omitempty"`
 
 	// when enabled, redirect http traffic to https

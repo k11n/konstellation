@@ -1,0 +1,24 @@
+# permissions for end users to edit ingressrequests.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ingressrequest-editor-role
+rules:
+- apiGroups:
+  - k11n.dev
+  resources:
+  - ingressrequests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k11n.dev
+  resources:
+  - ingressrequests/status
+  verbs:
+  - get

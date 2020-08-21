@@ -25,7 +25,6 @@ import (
 	istio "istio.io/client-go/pkg/apis/networking/v1beta1"
 	autoscale "k8s.io/api/autoscaling/v2beta2"
 	corev1 "k8s.io/api/core/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,13 +46,12 @@ type DeploymentReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=k11n.dev,resources=appconfigs;apptargets;appreleases;builds;certificaterefs,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=k11n.dev,resources=appconfigs;apptargets;appreleases;builds;ingressrequests,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k11n.dev,resources=apptargets/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=configmaps;services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.istio.io,resources=destinationrules;gateways;virtualservices,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=autoscaling,resources=horizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=prometheusrules;servicemonitors;podmonitors,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 
 func (r *DeploymentReconciler) Reconcile(req ctrl.Request) (res ctrl.Result, err error) {
 	ctx := context.Background()
@@ -127,7 +125,7 @@ func (r *DeploymentReconciler) Reconcile(req ctrl.Request) (res ctrl.Result, err
 		return
 	}
 
-	err = r.reconcileIngress(ctx, at)
+	err = r.reconcileIngressRequest(ctx, at)
 	if err != nil {
 		return
 	}
@@ -195,44 +193,13 @@ func (r *DeploymentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		}),
 	}
 
-	certWatcher := &handler.EnqueueRequestsFromMapFunc{
-		ToRequests: handler.ToRequestsFunc(func(object handler.MapObject) []ctrl.Request {
-			var requests []ctrl.Request
-
-			// get the cert
-			cert := object.Object.(*v1alpha1.CertificateRef)
-
-			// get apptargets that are impacted by the cert
-			err := resources.ForEach(r.Client, &v1alpha1.AppTargetList{}, func(item interface{}) error {
-				at := item.(v1alpha1.AppTarget)
-				if at.Spec.Ingress == nil {
-					return nil
-				}
-
-				for _, host := range at.Spec.Ingress.Hosts {
-					if resources.CertificateCovers(cert.Spec.Domain, host) {
-						requests = append(requests, ctrl.Request{
-							NamespacedName: types.NamespacedName{Name: at.Name},
-						})
-					}
-				}
-				return nil
-			})
-			if err != nil {
-				r.Log.Error(err, "could not list appTargets in certWatcher")
-			}
-			return requests
-		}),
-	}
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.AppTarget{}).
 		Owns(&v1alpha1.AppRelease{}).
 		Owns(&corev1.Service{}).
 		Owns(&istio.VirtualService{}).
 		Owns(&autoscale.HorizontalPodAutoscaler{}).
-		Owns(&netv1beta1.Ingress{}).
-		Watches(&source.Kind{Type: &v1alpha1.CertificateRef{}}, certWatcher).
+		Owns(&v1alpha1.IngressRequest{}).
 		Watches(&source.Kind{Type: &v1alpha1.AppConfig{}}, configWatcher).
 		Complete(r)
 }

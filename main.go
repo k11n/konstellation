@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/k11n/konstellation/api/v1alpha1"
+	k11nv1alpha1 "github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -44,6 +45,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
+	utilruntime.Must(k11nv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 
 	// Istio scheme
@@ -123,6 +125,14 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Deployment")
+		os.Exit(1)
+	}
+	if err = (&controllers.IngressRequestReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("IngressRequest"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "IngressRequest")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

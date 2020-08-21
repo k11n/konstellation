@@ -81,7 +81,7 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 	return err
 }
 
-func (i *AWSALBIngress) ConfigureIngress(kclient client.Client, ingress *netv1beta1.Ingress, config *v1alpha1.IngressConfig) error {
+func (i *AWSALBIngress) ConfigureIngress(kclient client.Client, ingress *netv1beta1.Ingress, irs []*v1alpha1.IngressRequest) error {
 	cc, err := resources.GetClusterConfig(kclient)
 	if err != nil {
 		return err
@@ -112,74 +112,94 @@ func (i *AWSALBIngress) ConfigureIngress(kclient client.Client, ingress *netv1be
 
 	listeners := `[{"HTTP": 80}]`
 
-	if config != nil {
-		hosts := append(config.Hosts[:0:0], config.Hosts...)
-		// get all certs and match against
-		certMap, err := resources.GetCertificatesForHosts(kclient, hosts)
-		if err != nil {
-			return err
-		}
+	requiresHttps := false
+	var customAnnotations map[string]string
 
-		var tlsHosts []string
-		for _, host := range hosts {
-			if certMap[host] != nil {
-				tlsHosts = append(tlsHosts, host)
+	// unique list of hosts
+	hostsSeen := make(map[string]bool)
+	var hosts []string
+	for _, ir := range irs {
+		for _, host := range ir.Spec.Hosts {
+			if !hostsSeen[host] {
+				hostsSeen[host] = true
+				hosts = append(hosts, host)
 			}
 		}
+		if ir.Spec.RequireHTTPS {
+			requiresHttps = true
+		}
+		// use the first annotations that we could find
+		if len(ir.Spec.Annotations) != 0 && customAnnotations != nil {
+			customAnnotations = ir.Spec.Annotations
+		}
+	}
 
-		// configure TLSHosts field
-		if len(tlsHosts) != 0 {
-			ingress.Spec.TLS = []netv1beta1.IngressTLS{
+	// get all certs and match against
+	certMap, err := resources.GetCertificatesForHosts(kclient, hosts)
+	if err != nil {
+		return err
+	}
+
+	var tlsHosts []string
+	for _, host := range hosts {
+		if certMap[host] != nil {
+			tlsHosts = append(tlsHosts, host)
+		}
+	}
+
+	// configure TLSHosts field
+	if len(tlsHosts) != 0 {
+		ingress.Spec.TLS = []netv1beta1.IngressTLS{
+			{
+				Hosts: tlsHosts,
+			},
+		}
+	}
+
+	arns := make([]string, 0)
+	seenCerts := make(map[string]bool, 0)
+	for _, host := range hosts {
+		cert := certMap[host]
+		if cert == nil {
+			continue
+		}
+
+		//alblog.Info("certificate matching host", "certDomain", matchingCert.Spec.Domain,
+		//	"certID", matchingCert.Name, "hostDomain", host)
+		arn := cert.Spec.ProviderID
+		if seenCerts[arn] {
+			// certificate already included
+			continue
+		}
+		seenCerts[arn] = true
+		arns = append(arns, arn)
+	}
+
+	if len(arns) > 0 {
+		annotations["alb.ingress.kubernetes.io/certificate-arn"] = strings.Join(arns, ",")
+		listeners = `[{"HTTP": 80}, {"HTTPS": 443}]`
+		// see if we need HTTPS redirection
+		if requiresHttps {
+			annotations["alb.ingress.kubernetes.io/actions.ssl-redirect"] = `{"Type": "redirect", "RedirectConfig": { "Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}`
+			paths := []netv1beta1.HTTPIngressPath{
 				{
-					Hosts: tlsHosts,
+					Path: "/*",
+					Backend: netv1beta1.IngressBackend{
+						ServiceName: "ssl-redirect",
+						ServicePort: intstr.FromString("use-annotation"),
+					},
 				},
 			}
+			rule := &ingress.Spec.Rules[0]
+			paths = append(paths, rule.IngressRuleValue.HTTP.Paths...)
+			rule.IngressRuleValue.HTTP.Paths = paths
 		}
+	}
 
-		arns := make([]string, 0)
-		seenCerts := make(map[string]bool, 0)
-		for _, host := range hosts {
-			cert := certMap[host]
-			if cert == nil {
-				continue
-			}
-
-			//alblog.Info("certificate matching host", "certDomain", matchingCert.Spec.Domain,
-			//	"certID", matchingCert.Name, "hostDomain", host)
-			arn := cert.Spec.ProviderID
-			if seenCerts[arn] {
-				// certificate already included
-				continue
-			}
-			seenCerts[arn] = true
-			arns = append(arns, arn)
-		}
-		if len(arns) > 0 {
-			annotations["alb.ingress.kubernetes.io/certificate-arn"] = strings.Join(arns, ",")
-			listeners = `[{"HTTP": 80}, {"HTTPS": 443}]`
-			// see if we need HTTPS redirection
-			if config.RequireHTTPS {
-				annotations["alb.ingress.kubernetes.io/actions.ssl-redirect"] = `{"Type": "redirect", "RedirectConfig": { "Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}`
-				paths := []netv1beta1.HTTPIngressPath{
-					{
-						Path: "/*",
-						Backend: netv1beta1.IngressBackend{
-							ServiceName: "ssl-redirect",
-							ServicePort: intstr.FromString("use-annotation"),
-						},
-					},
-				}
-				rule := &ingress.Spec.Rules[0]
-				paths = append(paths, rule.IngressRuleValue.HTTP.Paths...)
-				rule.IngressRuleValue.HTTP.Paths = paths
-			}
-		}
-
-		// allow config overrides
-		for key, val := range config.Annotations {
-			if strings.HasPrefix(key, "alb.ingress") {
-				annotations[key] = val
-			}
+	// allow config overrides
+	for key, val := range customAnnotations {
+		if strings.HasPrefix(key, "alb.ingress") {
+			annotations[key] = val
 		}
 	}
 

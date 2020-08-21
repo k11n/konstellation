@@ -81,7 +81,7 @@ rules:
   - appreleases
   - apptargets
   - builds
-  - certificaterefs
+  - ingressrequests
   verbs:
   - create
   - delete
@@ -184,6 +184,26 @@ rules:
   - k11n.dev
   resources:
   - clusterconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - k11n.dev
+  resources:
+  - ingressrequests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k11n.dev
+  resources:
+  - ingressrequests/status
   verbs:
   - get
   - patch

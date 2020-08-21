@@ -1,0 +1,7 @@
+apiVersion: k11n.dev/v1alpha1
+kind: IngressRequest
+metadata:
+  name: ingressrequest-sample
+spec:
+  # Add fields here
+  foo: bar

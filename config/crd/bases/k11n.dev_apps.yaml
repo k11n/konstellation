@@ -823,6 +823,10 @@ spec:
                         items:
                           type: string
                         type: array
+                      paths:
+                        items:
+                          type: string
+                        type: array
                       port:
                         type: string
                       requireHttps:

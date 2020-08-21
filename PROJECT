@@ -29,6 +29,9 @@ resources:
 - group: k11n
   kind: Nodepool
   version: v1alpha1
+- group: k11n
+  kind: IngressRequest
+  version: v1alpha1
 version: 3-alpha
 plugins:
   go.operator-sdk.io/v2-alpha: {}

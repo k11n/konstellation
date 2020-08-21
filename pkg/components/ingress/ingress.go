@@ -12,7 +12,7 @@ import (
 
 type IngressComponent interface {
 	components.ComponentInstaller
-	ConfigureIngress(kclient client.Client, ingress *netv1beta1.Ingress, config *v1alpha1.IngressConfig) error
+	ConfigureIngress(kclient client.Client, ingress *netv1beta1.Ingress, irs []*v1alpha1.IngressRequest) error
 }
 
 func NewIngressForCluster(cloud, cluster string) IngressComponent {
