@@ -123,7 +123,7 @@ func (r *AppReleaseReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	}
 
 	if ar.Spec.Role == v1alpha1.ReleaseRoleActive {
-		if status.NumReady == status.NumAvailable && status.NumReady > 0 {
+		if status.NumDesired == status.NumAvailable && status.NumReady > 0 {
 			status.State = v1alpha1.ReleaseStateReleased
 		} else {
 			status.State = v1alpha1.ReleaseStateReleasing
