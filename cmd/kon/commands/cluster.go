@@ -612,12 +612,6 @@ func clusterSelect(clusterName string) error {
 		return err
 	}
 
-	// TODO: still load the resources in testing
-	//err = ac.loadResourcesIntoKube()
-	//if err != nil {
-	//	return err
-	//}
-
 	// see if we have a nodepool
 	pools, err := resources.GetNodepools(kclient)
 	if len(pools) == 0 {
@@ -634,6 +628,8 @@ func clusterSelect(clusterName string) error {
 
 	// see if targets are set
 	if len(cc.Spec.Targets) == 0 {
+		fmt.Println(`Konstellation uses "targets" to organize your apps, each cluster must handle one or more targets`)
+		fmt.Println(`See: https://konstellation.dev/docs/apps/basics/#targets`)
 		if err := ac.configureCluster(); err != nil {
 			return err
 		}
