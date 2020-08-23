@@ -17,8 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
 // AppReleaseSpec defines a release of AppTarget
@@ -125,4 +129,14 @@ func (s *AppReleaseSpec) ContainerPorts() []corev1.ContainerPort {
 
 func init() {
 	SchemeBuilder.Register(&AppRelease{}, &AppReleaseList{})
+}
+
+func GenerateAppReleaseName(at *AppTarget, build *Build, cm *corev1.ConfigMap) string {
+	hashStr := at.GetHash()
+	if cm != nil {
+		hashStr = files.Sha1ChecksumString(fmt.Sprintf("%s-%s", at.GetHash(), cm.Labels[ConfigHashLabel]))
+	}
+	return fmt.Sprintf("%s-%s-%s", at.Spec.App,
+		build.CreationTimestamp.Format("20060102-1504"),
+		hashStr[:5])
 }

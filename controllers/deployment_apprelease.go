@@ -15,7 +15,6 @@ import (
 
 	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/pkg/resources"
-	"github.com/k11n/konstellation/pkg/utils/files"
 )
 
 const (
@@ -433,21 +432,13 @@ func appReleaseForTarget(at *v1alpha1.AppTarget, build *v1alpha1.Build, configMa
 	}
 	labels[v1alpha1.AppTargetHash] = at.GetHash()
 
-	// generate name hash with both appTargetHash and config
-	hashStr := at.GetHash()
 	if configMap != nil {
 		labels[v1alpha1.ConfigHashLabel] = configMap.Labels[v1alpha1.ConfigHashLabel]
-		hashStr += "-" + labels[v1alpha1.ConfigHashLabel]
-		hashStr = files.Sha1ChecksumString(hashStr)
 	}
-	name := fmt.Sprintf("%s-%s-%s", at.Spec.App,
-		build.CreationTimestamp.Format("20060102-1504"),
-		hashStr[:5])
-
 	ar := &v1alpha1.AppRelease{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: at.TargetNamespace(),
-			Name:      name,
+			Name:      v1alpha1.GenerateAppReleaseName(at, build, configMap),
 			Labels:    labels,
 		},
 		Spec: v1alpha1.AppReleaseSpec{

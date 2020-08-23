@@ -48,9 +48,6 @@ func (r *DeploymentReconciler) reconcileIngressRequest(ctx context.Context, at *
 	// use existing record's status
 	if existing != nil {
 		address := existing.Status.Address
-		if at.Status.Hostname != address {
-			r.Log.Info("updating appTarget hostname", "appTarget", at.Name, "hostname", address, "old", at.Status.Hostname)
-		}
 		at.Status.Hostname = address
 	}
 
