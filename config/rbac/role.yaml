@@ -173,6 +173,19 @@ rules:
 - apiGroups:
   - k11n.dev
   resources:
+  - certificaterefs
+  - ingressrequests
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k11n.dev
+  resources:
   - clusterconfigs
   verbs:
   - get
@@ -188,18 +201,6 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - k11n.dev
-  resources:
-  - ingressrequests
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - k11n.dev
   resources:

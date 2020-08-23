@@ -44,7 +44,7 @@ type IngressRequestReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=k11n.dev,resources=ingressrequests,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=k11n.dev,resources=ingressrequests;certificaterefs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k11n.dev,resources=ingressrequests/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 
