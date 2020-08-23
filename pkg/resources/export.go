@@ -242,6 +242,7 @@ func (e *Exporter) cleanupMeta(meta *metav1.ObjectMeta) {
 	meta.ResourceVersion = ""
 	meta.Generation = 0
 	meta.UID = ""
+	meta.CreationTimestamp = metav1.Time{}
 	meta.SetSelfLink("")
 }
 
