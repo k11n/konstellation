@@ -11,6 +11,7 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -700,6 +701,11 @@ func clusterStatus(c *cli.Context) error {
 		return err
 	}
 
+	nodepools, err := resources.GetNodepools(kclient)
+	if err != nil {
+		return err
+	}
+
 	table := tablewriter.NewWriter(os.Stdout)
 	utils.FormatPlainTable(table)
 	table.Append([]string{"Name:", cc.Name})
@@ -710,12 +716,29 @@ func clusterStatus(c *cli.Context) error {
 	table.Render()
 	fmt.Println()
 
+	npTable := tablewriter.NewWriter(os.Stdout)
+	utils.FormatPlainTable(npTable)
+	for _, np := range nodepools {
+		npTable.Append([]string{
+			np.Name,
+			np.Spec.MachineType,
+			fmt.Sprintf("%d of %d", np.Status.NumReady, np.Spec.MaxSize),
+		})
+	}
+	fmt.Println("Nodepools")
+	npTable.Render()
+	fmt.Println()
+
 	componentTable := tablewriter.NewWriter(os.Stdout)
 	utils.FormatPlainTable(componentTable)
-	for _, component := range cc.Status.InstalledComponents {
+	components := cc.Status.InstalledComponents
+	sort.SliceStable(components, func(i, j int) bool {
+		return strings.Compare(components[i].Name, components[j].Name) < 0
+	})
+	for _, component := range components {
 		componentTable.Append([]string{component.Name, strings.TrimSpace(component.Version)})
 	}
-	fmt.Println("Installed components:")
+	fmt.Println("Installed components")
 	componentTable.Render()
 	fmt.Println()
 
