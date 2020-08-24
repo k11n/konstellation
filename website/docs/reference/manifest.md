@@ -41,8 +41,39 @@ Specification for an Ingress. An Ingress always listens on port 80/443 externall
 |:------------- |:--------------- |:-------- |:------------------------------ |
 | hosts         | List[string]    | yes      | A list of hostnames that the target should run on
 | port          | string          | no       | Target port that traffic should be routed to. Defaults to the first defined port.
+| paths         | List[string]    | no       | List of paths to route to the current app. When left empty, it'll serve all traffic on listed hosts.
 | requireHttps  | bool            | no       | When set, it'll redirect HTTP traffic to HTTPS
 | annotations   | Map{string: string} | no   | Custom annotation for the Ingress resource
+
+Konstellation supports both host and path based routing, making it possible for multiple apps to serve different paths. For example, with the following apps
+
+```yaml title="api-server.yaml"
+apiVersion: k11n.dev/v1alpha1
+kind: App
+metadata:
+  name: api-server
+...
+  target:
+    ingress:
+      hosts:
+        - myhost.com
+      paths:
+        - /api/
+```
+
+```yaml title="main-app.yaml"
+apiVersion: k11n.dev/v1alpha1
+kind: App
+metadata:
+  name: main-app
+...
+  target:
+    ingress:
+      hosts:
+        - myhost.com
+```
+
+myhost.com/api/* will be routed to `api-server`, while all other requests will be routed to `main-app`
 
 ## PortSpec
 
@@ -143,7 +174,6 @@ Defines Prometheus metrics scraping behavior. The fields below are translated in
 |:------------- |:--------------- |:-------- |:------------------------------ |
 | endpoints     | List[[Endpoint](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#endpoint)]  | yes      | Endpoints to scrape
 | rules         | List[[Rules](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#rule)] | no | Recording and alerting rules
-
 
 
 ## ScaleSpec
