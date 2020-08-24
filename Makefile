@@ -113,7 +113,6 @@ else
 RICE=$(shell which rice)
 endif
 
-
 cli: rice
 	@{ \
   		set -e ;\
@@ -137,3 +136,12 @@ grafana: prometheus-0.4
 	kustomize build components/grafana > deploy/grafana/dashboards.yaml
 
 components: prometheus-0.4 grafana
+
+K8S_VERSION = v1.18.2
+ETCD_VERSION = v3.4.3
+
+testbin:
+	curl -sSLo setup_envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/kubebuilder/master/scripts/setup_envtest_bins.sh
+	chmod +x setup_envtest.sh
+	./setup_envtest.sh $(K8S_VERSION) $(ETCD_VERSION)
+	rm setup_envtest.sh

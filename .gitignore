@@ -23,7 +23,7 @@ components/prometheus/0.3/vendor
 *.out
 
 # Kubernetes Generated files - skip generated files, except for vendored files
-
+testbin
 !vendor/**/zz_generated.*
 
 # editor and IDE paraphernalia

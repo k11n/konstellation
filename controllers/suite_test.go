@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -30,8 +31,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	k11ndevv1alpha1 "github.com/k11n/konstellation/api/v1alpha1"
-	k11nv1alpha1 "github.com/k11n/konstellation/api/v1alpha1"
+	"github.com/k11n/konstellation/api/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -51,6 +51,10 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func(done Done) {
+	Expect(os.Setenv("TEST_ASSET_KUBE_APISERVER", "../testbin/kube-apiserver")).To(Succeed())
+	Expect(os.Setenv("TEST_ASSET_ETCD", "../testbin/etcd")).To(Succeed())
+	Expect(os.Setenv("TEST_ASSET_KUBECTL", "../testbin/kubectl")).To(Succeed())
+
 	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
 
 	By("bootstrapping test environment")
@@ -63,22 +67,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
 
-	err = k11ndevv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = k11nv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = k11nv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = k11nv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = k11nv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-
-	err = k11nv1alpha1.AddToScheme(scheme.Scheme)
+	err = v1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme

@@ -7,7 +7,7 @@ var signupUrl = 'https://forms.gle/Eh9je8GmS7NRSXf69'
 
 module.exports = {
   title: 'Konstellation',
-  tagline: 'Deploy and manage resilient applications on Kubernetes',
+  tagline: 'A practical stack for deploying apps on Kubernetes',
   url: 'https://konstellation.dev',
   baseUrl: '/',
   favicon: 'img/favicon.ico',

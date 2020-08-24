@@ -13,12 +13,11 @@ import Typical from 'react-typical'
 
 const featureCols = [
   {
-    title: 'Kubernetes on Autopilot',
+    title: 'Kubernetes made simple',
     // imageUrl: 'img/undraw_docusaurus_mountain.svg',
     description: `Konstellation gives you a Heroku-like experience on top of
-      Kubernetes that you fully control. It provides a CLI that manages every
-      aspect of app deployments. New apps are deployed in minutes with minimal
-      configuration.`,
+      Kubernetes that you fully control. It provides a full featured CLI that
+      significantly reduces the complexity of working with Kubernetes.`,
   },
   {
     title: 'Designed for microservices',
