@@ -678,6 +678,10 @@ func appLoad(c *cli.Context) error {
 		}
 	}
 
+	if atWithHost == nil {
+		return nil
+	}
+
 	fmt.Print("Waiting for load balancer...")
 	var hostname string
 	err = utils.WaitUntilComplete(utils.MediumTimeoutSec, utils.LongCheckInterval, func() (bool, error) {
