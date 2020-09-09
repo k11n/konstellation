@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/k11n/konstellation/api/v1alpha1"
-	k11nv1alpha1 "github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/controllers"
 	// +kubebuilder:scaffold:imports
 )
@@ -45,7 +44,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
-	utilruntime.Must(k11nv1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 
 	// Istio scheme
@@ -136,7 +134,7 @@ func main() {
 		os.Exit(1)
 	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&k11nv1alpha1.App{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&v1alpha1.App{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "App")
 			os.Exit(1)
 		}
