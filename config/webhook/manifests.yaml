@@ -11,12 +11,12 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-k11n-dev-dev-v1alpha1-app
+      path: /validate-k11n-dev-v1alpha1-app
   failurePolicy: Fail
   name: vapp.kb.io
   rules:
   - apiGroups:
-    - k11n.dev.dev
+    - k11n.dev
     apiVersions:
     - v1alpha1
     operations:

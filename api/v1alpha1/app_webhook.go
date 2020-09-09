@@ -40,7 +40,7 @@ func (a *App) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// +kubebuilder:webhook:verbs=create;update,path=/validate-k11n-dev-dev-v1alpha1-app,mutating=false,failurePolicy=fail,groups=k11n.dev.dev,resources=apps,versions=v1alpha1,name=vapp.kb.io
+// +kubebuilder:webhook:verbs=create;update,path=/validate-k11n-dev-v1alpha1-app,mutating=false,failurePolicy=fail,groups=k11n.dev,resources=apps,versions=v1alpha1,name=vapp.kb.io
 
 var _ webhook.Validator = &App{}
 
