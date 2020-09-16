@@ -267,7 +267,9 @@ function Home() {
       description="Description will go into a meta tag in <head />">
       <header className={clsx('hero hero--primary', styles.heroBanner)}>
         <div className="container">
-          <h1 className="heroTagline">{siteConfig.tagline}</h1>
+          <h1 className="heroTagline">
+            The swiss army knife for running Kubernetes in the cloud.
+          </h1>
           {/* <h1 className="hero__title">{siteConfig.title}</h1>
           <p className="hero_tagline">{siteConfig.tagline}</p> */}
           <div className={styles.buttons}>

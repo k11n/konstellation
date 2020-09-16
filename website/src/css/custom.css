@@ -1,16 +1,25 @@
 /* stylelint-disable docusaurus/copyright-header */
 
 :root {
-  --ifm-color-primary: #25c2a0;
+  --ifm-font-family-base: 'Nunito Sans', system-ui, -apple-system, sans-serif;
+  /* --ifm-color-primary: #4829B2;
   --ifm-color-primary-dark: rgb(33, 175, 144);
   --ifm-color-primary-darker: rgb(31, 165, 136);
   --ifm-color-primary-darkest: rgb(26, 136, 112);
   --ifm-color-primary-light: rgb(70, 203, 174);
   --ifm-color-primary-lighter: rgb(102, 212, 189);
-  --ifm-color-primary-lightest: rgb(146, 224, 208);
+  --ifm-color-primary-lightest: rgb(146, 224, 208); */
   --ifm-code-font-size: 95%;
+
+  --ifm-navbar-background-color: #4829B2;
+  --ifm-navbar-link-color: var(--ifm-color-white);
+  --header-text-color: var(--ifm-color-white);
+}
+
+html[data-theme='dark'] {
   --ifm-color-text-secondary: #ddd;
 }
+
 
 .docusaurus-highlight-code-line {
   background-color: rgb(72, 77, 91);
@@ -28,16 +37,30 @@ html[data-theme="dark"] .alternateRow {
 
 h1.heroTagline {
   color: #fff;
-  font-size: 50px;
+  font-size: 42px;
+  font-weight: 500;
   margin-bottom: 1.5rem;
+}
+
+.navbar__title {
+  font-family: 'Montserrat', sans-serif;
+}
+
+.hero--primary {
+  background-color: var(--ifm-navbar-background-color);
 }
 
 .buttonCta {
   font-size: 24px;
-  font-weight: 700;
+  font-weight: 500;
   border-width: 2px;
+  margin-top: 1rem;
   margin-left: 0.7rem;
   margin-right: 0.7rem;
+}
+
+.hero .button.button--secondary.button--outline:not(.button--active):not(:hover) {
+  color: var(--ifm-color-white);
 }
 
 .featureColumnSection {

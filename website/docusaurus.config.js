@@ -7,7 +7,7 @@ var signupUrl = 'https://forms.gle/Eh9je8GmS7NRSXf69'
 
 module.exports = {
   title: 'Konstellation',
-  tagline: 'A practical stack for deploying apps on Kubernetes',
+  tagline: '',
   url: 'https://konstellation.dev',
   baseUrl: '/',
   favicon: 'img/favicon.ico',
@@ -26,7 +26,7 @@ module.exports = {
       title: 'Konstellation',
       logo: {
         alt: 'Konstellation Logo',
-        src: 'img/logo_light.png',
+        src: 'img/logo_dark.png',
         srcDark: 'img/logo_dark.png',
       },
       items: [
@@ -45,7 +45,7 @@ module.exports = {
     },
     colorMode: {
       defaultMode: 'dark',
-      disableSwitch: true,
+      // disableSwitch: true,
       respectPrefersColorScheme: false,
     },
     footer: {
@@ -113,13 +113,14 @@ module.exports = {
     //   textColor: '#FFFFFF',
     // },
   },
+  plugins: [
+    'docusaurus-plugin-sass',
+  ],
   presets: [
     [
       '@docusaurus/preset-classic',
       {
         docs: {
-          // It is recommended to set document id as docs home page (`docs/` path).
-          homePageId: 'getting-started/installation',
           sidebarPath: require.resolve('./sidebars.js'),
           // Please change this to your repo.
           editUrl:
@@ -128,7 +129,7 @@ module.exports = {
           // rehypePlugins: [rehypeTruncate],
         },
         theme: {
-          customCss: require.resolve('./src/css/custom.css'),
+          customCss: require.resolve('./src/css/app.scss'),
         },
         sitemap: {
           cacheTime: 6000 * 1000, // 600 sec - cache purge period
