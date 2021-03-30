@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	istioVersion = "1.6.8"
+	istioVersion = "1.9.2"
 )
 
 func init() {

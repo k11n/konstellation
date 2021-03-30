@@ -129,13 +129,17 @@ prometheus-0.4:
 	components/prometheus/build.py 0.4
 	mv components/prometheus/0.4/dist/*.yaml deploy/kube-prometheus/0.4/
 
+prometheus-0.7:
+	components/prometheus/build.py 0.7
+	mv components/prometheus/0.7/dist/*.yaml deploy/kube-prometheus/0.7/
+
 grafana: prometheus-0.4
 	# build grafana-operator
 	kustomize build components/grafana/operator > deploy/grafana/operator.yaml
 	components/grafana/generate-resources.py components/prometheus/0.4/build/grafana-dashboardDefinitions.yaml
 	kustomize build components/grafana > deploy/grafana/dashboards.yaml
 
-components: prometheus-0.4 grafana
+components: prometheus-0.4 prometheus-0.7 grafana
 
 K8S_VERSION = v1.18.2
 ETCD_VERSION = v3.4.3

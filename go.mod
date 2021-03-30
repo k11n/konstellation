@@ -3,10 +3,11 @@ module github.com/k11n/konstellation
 go 1.14
 
 require (
-	github.com/GeertJohan/go.rice v1.0.0
+	github.com/GeertJohan/go.rice v1.0.2
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/aws/aws-sdk-go v1.33.7
 	github.com/coreos/prometheus-operator v0.40.0
+	github.com/daaku/go.zipexe v1.0.1 // indirect
 	github.com/gammazero/workerpool v1.0.0
 	github.com/go-logr/logr v0.1.0
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
@@ -22,6 +23,7 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/thoas/go-funk v0.7.0
 	github.com/urfave/cli/v2 v2.2.0
+	golang.org/x/sys v0.0.0-20210326220804-49726bf1d181 // indirect
 	gopkg.in/ini.v1 v1.57.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	istio.io/api v0.0.0-20200717202705-c1183dac172d
