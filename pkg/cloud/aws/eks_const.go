@@ -1,6 +1,8 @@
 package aws
 
 var EKSAvailableVersions = []string{
+	"1.19",
+	"1.18",
 	"1.17",
 	"1.16",
 }
