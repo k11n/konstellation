@@ -3,7 +3,7 @@ package ingress
 import (
 	"log"
 
-	netv1beta1 "k8s.io/api/networking/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/k11n/konstellation/api/v1alpha1"
@@ -12,7 +12,7 @@ import (
 
 type IngressComponent interface {
 	components.ComponentInstaller
-	ConfigureIngress(kclient client.Client, ingress *netv1beta1.Ingress, irs []*v1alpha1.IngressRequest) error
+	ConfigureIngress(kclient client.Client, ingress *netv1.Ingress, irs []*v1alpha1.IngressRequest) error
 }
 
 func NewIngressForCluster(cloud, cluster string) IngressComponent {

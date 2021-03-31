@@ -23,7 +23,7 @@ func (d *KubeDash) Name() string {
 }
 
 func (d *KubeDash) VersionForKube(version string) string {
-	return "2.0.3"
+	return "2.0.5"
 }
 
 func (d *KubeDash) InstallComponent(kclient client.Client) error {

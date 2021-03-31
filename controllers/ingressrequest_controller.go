@@ -22,13 +22,12 @@ import (
 	"github.com/go-logr/logr"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/k11n/konstellation/api/v1alpha1"
 	"github.com/k11n/konstellation/pkg/components/ingress"
 	"github.com/k11n/konstellation/pkg/resources"
 
-	netv1beta1 "k8s.io/api/networking/v1beta1"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -62,7 +61,7 @@ func (r *IngressRequestReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 
 	if len(irs) == 0 {
 		// kill everything
-		r.Client.Delete(ctx, &netv1beta1.Ingress{
+		r.Client.Delete(ctx, &netv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: resources.IstioNamespace,
 				Name:      req.Namespace,
@@ -152,7 +151,7 @@ func (r *IngressRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	ingressWatcher := &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: handler.ToRequestsFunc(func(object handler.MapObject) []ctrl.Request {
-			ingress := object.Object.(*netv1beta1.Ingress)
+			ingress := object.Object.(*netv1.Ingress)
 
 			requests := []ctrl.Request{}
 
@@ -179,18 +178,27 @@ func (r *IngressRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.IngressRequest{}).
 		Watches(&source.Kind{Type: &v1alpha1.CertificateRef{}}, certWatcher).
-		Watches(&source.Kind{Type: &netv1beta1.Ingress{}}, ingressWatcher).
+		Watches(&source.Kind{Type: &netv1.Ingress{}}, ingressWatcher).
 		Complete(r)
 }
 
-func (r *IngressRequestReconciler) ingressForRequests(target string, requests []*v1alpha1.IngressRequest) (*netv1beta1.Ingress, error) {
+func (r *IngressRequestReconciler) ingressForRequests(target string, requests []*v1alpha1.IngressRequest) (*netv1.Ingress, error) {
 	cc, err := resources.GetClusterConfig(r.Client)
 	if err != nil {
 		return nil, err
 	}
 	ingressComponent := ingress.NewIngressForCluster(cc.Spec.Cloud, cc.Name)
 
-	in := netv1beta1.Ingress{
+	backend := netv1.IngressBackend{
+		Service: &netv1.IngressServiceBackend{
+			Name: resources.IngressBackendName,
+			Port: netv1.ServiceBackendPort{
+				Number: 80,
+			},
+		},
+	}
+	pathType := netv1.PathTypePrefix
+	in := netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: resources.IstioNamespace,
 			Name:      target,
@@ -198,28 +206,23 @@ func (r *IngressRequestReconciler) ingressForRequests(target string, requests []
 				resources.Konstellation: "1",
 			},
 		},
-		Spec: netv1beta1.IngressSpec{
-			Rules: []netv1beta1.IngressRule{
+		Spec: netv1.IngressSpec{
+			Rules: []netv1.IngressRule{
 				{
-					IngressRuleValue: netv1beta1.IngressRuleValue{
-						HTTP: &netv1beta1.HTTPIngressRuleValue{
-							Paths: []netv1beta1.HTTPIngressPath{
+					IngressRuleValue: netv1.IngressRuleValue{
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
 								{
-									Path: "/*",
-									Backend: netv1beta1.IngressBackend{
-										ServiceName: resources.IngressBackendName,
-										ServicePort: intstr.FromInt(80),
-									},
+									Path:     "/",
+									Backend:  backend,
+									PathType: &pathType,
 								},
 							},
 						},
 					},
 				},
 			},
-			Backend: &netv1beta1.IngressBackend{
-				ServiceName: resources.IngressBackendName,
-				ServicePort: intstr.FromInt(80),
-			},
+			DefaultBackend: &backend,
 		},
 	}
 

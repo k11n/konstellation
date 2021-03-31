@@ -14,7 +14,7 @@ func init() {
 }
 
 const (
-	componentVersion = "0.3.6"
+	componentVersion = "0.4.2"
 )
 
 type MetricsServer struct {

@@ -1,17 +1,18 @@
 package ingress
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 
 	"github.com/spf13/cast"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	netv1beta1 "k8s.io/api/networking/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -22,9 +23,10 @@ import (
 )
 
 const (
-	albIngressName       = "alb-ingress-controller"
-	albRoleAnnotation    = "eks.amazonaws.com/role-arn"
-	albControllerVersion = "1.1.8"
+	albIngressName        = "alb-ingress-controller"
+	albServiceAccountName = "aws-load-balancer-controller"
+	albRoleAnnotation     = "eks.amazonaws.com/role-arn"
+	albControllerVersion  = "2.1.2"
 )
 
 var alblog = logf.Log.WithName("component.ALBIngress")
@@ -45,22 +47,41 @@ func (i *AWSALBIngress) VersionForKube(version string) string {
 }
 
 func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
-	// deploy roles yaml
-	url := fmt.Sprintf("https://raw.githubusercontent.com/kubernetes-sigs/aws-alb-ingress-controller/v%s/docs/examples/rbac-role.yaml", albControllerVersion)
+	// deploy cert manager
+	url := fmt.Sprintf("https://github.com/jetstack/cert-manager/releases/download/v1.0.2/cert-manager.yaml")
 	err := cli.KubeApply(url)
 	if err != nil {
 		return nil
 	}
 
-	// get cluster config and alb service account to annotate
-	cc, err := resources.GetClusterConfig(kclient)
+	// edit cluster name
+	templateUrl := "https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.1.2/docs/install/v2_1_2_full.yaml"
+	resp, err := http.Get(templateUrl)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
 
+	// replace with cluster name
+	cc, err := resources.GetClusterConfig(kclient)
+	if err != nil {
+		return err
+	}
+	content := strings.ReplaceAll(string(data), "--cluster-name=your-cluster-name", fmt.Sprintf("--cluster-name=%s", cc.Name))
+	reader := bytes.NewReader([]byte(content))
+	if err = cli.KubeApplyReader(reader); err != nil {
+		return err
+	}
+
+	// alb service account to annotate
 	svcAccount := &corev1.ServiceAccount{}
 	err = kclient.Get(context.TODO(), types.NamespacedName{
-		Name:      albIngressName,
+		Name:      albServiceAccountName,
 		Namespace: resources.KubeSystemNamespace,
 	}, svcAccount)
 	if err != nil {
@@ -73,23 +94,27 @@ func (i *AWSALBIngress) InstallComponent(kclient client.Client) error {
 		return err
 	}
 
-	// last step to create deployment
-	dep := i.deploymentForIngress(cc)
-
-	_, err = resources.UpdateResource(kclient, dep, nil, nil)
-
 	return err
 }
 
-func (i *AWSALBIngress) ConfigureIngress(kclient client.Client, ingress *netv1beta1.Ingress, irs []*v1alpha1.IngressRequest) error {
+func (i *AWSALBIngress) ConfigureIngress(kclient client.Client, ingress *netv1.Ingress, irs []*v1alpha1.IngressRequest) error {
 	cc, err := resources.GetClusterConfig(kclient)
 	if err != nil {
 		return err
 	}
 
+	// if grpc mode, operate differently
+	isGrpc := false
+	for _, ir := range irs {
+		if ir.Spec.AppProtocol == "grpc" {
+			isGrpc = true
+		}
+	}
+
 	annotations := map[string]string{
-		"kubernetes.io/ingress.class":      "alb",
-		"alb.ingress.kubernetes.io/scheme": "internet-facing",
+		"kubernetes.io/ingress.class":                        "alb",
+		"alb.ingress.kubernetes.io/scheme":                   "internet-facing",
+		"alb.ingress.kubernetes.io/load-balancer-attributes": "routing.http2.enabled=true",
 	}
 
 	// attach dualstack LB if we have IPV6 enabled on the subnet
@@ -103,14 +128,24 @@ func (i *AWSALBIngress) ConfigureIngress(kclient client.Client, ingress *netv1be
 		return err
 	}
 
-	for _, p := range svc.Spec.Ports {
-		if p.Name == "status-port" {
-			annotations["alb.ingress.kubernetes.io/healthcheck-port"] = cast.ToString(p.NodePort)
-			annotations["alb.ingress.kubernetes.io/healthcheck-path"] = resources.IngressHealthPath
+	if isGrpc {
+		annotations["alb.ingress.kubernetes.io/backend-protocol-version"] = "GRPC"
+	} else {
+		// point to HTTP port for status, otherwise use default
+		for _, p := range svc.Spec.Ports {
+			if p.Name == "status-port" {
+				annotations["alb.ingress.kubernetes.io/healthcheck-port"] = cast.ToString(p.NodePort)
+				annotations["alb.ingress.kubernetes.io/healthcheck-path"] = resources.IngressHealthPath
+			}
 		}
 	}
 
-	listeners := `[{"HTTP": 80}]`
+	listeners := []map[string]int{}
+	if !isGrpc {
+		listeners = append(listeners, map[string]int{
+			"HTTP": 80,
+		})
+	}
 
 	requiresHttps := false
 	var customAnnotations map[string]string
@@ -142,14 +177,15 @@ func (i *AWSALBIngress) ConfigureIngress(kclient client.Client, ingress *netv1be
 
 	var tlsHosts []string
 	for _, host := range hosts {
-		if certMap[host] != nil {
+		// grpc requires https, so we'll always enable
+		if certMap[host] != nil || isGrpc {
 			tlsHosts = append(tlsHosts, host)
 		}
 	}
 
 	// configure TLSHosts field
 	if len(tlsHosts) != 0 {
-		ingress.Spec.TLS = []netv1beta1.IngressTLS{
+		ingress.Spec.TLS = []netv1.IngressTLS{
 			{
 				Hosts: tlsHosts,
 			},
@@ -177,16 +213,24 @@ func (i *AWSALBIngress) ConfigureIngress(kclient client.Client, ingress *netv1be
 
 	if len(arns) > 0 {
 		annotations["alb.ingress.kubernetes.io/certificate-arn"] = strings.Join(arns, ",")
-		listeners = `[{"HTTP": 80}, {"HTTPS": 443}]`
+		listeners = append(listeners, map[string]int{
+			"HTTPS": 443,
+		})
 		// see if we need HTTPS redirection
-		if requiresHttps {
+		if requiresHttps && !isGrpc {
+			pathType := netv1.PathTypePrefix
 			annotations["alb.ingress.kubernetes.io/actions.ssl-redirect"] = `{"Type": "redirect", "RedirectConfig": { "Protocol": "HTTPS", "Port": "443", "StatusCode": "HTTP_301"}}`
-			paths := []netv1beta1.HTTPIngressPath{
+			paths := []netv1.HTTPIngressPath{
 				{
-					Path: "/*",
-					Backend: netv1beta1.IngressBackend{
-						ServiceName: "ssl-redirect",
-						ServicePort: intstr.FromString("use-annotation"),
+					Path:     "/",
+					PathType: &pathType,
+					Backend: netv1.IngressBackend{
+						Service: &netv1.IngressServiceBackend{
+							Name: "ssl-redirect",
+							Port: netv1.ServiceBackendPort{
+								Name: "use-annotation",
+							},
+						},
 					},
 				},
 			}
@@ -203,7 +247,11 @@ func (i *AWSALBIngress) ConfigureIngress(kclient client.Client, ingress *netv1be
 		}
 	}
 
-	annotations["alb.ingress.kubernetes.io/listen-ports"] = listeners
+	listenersJson, err := json.Marshal(listeners)
+	if err != nil {
+		return err
+	}
+	annotations["alb.ingress.kubernetes.io/listen-ports"] = string(listenersJson)
 
 	if ingress.Annotations == nil {
 		ingress.Annotations = annotations
@@ -214,42 +262,4 @@ func (i *AWSALBIngress) ConfigureIngress(kclient client.Client, ingress *netv1be
 	}
 
 	return nil
-}
-
-func (i *AWSALBIngress) deploymentForIngress(cc *v1alpha1.ClusterConfig) *appsv1.Deployment {
-	labels := map[string]string{
-		resources.KubeAppLabel: albIngressName,
-	}
-	// mapped from: https://raw.githubusercontent.com/kubernetes-sigs/aws-alb-ingress-controller/v1.1.6/docs/examples/alb-ingress-controller.yaml
-	dep := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      albIngressName,
-			Namespace: resources.KubeSystemNamespace,
-			Labels:    labels,
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name: albIngressName,
-							Args: []string{
-								"--ingress-class=alb",
-								fmt.Sprintf("--cluster-name=%s", cc.Name),
-							},
-							Image: "docker.io/amazon/aws-alb-ingress-controller:v" + albControllerVersion,
-						},
-					},
-					ServiceAccountName: albIngressName,
-				},
-			},
-		},
-	}
-	return dep
 }

@@ -68,6 +68,10 @@ func (r *DeploymentReconciler) ingressRequestForAppTarget(at *v1alpha1.AppTarget
 		ir.Spec.Paths = at.Spec.Ingress.Paths
 		ir.Spec.RequireHTTPS = at.Spec.Ingress.RequireHTTPS
 		ir.Spec.Annotations = at.Spec.Ingress.Annotations
+
+		if at.Spec.Ingress.Port == "grpc" {
+			ir.Spec.AppProtocol = "grpc"
+		}
 	}
 	return ir
 }

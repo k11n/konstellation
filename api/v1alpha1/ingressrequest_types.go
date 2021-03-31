@@ -31,6 +31,9 @@ type IngressRequestSpec struct {
 	RequireHTTPS bool `json:"requireHttps,omitempty"`
 
 	// +optional
+	AppProtocol string `json:"protocol,omitempty"`
+
+	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 

@@ -3041,6 +3041,8 @@ spec:
               items:
                 type: string
               type: array
+            protocol:
+              type: string
             requireHttps:
               type: boolean
           required:
