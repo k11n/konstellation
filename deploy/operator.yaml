@@ -384,7 +384,7 @@ spec:
         - --enable-leader-election
         command:
         - /manager
-        image: k11n/operator:0.5.7
+        image: k11n/operator:0.5.8
         name: manager
         resources:
           limits:

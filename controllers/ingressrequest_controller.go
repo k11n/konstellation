@@ -18,9 +18,11 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/k11n/konstellation/api/v1alpha1"
@@ -49,9 +51,20 @@ type IngressRequestReconciler struct {
 
 func (r *IngressRequestReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	log := r.Log.WithValues("ingressrequest", req.NamespacedName)
 
 	res := ctrl.Result{}
+
+	// find the requested ingress, since we need to get its app protocol
+	reconcileAll := false
+	ir := &v1alpha1.IngressRequest{}
+	err := r.Client.Get(context.Background(), req.NamespacedName, ir)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			reconcileAll = true
+		} else {
+			return res, err
+		}
+	}
 
 	// fetch all requests in same namespace to reconcile
 	irs, err := resources.GetIngressRequests(r.Client, req.Namespace)
@@ -59,33 +72,62 @@ func (r *IngressRequestReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return res, err
 	}
 
-	if len(irs) == 0 {
-		// kill everything
-		r.Client.Delete(ctx, &netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: resources.IstioNamespace,
-				Name:      req.Namespace,
-			},
-		})
-		return res, nil
+	// aggregate items by app protocol => []*ingressRequest
+	itemsToReconcile := make(map[string][]*v1alpha1.IngressRequest)
+	for _, r := range irs {
+		p := r.Spec.AppProtocol
+		if reconcileAll || p == ir.Spec.AppProtocol {
+			itemsToReconcile[p] = append(itemsToReconcile[p], r)
+		}
 	}
 
-	// create ingress, one for all hosts
-	in, err := r.ingressForRequests(req.Namespace, irs)
+	for protocol, irs := range itemsToReconcile {
+		err = r.reconcileForAppProtocol(req.Namespace, irs, protocol)
+		if err != nil {
+			return res, err
+		}
+	}
+
+	// remove ingresses where name doesn't match
+	ingressList := &netv1.IngressList{}
+	err = r.Client.List(ctx, ingressList)
 	if err != nil {
 		return res, err
+	}
+
+	for _, in := range ingressList.Items {
+		protocol := in.Labels[resources.AppProtocolLabel]
+		if itemsToReconcile[protocol] == nil {
+			// no longer valid, delete
+			if err := r.Client.Delete(ctx, &in); err != nil {
+				return res, err
+			}
+		}
+	}
+
+	return res, nil
+}
+
+func (r *IngressRequestReconciler) reconcileForAppProtocol(namespace string, irs []*v1alpha1.IngressRequest, protocol string) error {
+	log := r.Log.WithValues("ingressrequest", namespace, "protocol", protocol)
+	ctx := context.Background()
+
+	// create ingress, one for all hosts sharing the same protocol
+	in, err := r.ingressForRequests(namespace, irs, protocol)
+	if err != nil {
+		return err
 	}
 
 	op, err := resources.UpdateResource(r.Client, in, nil, nil)
 	if err != nil {
-		return res, err
+		return err
 	}
 	resources.LogUpdates(log, op, "Updated Ingress")
 
 	// reload ingress to grab updated status
 	err = r.Client.Get(ctx, client.ObjectKey{Namespace: in.Namespace, Name: in.Name}, in)
 	if err != nil {
-		return res, err
+		return err
 	}
 
 	var address string
@@ -110,16 +152,20 @@ func (r *IngressRequestReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 			if err != nil {
 				break
 			}
-			log.Info("Updated IngressRequest status", "ingress", ir.Name)
+			log.Info("Updated IngressRequest status",
+				"ingress", ir.Name,
+				"address", address)
 		}
 	}
-	return res, nil
+	return nil
 }
 
 func (r *IngressRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// trigger when certificates change
 	certWatcher := &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: handler.ToRequestsFunc(func(object handler.MapObject) []ctrl.Request {
-			requests := []ctrl.Request{}
+			cert := object.Object.(*v1alpha1.CertificateRef)
+			var requests []ctrl.Request
 
 			// trigger a single request per namespace
 			cc, err := resources.GetClusterConfig(mgr.GetClient())
@@ -133,14 +179,18 @@ func (r *IngressRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					return requests
 				}
 
-				// just need to request once. there'll be one ingress with all of the hosts
+				// queue hosts matching certs
 				for _, ingressReq := range irs {
-					requests = append(requests, ctrl.Request{
-						NamespacedName: types.NamespacedName{
-							Name:      ingressReq.Name,
-							Namespace: ingressReq.Namespace,
-						},
-					})
+					for _, h := range ingressReq.Spec.Hosts {
+						if resources.CertificateCovers(cert.Spec.Domain, h) {
+							requests = append(requests, ctrl.Request{
+								NamespacedName: types.NamespacedName{
+									Name:      ingressReq.Name,
+									Namespace: ingressReq.Namespace,
+								},
+							})
+						}
+					}
 					break
 				}
 
@@ -151,17 +201,20 @@ func (r *IngressRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	ingressWatcher := &handler.EnqueueRequestsFromMapFunc{
 		ToRequests: handler.ToRequestsFunc(func(object handler.MapObject) []ctrl.Request {
-			ingress := object.Object.(*netv1.Ingress)
+			in := object.Object.(*netv1.Ingress)
 
-			requests := []ctrl.Request{}
+			var requests []ctrl.Request
 
 			// ensure that ingress is being managed by Kon before triggering
-			if ingress.Labels == nil || ingress.Labels[resources.Konstellation] == "" {
+			if in.Labels == nil || in.Labels[resources.Konstellation] == "" {
 				return requests
 			}
 
+			protocol := in.Labels[resources.AppProtocolLabel]
+			target := in.Labels[resources.TargetLabel]
+
 			// any changes to a single resource in a target, will cause ingress to reconcile
-			reqList, err := resources.GetIngressRequests(mgr.GetClient(), ingress.Name)
+			reqList, err := resources.GetIngressRequestsForAppProtocol(mgr.GetClient(), target, protocol)
 			if err != nil || len(reqList) == 0 {
 				return requests
 			}
@@ -182,7 +235,7 @@ func (r *IngressRequestReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *IngressRequestReconciler) ingressForRequests(target string, requests []*v1alpha1.IngressRequest) (*netv1.Ingress, error) {
+func (r *IngressRequestReconciler) ingressForRequests(target string, requests []*v1alpha1.IngressRequest, protocol string) (*netv1.Ingress, error) {
 	cc, err := resources.GetClusterConfig(r.Client)
 	if err != nil {
 		return nil, err
@@ -197,13 +250,20 @@ func (r *IngressRequestReconciler) ingressForRequests(target string, requests []
 			},
 		},
 	}
+
+	ingressName := target
+	if protocol != "" {
+		ingressName = fmt.Sprintf("%s-%s", target, protocol)
+	}
 	pathType := netv1.PathTypePrefix
 	in := netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: resources.IstioNamespace,
-			Name:      target,
+			Name:      ingressName,
 			Labels: map[string]string{
-				resources.Konstellation: "1",
+				resources.Konstellation:    "1",
+				resources.AppProtocolLabel: protocol,
+				resources.TargetLabel:      target,
 			},
 		},
 		Spec: netv1.IngressSpec{

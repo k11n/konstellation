@@ -12,6 +12,7 @@ const (
 	AppReleaseLabel    = "k11n.dev/appRelease"
 	DomainLabel        = "k11n.dev/domain"
 	TargetReleaseLabel = "k11n.dev/targetRelease"
+	AppProtocolLabel   = "k11n.dev/appProtocol"
 
 	KubeManagedByLabel   = "app.kubernetes.io/managed-by"
 	KubeAppLabel         = "app"
