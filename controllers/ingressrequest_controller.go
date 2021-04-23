@@ -95,14 +95,18 @@ func (r *IngressRequestReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		return res, err
 	}
 
-	for _, in := range ingressList.Items {
-		protocol := in.Labels[resources.AppProtocolLabel]
-		if itemsToReconcile[protocol] == nil {
-			// no longer valid, delete
-			if err := r.Client.Delete(ctx, &in); err != nil {
-				return res, err
+	// when in full reconcile mode, delete ingresses that don't match
+	if reconcileAll {
+		for _, in := range ingressList.Items {
+			protocol := in.Labels[resources.AppProtocolLabel]
+			if itemsToReconcile[protocol] == nil {
+				// no longer valid, delete
+				if err := r.Client.Delete(ctx, &in); err != nil {
+					return res, err
+				}
 			}
 		}
+
 	}
 
 	return res, nil
