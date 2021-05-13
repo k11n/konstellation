@@ -111,6 +111,7 @@ func (i *IstioInstaller) InstallComponent(kclient client.Client) error {
 		"--set", "addonComponents.grafana.enabled=false",
 		"--set", "values.gateways.istio-ingressgateway.type=NodePort",
 		"--set", "values.gateways.enabled=true",
+		"--set", "values.global.proxy.holdApplicationUntilProxyStarts=true",
 	)
 	if err != nil {
 		return err
