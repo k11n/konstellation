@@ -18,6 +18,8 @@ package v1alpha1
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	promv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
@@ -73,6 +75,11 @@ type AppCommonSpec struct {
 	// +nullable
 	// +optional
 	Command []string `json:"command,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +nullable
+	// +optional
+	Env []corev1.EnvVar `json:"env,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// +nullable
@@ -179,6 +186,10 @@ type TargetConfig struct {
 	Ingress *IngressConfig `json:"ingress,omitempty"`
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +nullable
+	// +optional
+	Env []corev1.EnvVar `json:"env,omitempty"`
 	// +optional
 	Scale ScaleSpec `json:"scale,omitempty"`
 	// +optional
@@ -260,6 +271,28 @@ func (a *AppSpec) DeployModeForTarget(target string) DeployMode {
 		deployMode = tc.DeployMode
 	}
 	return deployMode
+}
+
+func (a *AppSpec) EnvForTarget(target string) []corev1.EnvVar {
+	envs := make([]corev1.EnvVar, 0, len(a.Env))
+	tc := a.GetTargetConfig(target)
+	overridden := make(map[string]bool)
+	if tc != nil && tc.Env != nil {
+		for _, e := range tc.Env {
+			envs = append(envs, e)
+			overridden[e.Name] = true
+		}
+	}
+	for _, e := range a.Env {
+		if !overridden[e.Name] {
+			envs = append(envs, e)
+		}
+	}
+	// ensure consistent output with envs in alphabetic order
+	sort.Slice(envs, func(i, j int) bool {
+		return strings.Compare(envs[i].Name, envs[j].Name) < 0
+	})
+	return envs
 }
 
 func (a *AppSpec) GetTargetConfig(target string) *TargetConfig {

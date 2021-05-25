@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/GeertJohan/go.rice v1.0.2
+	github.com/akavel/rsrc v0.10.2 // indirect
 	github.com/apparentlymart/go-cidr v1.1.0
 	github.com/aws/aws-sdk-go v1.33.7
 	github.com/coreos/prometheus-operator v0.40.0
@@ -15,6 +16,7 @@ require (
 	github.com/googleapis/gnostic v0.5.4 // indirect
 	github.com/hako/durafmt v0.0.0-20200710122514-c0fb7b4da026
 	github.com/imdario/mergo v0.3.10
+	github.com/jessevdk/go-flags v1.5.0 // indirect
 	github.com/manifoldco/promptui v0.7.0
 	github.com/mitchellh/hashstructure v1.0.0
 	github.com/olekukonko/tablewriter v0.0.4
@@ -26,10 +28,11 @@ require (
 	github.com/stretchr/testify v1.6.1
 	github.com/thoas/go-funk v0.7.0
 	github.com/urfave/cli/v2 v2.2.0
+	github.com/valyala/fasttemplate v1.2.1 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0 // indirect
 	golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5 // indirect
-	golang.org/x/sys v0.0.0-20210326220804-49726bf1d181 // indirect
+	golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea // indirect
 	gopkg.in/ini.v1 v1.57.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	honnef.co/go/tools v0.1.3 // indirect

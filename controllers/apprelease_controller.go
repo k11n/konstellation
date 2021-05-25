@@ -19,10 +19,10 @@ package controllers
 import (
 	"context"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/thoas/go-funk"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -263,15 +263,24 @@ func (r *AppReleaseReconciler) newReplicaSetForAR(ar *v1alpha1.AppRelease, build
 	if ar.Spec.Probes.Startup != nil {
 		container.StartupProbe = ar.Spec.Probes.Startup.ToCoreProbe()
 	}
+
+	// mark env keys that are set
+	setEnvs := make(map[string]bool)
+	for _, e := range ar.Spec.Env {
+		container.Env = append(container.Env, e)
+		setEnvs[e.Name] = true
+	}
 	if cm != nil && len(cm.Data) > 0 {
-		// set env
-		keys := funk.Keys(cm.Data).([]string)
-		sort.Strings(keys)
-		for _, key := range keys {
+		for key, val := range cm.Data {
+			if setEnvs[key] {
+				r.Log.Info("conflicting env", "key", key)
+				continue
+			}
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  key,
-				Value: cm.Data[key],
+				Value: val,
 			})
+			setEnvs[key] = true
 		}
 	}
 
@@ -283,9 +292,17 @@ func (r *AppReleaseReconciler) newReplicaSetForAR(ar *v1alpha1.AppRelease, build
 			return nil, err
 		}
 		for _, e := range envs {
+			if setEnvs[e.Name] {
+				r.Log.Info("conflicting env", "key", e.Name)
+				continue
+			}
 			container.Env = append(container.Env, e)
 		}
 	}
+
+	sort.Slice(container.Env, func(i, j int) bool {
+		return strings.Compare(container.Env[i].Name, container.Env[j].Name) < 0
+	})
 
 	podSpec := corev1.PodSpec{
 		Containers: []corev1.Container{

@@ -167,14 +167,14 @@ func (at *AppTarget) GetHash() string {
 
 // sets a label on the app target with its hash
 func (at *AppTarget) UpdateHash() error {
-	copy := at.DeepCopy()
+	atCopy := at.DeepCopy()
 	// clear fields that we don't need to include in hash
-	copy.Spec.Ingress = nil
-	copy.Status = AppTargetStatus{}
-	copy.Labels = nil
-	copy.Annotations = nil
-	copy.Spec.DeployMode = DeployLatest
-	copy.Spec.Scale = ScaleSpec{}
+	atCopy.Spec.Ingress = nil
+	atCopy.Status = AppTargetStatus{}
+	atCopy.Labels = nil
+	atCopy.Annotations = nil
+	atCopy.Spec.DeployMode = DeployLatest
+	atCopy.Spec.Scale = ScaleSpec{}
 	encoder := json.NewSerializerWithOptions(json.DefaultMetaFactory, nil, nil,
 		json.SerializerOptions{
 			Yaml:   true,
@@ -182,7 +182,7 @@ func (at *AppTarget) UpdateHash() error {
 			Strict: false,
 		})
 	buf := bytes.NewBuffer(nil)
-	err := encoder.Encode(copy, buf)
+	err := encoder.Encode(atCopy, buf)
 	if err != nil {
 		return err
 	}

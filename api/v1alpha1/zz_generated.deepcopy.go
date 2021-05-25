@@ -21,8 +21,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
-	corev1 "k8s.io/api/core/v1"
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	"k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -177,6 +177,13 @@ func (in *AppCommonSpec) DeepCopyInto(out *AppCommonSpec) {
 		in, out := &in.Command, &out.Command
 		*out = make([]string, len(*in))
 		copy(*out, *in)
+	}
+	if in.Env != nil {
+		in, out := &in.Env, &out.Env
+		*out = make([]v1.EnvVar, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
 	}
 	if in.Args != nil {
 		in, out := &in.Args, &out.Args
@@ -908,7 +915,7 @@ func (in *HTTPGetAction) DeepCopyInto(out *HTTPGetAction) {
 	*out = *in
 	if in.HTTPHeaders != nil {
 		in, out := &in.HTTPHeaders, &out.HTTPHeaders
-		*out = make([]corev1.HTTPHeader, len(*in))
+		*out = make([]v1.HTTPHeader, len(*in))
 		copy(*out, *in)
 	}
 }
@@ -928,7 +935,7 @@ func (in *Handler) DeepCopyInto(out *Handler) {
 	*out = *in
 	if in.Exec != nil {
 		in, out := &in.Exec, &out.Exec
-		*out = new(corev1.ExecAction)
+		*out = new(v1.ExecAction)
 		(*in).DeepCopyInto(*out)
 	}
 	if in.HTTPGet != nil {
@@ -1395,14 +1402,14 @@ func (in *PrometheusSpec) DeepCopyInto(out *PrometheusSpec) {
 	*out = *in
 	if in.Endpoints != nil {
 		in, out := &in.Endpoints, &out.Endpoints
-		*out = make([]v1.Endpoint, len(*in))
+		*out = make([]monitoringv1.Endpoint, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.Rules != nil {
 		in, out := &in.Rules, &out.Rules
-		*out = make([]v1.Rule, len(*in))
+		*out = make([]monitoringv1.Rule, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -1468,6 +1475,13 @@ func (in *TargetConfig) DeepCopyInto(out *TargetConfig) {
 		(*in).DeepCopyInto(*out)
 	}
 	in.Resources.DeepCopyInto(&out.Resources)
+	if in.Env != nil {
+		in, out := &in.Env, &out.Env
+		*out = make([]v1.EnvVar, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	in.Scale.DeepCopyInto(&out.Scale)
 	in.Probes.DeepCopyInto(&out.Probes)
 }

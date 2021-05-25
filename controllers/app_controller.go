@@ -220,6 +220,7 @@ func newAppTargetForApp(app *v1alpha1.App, target string, build *v1alpha1.Build)
 				ServiceAccount:   app.Spec.ServiceAccount,
 				Resources:        *app.Spec.ResourcesForTarget(target),
 				Probes:           *app.Spec.ProbesForTarget(target),
+				Env:              app.Spec.EnvForTarget(target),
 			},
 			DeployMode: app.Spec.DeployModeForTarget(target),
 			Configs:    app.Spec.Configs,

@@ -850,9 +850,19 @@ func appLocal(c *cli.Context) error {
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
 
+	setEnv := make(map[string]bool)
+	for _, e := range app.Spec.EnvForTarget(target) {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", e.Name, e.Value))
+		setEnv[e.Name] = true
+	}
 	if cm != nil {
 		for key, val := range cm.Data {
+			if setEnv[key] {
+				fmt.Println("error: conflicting env key", key)
+				continue
+			}
 			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", key, val))
+			setEnv[key] = true
 		}
 	}
 	for i, dep := range deps {
@@ -860,7 +870,12 @@ func appLocal(c *cli.Context) error {
 		if proxy == nil {
 			continue
 		}
+		if setEnv[dep.HostKey()] {
+			fmt.Println("error: conflicting env key", dep.HostKey())
+			continue
+		}
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", dep.HostKey(), proxy.HostWithPort()))
+		setEnv[dep.HostKey()] = true
 	}
 
 	// pass any other custom env vars
