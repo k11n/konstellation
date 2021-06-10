@@ -141,6 +141,10 @@ var ClusterCommands = []*cli.Command{
 						Name:  "force",
 						Usage: "deletes an existing debugging image if exists",
 					},
+					&cli.StringSliceFlag{
+						Name:  "cmd",
+						Usage: "pass custom command and arguments",
+					},
 				},
 			},
 			{
@@ -650,6 +654,8 @@ func clusterSelect(clusterName string) error {
 func clusterShell(c *cli.Context) error {
 	image := c.String("image")
 	force := c.Bool("force")
+	customCmd := c.StringSlice("cmd")
+
 	ac, err := getActiveCluster()
 	if err != nil {
 		return err
@@ -682,7 +688,11 @@ func clusterShell(c *cli.Context) error {
 
 	// not found, create
 	fmt.Println("Creating new debugging pod", podName)
-	cmd := exec.Command("kubectl", "run", "--rm", "-it", podName, "--image", image, "--restart=Never")
+	args := []string{"run", "--rm", "-it", podName, "--image", image, "--restart=Never"}
+	if len(customCmd) > 0 {
+		args = append(append(args, "--command", "--"), customCmd...)
+	}
+	cmd := exec.Command("kubectl", args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
